@@ -234,6 +234,135 @@ end
 
 @doc raw"""
 
+    JastrowParameters
+
+A type defining quantities related to Jastrow variational parameters.
+
+"""
+mutable struct JastrowParameters
+    # type of Jastrow parameter
+    jastrow_type::String
+
+    # map of Jastrow parameters
+    jpar_map::OrderedDict{Any, Any}
+
+    # total number of Jastrow parameters
+    num_jpars::Int
+
+    # number of Jastrow parameters to be optimized
+    num_jpar_opts::Int
+end
+
+
+@doc raw"""
+
+    JastrowParameters( jastrow_type::String, 
+                       optimize::NamedTuple,
+                       model_geometry::ModelGeometry,
+                       rng::Xoshiro )::JastrowParameters
+
+Given a type of Jastrow factor and set of optimization flags, generates a random initial set of 
+Jastrow parameters.
+
+- `jastrow_type::String`: type of Jastrow factor: "e-den-den", "e-spn-spn". TBA: "eph-den-den", "ph-den-den"
+- `optimize::NamedTuple`: field of optimization flags.
+- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
+- `rng::Xoshiro`: random number generator.
+
+"""
+function JastrowParameters(
+    jastrow_type::String, 
+    optimize::NamedTuple,
+    model_geometry::ModelGeometry,
+    rng::Xoshiro
+)::JastrowParameters
+    # create map of Jastrow parameters
+    jpar_map = map_jastrow_parameters(
+        model_geometry, 
+        rng
+    )
+
+    # get total number of Jastrow parameters
+    num_jpars = length(jpar_map)
+
+    if optimize.djastrow && jastrow_type == "e-den-den"
+        num_jpar_opts = num_jpars - 1
+    elseif optimize.sjastrow && jastrow_type == "e-spn-spn"
+        num_jpar_opts = num_jpars - 1
+    # elseif optimize.ephjastrow && jastrow_type == "eph-den-den"
+    # elseif optimize.phjastrow && jastrow_type == "ph-den-den"
+    else
+        num_jpar_opts = 0
+    end
+
+    debug && println("Jastrow::JastrowParameters() : type: ", jastrow_type)
+    debug && println("Number of Jastrow parameters = ", num_jpars)
+    debug && println("Number of Jastrow parameters to be optimized = ", num_jpar_opts)
+
+    return JastrowParameters(jastrow_type, jpar_map, num_jpars, num_jpar_opts)
+end
+
+
+@doc raw"""
+
+    JastrowParameters( jastrow_type::String, 
+                       optimize::NamedTuple,
+                       model_geometry::ModelGeometry,
+                       path_to_parameter_file::String )::JastrowParameters
+
+Given a type of Jastrow factor and set of optimization flags, generates an initial set of 
+Jastrow parameters from a specfied file. 
+
+- `jastrow_type::String`: type of Jastrow factor: "e-den-den", "e-spn-spn". TBA: "eph-den-den", "ph-den-den"
+- `optimize::NamedTuple`: field of optimization flags.
+- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
+- `path_to_parameter_file::String`: filepath to initial parameters.
+
+"""
+function JastrowParameters(
+    jastrow_type::String, 
+    optimize::NamedTuple,
+    model_geometry::ModelGeometry,
+    path_to_parameter_file::String
+)::JastrowParameters
+    # get parameters from file
+    vpar_dict = readin_parameters(path_to_parameter_file)
+
+    if jastrow_type == "e-den-den"
+        init_jpars = vpar_dict[:density_jastrow]
+    elseif jastrow_type == "e-spn-spn"
+        init_jpars = vpar_dict[:spin_jastrow]
+    end
+
+    # create map of Jastrow parameters 
+    jpar_map = map_jastrow_parameters(
+        model_geometry, 
+        init_jpars
+    ) 
+
+    # get total number of Jastrow parameters
+    num_jpars = length(jpar_map)
+
+    if optimize.djastrow && jastrow_type == "e-den-den"
+        num_jpar_opts = num_jpars - 1
+    elseif optimize.sjastrow && jastrow_type == "e-spn-spn"
+        num_jpar_opts = num_jpars - 1
+    # elseif optimize.ephjastrow && jastrow_type == "eph-den-den"
+    # elseif optimize.phjastrow && jastrow_type == "ph-den-den"
+    else
+        num_jpar_opts = 0
+    end
+
+    debug && println("Jastrow::JastrowParameters() : type: ", jastrow_type)
+    debug && println("Number of Jastrow parameters = ", num_jpars)
+    debug && println("Number of Jastrow parameters to be optimized = ", num_jpar_opts)
+
+    return JastrowParameters(jastrow_type, jpar_map, num_jpars, num_jpar_opts)
+end
+
+
+@doc raw"""
+
     collect_parameters( determinantal_parameters::DeterminantalParameters, 
                         jastrow_parameters::JastrowParameters )::Vector{AbstractFloat}
 

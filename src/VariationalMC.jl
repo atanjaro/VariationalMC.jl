@@ -3,15 +3,16 @@ module VariationalMC
 using LatticeUtilities
 using Random
 using LinearAlgebra
-using DelimitedFiles
-using Profile
 using OrderedCollections
+using Printf
 using CSV
+using JLD2
+
+using Profile
+using Revise
+using DelimitedFiles
 using DataFrames
 using DataStructures
-using Printf
-using JLD2
-using Revise
 
 
 include("ModelGeometry.jl")
