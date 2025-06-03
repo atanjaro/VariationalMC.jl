@@ -13,3 +13,11 @@ makedocs(
         "Home" => "index.md",
     ],
 )
+
+deploydocs(
+    repo = "github.com/atanjaro/VariationalMC.jl.git",  
+    target = "build",
+    branch = "gh-pages",
+    devbranch = "main",
+    push_preview = true,
+)
