@@ -34,7 +34,3 @@ This section reviews some notable package dependencies.
 
 For questions and comments regarding this package, please email Andy Tanjaroon Ly at [atanjaro@vols.utk.edu](mailto:atanjaro@vols.utk.edu).
 
-```@autodocs
-Modules = [VariationalMC]
-```
-
