@@ -16,6 +16,8 @@ The development of this code was supported by the U.S. Department of Energy, Off
 
 ## Documentation
 
+- [`DEV`](https://atanjaro.github.io/VariationalMC.jl/dev/): Documentation associated with most recent commit to the main branch.
+
 ## Notable Package Dependencies
 
 This section reviews some notable package dependencies.
