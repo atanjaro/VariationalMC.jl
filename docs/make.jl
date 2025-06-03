@@ -1,5 +1,5 @@
 using Pkg
-Pkg.activate("..")  # Activate the package environment
+Pkg.activate(@__DIR__)  # Activate the package environment
 Pkg.instantiate()   # Ensure all dependencies are installed
 
 using Documenter
