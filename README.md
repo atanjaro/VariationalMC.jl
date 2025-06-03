@@ -6,7 +6,7 @@
 
 This package implements the Variational Monte Carlo (VMC) method for the Hubbard model and models of electron-phonon interaction (coming soon). 
 
-Package is experimental and should only be used with caution. 
+This code is currently the experimental stage of development. Use with caution.
 
 ## Funding 
 
