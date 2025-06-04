@@ -4,15 +4,12 @@
 
 - [`SimulationInfo`](@ref)
 - [`initialize_datafolder`](@ref)
-- [`model_summary`](@ref)
-- ['create_datafolder_prefix'](@ref)
+- [`create_datafolder_prefix`](@ref)
 
 ```@docs
 SimulationInfo
 SimulationInfo(;)
-save_simulation_info
 initialize_datafolder
-model_summary
 create_datafolder_prefix
 ```
 

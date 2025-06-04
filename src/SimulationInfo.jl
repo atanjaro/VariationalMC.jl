@@ -34,7 +34,10 @@ end
 
 @doc raw"""
 
-    SimulationInfo( ; datafolder_prefix::String, filepath::String = ".", sID::Int=0, pID::Int=0 )
+    SimulationInfo( ; datafolder_prefix::String, 
+                    filepath::String = ".", 
+                    sID::Int=0, 
+                    pID::Int=0 )
 
 Creates an instance of the SimulationInfo type.
 
@@ -123,9 +126,9 @@ function initialize_datafolder(sim_info::SimulationInfo)::Nothing
 end
 
 
-"""
-    model_summary( ;,
-                   n̄::Float64,
+@doc raw"""
+
+    model_summary( ; n̄::Float64,
                    nup::Int,
                    ndn::Int,
                    simulation_info::SimulationInfo, 
@@ -179,13 +182,17 @@ end
 
 @doc raw"""
 
-    create_datafolder_prefix( optimize::NamedTuple, df_prefix::String )
+    create_datafolder_prefix( optimize::NamedTuple, 
+                              df_prefix::String )::String
 
 Check the optimization fields and appends parameter names to the end of the foldername.
 Returns the datafolder prefix.
 
 """
-function create_datafolder_prefix(optimize::NamedTuple, df_prefix::String)
+function create_datafolder_prefix(
+    optimize::NamedTuple, 
+    df_prefix::String
+)::String
     opt_keys = keys(optimize)
 
     enabled_opts = [begin
