@@ -9,6 +9,8 @@
 
 ```@docs
 SimulationInfo
+SimulationInfo(;)
+save_simulation_info
 initialize_datafolder
 model_summary
 create_datafolder_prefix

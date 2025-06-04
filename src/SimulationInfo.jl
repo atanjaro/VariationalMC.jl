@@ -76,14 +76,17 @@ end
 
 @doc raw"""
 
-    save_simulation_info( sim_info::SimulationInfo, additional_info = nothing )
+    save_simulation_info( sim_info::SimulationInfo, 
+                          additional_info = nothing )::Nothing
 
 Save the contents `sim_info` to a TOML file, and add an optional additional table to the
 output file based on the contents of a dictionary `additional_info`.
 
 """
-function save_simulation_info(sim_info::SimulationInfo, additional_info = nothing)
-
+function save_simulation_info(
+    sim_info::SimulationInfo, 
+    additional_info = nothing
+)::Nothing
     (; datafolder, pID, sID) = sim_info
     fn = @sprintf "simulation_info_pID%d_sID%d.toml" pID sID
     open(joinpath(datafolder, fn), "w") do fout
@@ -100,12 +103,12 @@ end
 
 @doc raw"""
 
-    initialize_datafolder( sim_info::SimulationInfo )
+    initialize_datafolder( sim_info::SimulationInfo )::Nothing
 
 Initalize `sim_info.datafolder` directory if it does not already exist.
 
 """
-function initialize_datafolder(sim_info::SimulationInfo)
+function initialize_datafolder(sim_info::SimulationInfo)::Nothing
 
     (; pID, datafolder, resuming) = sim_info
 
@@ -120,6 +123,19 @@ function initialize_datafolder(sim_info::SimulationInfo)
 end
 
 
+"""
+    model_summary( ;,
+                   n̄::Float64,
+                   nup::Int,
+                   ndn::Int,
+                   simulation_info::SimulationInfo, 
+                   model_geometry::ModelGeometry, 
+                   tight_binding_model::TightBindingModel, 
+                   parameters::Tuple )::Nothing
+
+Writes model summary to file.
+
+"""
 function model_summary(;
         n̄::Float64,
         nup::Int,
@@ -127,8 +143,8 @@ function model_summary(;
         simulation_info::SimulationInfo, 
         model_geometry::ModelGeometry, 
         tight_binding_model::TightBindingModel, 
-        parameters::Tuple)
-
+        parameters::Tuple
+)::Nothing
     # if process ID is 1
     if iszero(simulation_info.pID)
 
@@ -155,15 +171,15 @@ function model_summary(;
                 show(fout, "text/plain", interaction)
             end
         end
-
-
     end
+
+    return nothing
 end
 
 
 @doc raw"""
 
-    create_datfolder_prefix( optimize::NamedTuple, df_prefix::String )
+    create_datafolder_prefix( optimize::NamedTuple, df_prefix::String )
 
 Check the optimization fields and appends parameter names to the end of the foldername.
 Returns the datafolder prefix.
