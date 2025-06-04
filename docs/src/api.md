@@ -1,10 +1,6 @@
 # API
 
-## SimulationInfo Type and Methods
-
-- [`SimulationInfo`](@ref)
-
-```@docs
-SimulationInfo
+```@autodocs
+Modules = [VariationalMC]
 ```
 
