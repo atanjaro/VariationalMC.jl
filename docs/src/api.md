@@ -1,5 +1,9 @@
 # API
 
+```@autodocs
+Modules = [VariationalMC]
+```
+
 ## SimulationInfo Type and Methods
 
 - [`SimulationInfo`](@ref)
@@ -13,6 +17,3 @@ initialize_datafolder
 create_datafolder_prefix
 ```
 
-<!-- ```@autodocs
-Modules = [VariationalMC]
-``` -->
