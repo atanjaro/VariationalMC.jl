@@ -8,4 +8,5 @@
 ```@docs
 DeterminantalWavefunction
 get_determinantal_wavefunction
+```
 

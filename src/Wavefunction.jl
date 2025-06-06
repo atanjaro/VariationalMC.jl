@@ -1,4 +1,4 @@
-"""
+@doc raw"""
 
     DeterminantalWavefunction( W::Matrix{ComplexF64}, 
                                D::Matrix{ComplexF64}, 
@@ -41,7 +41,7 @@ mutable struct DeterminantalWavefunction
 end
 
 
-"""
+@doc raw"""
 
     get_determinantal_wavefunction( tight_binding_model::TightBindingModel, 
                                     determinantal_parameters::DeterminantalParameters, 
