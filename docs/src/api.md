@@ -1,6 +1,6 @@
 # API
 
-## SimulationInfo Type and Methods
+<!-- ## SimulationInfo Type and Methods
 
 - [`SimulationInfo`](@ref)
 - [`SimulationInfo(;)`](@ref)
@@ -16,7 +16,7 @@ save_simulation_info
 initialize_datafolder
 create_datafolder_prefix
 model_summary
-```
+``` -->
 
 ## ModelGeometry Type and Methods
 
@@ -196,7 +196,7 @@ get_covariance_matrix
 get_force_vector
 ```
 
-# Measurement Methods
+<!-- # Measurement Methods
 
 ### Intitialize Measurements
 
@@ -275,7 +275,7 @@ write_measurements!
 
 ```@docs
 
-``` -->
+``` --> -->
 
 
 
