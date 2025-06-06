@@ -10,10 +10,10 @@
 
 ```@docs
 SimulationInfo
-save_simulation_info
+VariationalMC.save_simulation_info
 initialize_datafolder
 create_datafolder_prefix
-model_summary
+VariationalMC.model_summary
 ```
 
 ## ModelGeometry Type and Methods
@@ -27,12 +27,12 @@ model_summary
 
 ```@docs
 ModelGeometry
-reduce_index_2d
-reduce_index_1d
-max_dist
-x
-y
-d
+VariationalMC.reduce_index_2d
+VariationalMC.reduce_index_1d
+VariationalMC.max_dist
+VariationalMC.x
+VariationalMC.y
+VariationalMC.d
 ```
 
 ## Parameters Types and Methods
@@ -49,10 +49,10 @@ d
 TightBindingModel
 SpinModel
 DeterminantalParameters
-JastrowParameters
-collect_parameters
-update_parameters!
-readin_parameters
+VariationalMC.JastrowParameters
+VariationalMC.collect_parameters
+VariationalMC.update_parameters!
+VariationalMC.readin_parameters
 ```
 
 ## Hamiltonian Methods
@@ -66,13 +66,13 @@ readin_parameters
 - [`get_tb_chem_pot`](@ref)
 
 ```@docs
-build_auxiliary_hamiltonian
-build_tight_binding_hamiltonian
-build_variational_hamiltonian
-diagonalize
-is_openshell
-get_variational_matrices
-get_tb_chem_pot
+VariationalMC.build_auxiliary_hamiltonian
+VariationalMC.build_tight_binding_hamiltonian
+VariationalMC.build_variational_hamiltonian
+VariationalMC.diagonalize
+VariationalMC.is_openshell
+VariationalMC.get_variational_matrices
+VariationalMC.get_tb_chem_pot
 ```
 
 ### Adding different symmetries to the Hamiltonian
@@ -83,10 +83,10 @@ get_tb_chem_pot
 - [`add_chemical_potential!`](@ref)
 
 ```@docs
-add_pairing_symmetry!
-add_spin_order!
-add_charge_order!
-add_chemical_potential!
+VariationalMC.add_pairing_symmetry!
+VariationalMC.add_spin_order!
+VariationalMC.add_charge_order!
+VariationalMC.add_chemical_potential!
 ```
 
 ## DeterminantalWavefunction Type and Methods
@@ -112,11 +112,11 @@ get_determinantal_wavefunction
 ```@docs
 JastrowFactor
 get_jastrow_factor
-get_fermionic_Tvec
-update_fermionic_Tvec!
-get_fermionic_jastrow_ratio
-map_jastrow_parameters
-check_deviation
+VariationalMC.get_fermionic_Tvec
+VariationalMC.update_fermionic_Tvec!
+VariationalMC.get_fermionic_jastrow_ratio
+VariationalMC.map_jastrow_parameters
+VariationalMC.check_deviation
 ```
 
 ## Markov Methods
@@ -126,7 +126,7 @@ check_deviation
 
 ```@docs
 local_fermion_update!
-metropolis_step
+VariationalMC.metropolis_step
 ```
 
 ## ParticleConfiguration Types and Methods
@@ -145,18 +145,18 @@ metropolis_step
 - [`get_linked_spindex`](@ref)
 
 ```@docs
-MarkovMove
-propose_random_move
-hop!
-exchange!
-generate_initial_fermion_configuration
-get_onsite_fermion_occupation
+VariationalMC.MarkovMove
+VariationalMC.propose_random_move
+VariationalMC.hop!
+VariationalMC.exchange!
+VariationalMC.generate_initial_fermion_configuration
+VariationalMC.get_onsite_fermion_occupation
 get_particle_numbers
 get_particle_density
-get_spindex_type
-get_index_from_spindex
-get_spindices_from_index
-get_linked_spindex
+VariationalMC.get_spindex_type
+VariationalMC.get_index_from_spindex
+VariationalMC.get_spindices_from_index
+VariationalMC.get_linked_spindex
 ```
 
 ## Greens Methods
@@ -168,11 +168,11 @@ get_linked_spindex
 - [`check_deviation`](@ref)
 
 ```@docs
-initialize_equal_time_greens
-update_equal_time_greens!
-rank1_update!
-recalculate_equal_time_greens
-check_deviation
+VariationalMC.initialize_equal_time_greens
+VariationalMC.update_equal_time_greens!
+VariationalMC.rank1_update!
+VariationalMC.recalculate_equal_time_greens
+VariationalMC.check_deviation
 ```
 
 ## Optimizer Methods
@@ -184,9 +184,9 @@ check_deviation
 
 ```@docs
 stochastic_reconfiguration!
-get_Δk
-get_covariance_matrix
-get_force_vector
+VariationalMC.get_Δk
+VariationalMC.get_covariance_matrix
+VariationalMC.get_force_vector
 ```
 
 ## Measurement Methods
@@ -211,11 +211,11 @@ initialize_measurement_directories
 - [`get_n`](@ref)
 
 ```@docs
-get_local_energy
-get_local_kinetic_energy
-get_local_hubbard_energy
-get_double_occ
-get_n
+VariationalMC.get_local_energy
+VariationalMC.get_local_kinetic_energy
+VariationalMC.get_local_hubbard_energy
+VariationalMC.get_double_occ
+VariationalMC.get_n
 ```
 
 ### Optimization Measurements
@@ -226,10 +226,10 @@ get_n
 - [`measure_ΔkE!`](@ref)
 
 ```@docs
-measure_parameters!
-measure_Δk!
-measure_ΔkΔkp!
-measure_ΔkE!
+VariationalMC.measure_parameters!
+VariationalMC.measure_Δk!
+VariationalMC.measure_ΔkΔkp!
+VariationalMC.measure_ΔkE!
 ```
 
 ### Simulation Measurements
@@ -239,9 +239,9 @@ measure_ΔkE!
 - [`measure_n!`](@ref)
 
 ```@docs
-measure_local_energy!
-measure_double_occ!
-measure_n!
+VariationalMC.measure_local_energy!
+VariationalMC.measure_double_occ!
+VariationalMC.measure_n!
 ```
 
 ### Make Measurements
@@ -251,7 +251,7 @@ measure_n!
 
 ```@docs
 make_measurements!
-reset_measurements!
+VariationalMC.reset_measurements!
 ```
 
 ### Write Measurements

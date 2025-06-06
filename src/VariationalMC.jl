@@ -19,10 +19,9 @@ include("ModelGeometry.jl")
 export ModelGeometry
 
 include("Parameters.jl")
-export DeterminantalParameters
+export TightBindingModel, SpinModel, DeterminantalParameters, JastrowParameters
 
 include("Hamiltonian.jl")
-export TightBindingModel, SpinModel
 
 include("ParticleConfiguration.jl")
 export get_particle_numbers, get_particle_density
@@ -33,7 +32,7 @@ export DeterminantalWavefunction, get_determinantal_wavefunction
 include("Greens.jl")
 
 include("Jastrow.jl")
-export JastrowParameters, JastrowFactor, get_jastrow_factor
+export JastrowFactor, get_jastrow_factor
 
 include("Markov.jl")
 export local_fermion_update!
