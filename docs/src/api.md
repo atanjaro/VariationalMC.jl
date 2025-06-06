@@ -16,9 +16,9 @@ save_simulation_info
 initialize_datafolder
 create_datafolder_prefix
 model_summary
-``` -->
+```
 
-<!-- ## ModelGeometry Type and Methods
+## ModelGeometry Type and Methods
 
 - [`ModelGeometry`](@ref)
 - [`reduce_index_2d`](@ref)
@@ -130,7 +130,6 @@ check_deviation
 - [`local_fermion_update!`](@ref)
 - [`metropolis_step`](@ref)
 
-
 ```@docs
 local_fermion_update!
 metropolis_step
@@ -194,9 +193,9 @@ stochastic_reconfiguration!
 get_Δk
 get_covariance_matrix
 get_force_vector
-``` -->
+```
 
-<!-- # Measurement Methods
+## Measurement Methods
 
 ### Intitialize Measurements
 
