@@ -18,7 +18,7 @@ create_datafolder_prefix
 model_summary
 ``` -->
 
-## ModelGeometry Type and Methods
+<!-- ## ModelGeometry Type and Methods
 
 - [`ModelGeometry`](@ref)
 - [`reduce_index_2d`](@ref)
@@ -93,7 +93,7 @@ add_pairing_symmetry!
 add_spin_order!
 add_charge_order!
 add_chemical_potential!
-```
+``` -->
 
 ## DeterminantalWavefunction Type and Methods
 
@@ -105,7 +105,7 @@ DeterminantalWavefunction
 get_determinantal_wavefunction
 ```
 
-## Jastrow Types and Methods
+<!-- ## Jastrow Types and Methods
 
 - [`JastrowFactor`](@ref)
 - [`get_jastrow_factor`](@ref)
@@ -194,7 +194,7 @@ stochastic_reconfiguration!
 get_Δk
 get_covariance_matrix
 get_force_vector
-```
+``` -->
 
 <!-- # Measurement Methods
 
@@ -275,7 +275,7 @@ write_measurements!
 
 ```@docs
 
-``` --> -->
+``` --> 
 
 
 
