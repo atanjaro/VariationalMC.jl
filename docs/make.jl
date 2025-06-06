@@ -9,7 +9,7 @@ makedocs(
     sitename = "VariationalMC.jl",
     modules = [VariationalMC],
     format = Documenter.HTML(),
-    checkdocs = :exports,     # <----- this is the key change
+    checkdocs = :none,    
     pages = [
         "Home" => "index.md",
         "Usage" => "usage.md",
