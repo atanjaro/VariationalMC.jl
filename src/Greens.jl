@@ -52,12 +52,12 @@ end
 
 @doc raw"""
 
-    function update_equal_time_greens!( markov_move::MarkovMove, 
-                                        detwf::DeterminantalWavefunction, 
-                                        model_geometry::ModelGeometry,
-                                        Ne::Int64, 
-                                        n_stab_W::Int64, 
-                                        δW::Float64 )::Nothing
+    update_equal_time_greens!( markov_move::MarkovMove, 
+                               detwf::DeterminantalWavefunction, 
+                               model_geometry::ModelGeometry,
+                               Ne::Int64, 
+                               n_stab_W::Int64, 
+                               δW::Float64 )::Nothing
 
 Updates the equal-time Green's function while performing a numerical stabilzation check. If the calculated 
 deviation exceeds the set threshold, then the current Green's function is replaced by one calculated from scratch.

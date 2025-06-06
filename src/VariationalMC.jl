@@ -27,7 +27,7 @@ export TightBindingModel, SpinModel
 include("ParticleConfiguration.jl")
 export get_particle_numbers, get_particle_density
 
-include("Wavefunction.jl")
+include("DeterminantalWavefunction.jl")
 export DeterminantalWavefunction, get_determinantal_wavefunction
 
 include("Greens.jl")

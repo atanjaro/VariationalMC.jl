@@ -581,8 +581,8 @@ end
 
 
 @doc raw"""
-    check_deviation!( jastrow_Tvec::Vector{Float64}, 
-                      Tvec_r::Vector{Float64} )::Float64
+    check_deviation( jastrow_Tvec::Vector{Float64}, 
+                     Tvec_r::Vector{Float64} )::Float64
 
 Checks floating point error accumulation in the fermionic T vector.
 

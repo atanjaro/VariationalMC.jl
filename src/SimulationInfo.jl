@@ -1,6 +1,12 @@
 @doc raw"""
 
-    SimulationInfo
+    SimulationInfo( filepath::String, 
+                    datafolder_prefix::String,
+                    datafolder_name::String,
+                    datafolder::String,
+                    pID::Int,
+                    sID::Int,
+                    resuming::Bool )
 
 A type containing information about the simulation, including the location data is written to,
 the simulation ID, and MPI process ID, and whether this simulation started a new simulation or resumed
@@ -37,13 +43,17 @@ end
     SimulationInfo( ; datafolder_prefix::String, 
                     filepath::String = ".", 
                     sID::Int=0, 
-                    pID::Int=0 )
+                    pID::Int=0 )::SimulationInfo
 
 Creates an instance of the SimulationInfo type.
 
 """
-function SimulationInfo(; datafolder_prefix::String, filepath::String = ".", sID::Int=0, pID::Int=0)
-
+function SimulationInfo(; 
+    datafolder_prefix::String, 
+    filepath::String = ".", 
+    sID::Int=0, 
+    pID::Int=0
+)::SimulationInfo
     # initialize data folder names
     datafolder_name = @sprintf "%s-%d" datafolder_prefix sID
     datafolder = joinpath(filepath, datafolder_name)
