@@ -40,7 +40,7 @@ end
 
 @doc raw"""
 
-    SimulationInfo( ; datafolder_prefix::String, 
+    SimulationInfo( datafolder_prefix::String, 
                     filepath::String = ".", 
                     sID::Int=0, 
                     pID::Int=0 )::SimulationInfo
@@ -48,7 +48,7 @@ end
 Creates an instance of the SimulationInfo type.
 
 """
-function SimulationInfo(; 
+function SimulationInfo( 
     datafolder_prefix::String, 
     filepath::String = ".", 
     sID::Int=0, 
@@ -138,7 +138,7 @@ end
 
 @doc raw"""
 
-    model_summary( ; n̄::Float64,
+    model_summary( n̄::Float64,
                    nup::Int,
                    ndn::Int,
                    simulation_info::SimulationInfo, 
@@ -149,7 +149,7 @@ end
 Writes model summary to file.
 
 """
-function model_summary(;
+function model_summary(
         n̄::Float64,
         nup::Int,
         ndn::Int,

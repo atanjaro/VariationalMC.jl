@@ -59,7 +59,7 @@ end
 
 @doc raw"""
 
-    DeterminantalParameters( ; optimize::NamedTuple, 
+    DeterminantalParameters( optimize::NamedTuple, 
                              tight_binding_model::TightBindingModel, 
                              model_geometry::ModelGeometry, 
                              minabs_vpar::Float64, 
@@ -76,7 +76,7 @@ Given an intial set of parameters and optimization flags, generates a set of var
 - `pht::Bool`: whether model is particle-hole transformed. 
 
 """
-function DeterminantalParameters(;
+function DeterminantalParameters(
     optimize::NamedTuple, 
     tight_binding_model::TightBindingModel, 
     model_geometry::ModelGeometry, 
@@ -259,7 +259,7 @@ end
 
 @doc raw"""
 
-    JastrowParameters( ; jastrow_type::String, 
+    JastrowParameters( jastrow_type::String, 
                        optimize::NamedTuple,
                        model_geometry::ModelGeometry,
                        rng::Xoshiro )::JastrowParameters
@@ -273,7 +273,7 @@ Jastrow parameters.
 - `rng::Xoshiro`: random number generator.
 
 """
-function JastrowParameters(;
+function JastrowParameters(
     jastrow_type::String, 
     optimize::NamedTuple,
     model_geometry::ModelGeometry,
@@ -308,7 +308,7 @@ end
 
 @doc raw"""
 
-    JastrowParameters( ; jastrow_type::String, 
+    JastrowParameters( jastrow_type::String, 
                        optimize::NamedTuple,
                        model_geometry::ModelGeometry,
                        path_to_parameter_file::String )::JastrowParameters
@@ -322,7 +322,7 @@ Jastrow parameters from a specfied file.
 - `path_to_parameter_file::String`: filepath to initial parameters.
 
 """
-function JastrowParameters(;
+function JastrowParameters(
     jastrow_type::String, 
     optimize::NamedTuple,
     model_geometry::ModelGeometry,
