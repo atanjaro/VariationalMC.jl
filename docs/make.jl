@@ -1,6 +1,7 @@
 using Pkg
 Pkg.activate(@__DIR__)  # Activate the package environment
 Pkg.instantiate()       # Ensure all dependencies are installed
+push!(LOAD_PATH, "../src")
 
 using Documenter
 using VariationalMC

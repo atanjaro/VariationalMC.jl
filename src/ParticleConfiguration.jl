@@ -145,7 +145,8 @@ end
 
 @doc raw"""
     exchange!( markov_move::MarkovMove, 
-               pconfig::Vector{Int} )::Nothing
+               pconfig::Vector{Int},
+               model_geometry::ModelGeometry )::Nothing
 
 If proposed exchange move is accepted, updates the particle positions.
 
@@ -156,7 +157,8 @@ If proposed exchange move is accepted, updates the particle positions.
 # TODO: need to debug!
 function exchange!(
     markov_move::MarkovMove, 
-    pconfig::Vector{Int}
+    pconfig::Vector{Int},
+    model_geometry::ModelGeometry
 )::Nothing
     @assert(markov_move.possible)
 
