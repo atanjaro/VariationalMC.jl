@@ -3,7 +3,6 @@
 ## SimulationInfo Type and Methods
 
 - [`SimulationInfo`](@ref)
-- [`SimulationInfo(;)`](@ref)
 - [`save_simulation_info`](@ref)
 - [`initialize_datafolder`](@ref)
 - [`create_datafolder_prefix`](@ref)
@@ -11,7 +10,6 @@
 
 ```@docs
 SimulationInfo
-SimulationInfo(;)
 save_simulation_info
 initialize_datafolder
 create_datafolder_prefix
@@ -42,9 +40,7 @@ d
 - [`TightBindingModel`](@ref)
 - [`SpinModel`](@ref)
 - [`DeterminantalParameters`](@ref)
-- [`DeterminantalParameters(;)`](@ref)
 - [`JastrowParameters`](@ref)
-- [`JastrowParameters(;)`](@ref)
 - [`collect_parameters`](@ref)
 - [`update_parameters!`](@ref)
 - [`readin_parameters`](@ref)
@@ -53,9 +49,7 @@ d
 TightBindingModel
 SpinModel
 DeterminantalParameters
-DeterminantalParameters(;)
 JastrowParameters
-JastrowParameters(;)
 collect_parameters
 update_parameters!
 readin_parameters
