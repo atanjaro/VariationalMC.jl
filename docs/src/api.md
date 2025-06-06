@@ -1,10 +1,11 @@
 # API
 
-## ModelGeometry Types and Methods
+## Wavefunction Type and Methods
 
-- [`ModelGeometry`](@ref)
+- [`DeterminantalWavefunction`](@ref)
+- [`get_determinantal_wavefunction`](@ref)
 
 ```@docs
-ModelGeometry
-```
+DeterminantalWavefunction
+get_determinantal_wavefunction
 

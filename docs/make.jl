@@ -1,6 +1,6 @@
 using Pkg
 Pkg.activate(@__DIR__)  # Activate the package environment
-Pkg.instantiate()   # Ensure all dependencies are installed
+Pkg.instantiate()       # Ensure all dependencies are installed
 
 using Documenter
 using VariationalMC
@@ -9,6 +9,7 @@ makedocs(
     sitename = "VariationalMC.jl",
     modules = [VariationalMC],
     format = Documenter.HTML(),
+    checkdocs = :exports,     # <----- this is the key change
     pages = [
         "Home" => "index.md",
         "Usage" => "usage.md",
@@ -17,7 +18,7 @@ makedocs(
 )
 
 deploydocs(
-    repo = "github.com/atanjaro/VariationalMC.jl.git",  
+    repo = "github.com/atanjaro/VariationalMC.jl.git",
     target = "build",
     branch = "gh-pages",
     devbranch = "main",
