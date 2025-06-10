@@ -1,32 +1,3 @@
-# Usage
-
-Here are a few example usage cases. 
-
-## Hubbard chain
-
-In the first example, we will work though simulating the repulsive Hubbard model 
-on a 1D chain at half-filling. 
-
-The Hubbard Hamiltonian for a 1D chain is given by 
-```math
-\hat{H} = -t \sum_{i, \sigma} (\hat{c}^{\dagger}_{i+1,\sigma}\hat{c}^{\phantom \dagger}_{i, \sigma} + {\rm h.c.})
-+ U \sum_i \hat{n}_{\uparrow,i}\hat{n}_{\downarrow,i} - \mu \sum_{\sigma,i} \hat{n}_{\sigma,i},
-```
-where ``\hat{c}^\dagger_{i, \sigma} \ (\hat{c}^{\phantom \dagger}_{i, \sigma})`` creates (annihilates) a spin ``\sigma``
-electron on site ``i`` in the lattice, and ``\hat{n}_{\sigma,i} = \hat{c}^\dagger_{i, \sigma} \hat{c}^{\phantom \dagger}_{i, \sigma}``
-is the spin-``\sigma`` electron number operator for site ``i``. In the above Hamiltonian ``t`` is the nearest neighbor hopping integral
-and ``U > 0`` controls the strength of the on-site Hubbard repulsion.
-Lastly, we consider the case that the system is half-filled and particle-hole symmetric,
-which occurs when when the chemical potential is zero, ``\mu = 0.0``.
-
-Suppose we want to simulate a half-filled Hubbard chain ``(\mu = 0.0)`` of length ``L=4`` with ``U=1.0``.
-This is accomplished by running the script associated with this example using the command
-```
-> julia hubbard_chain.jl 1 4 1.0 2 2 300 1000 2000 100
-```
-Below you will find a heavily commented script that includes details on what each part of the code is doing.
-
-````julia
 # Import the required packages
 using LinearAlgebra
 using Random
@@ -459,6 +430,4 @@ if abspath(PROGRAM_FILE) == @__FILE__
     # Run the simulation.
     run_hubbard_chain_simulation(sID, L, U, nup, ndn, N_equil, N_opts, N_updates, N_bins)
 end
-````
-
 

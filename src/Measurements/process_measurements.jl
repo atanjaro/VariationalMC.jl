@@ -1,23 +1,41 @@
-## TEST ## Jackknife average and standard deviation for a vector of samples
-function jackknife_stats(samples::Vector{Float64})
-    N = length(samples)
+@doc raw"""
+
+    jackknife_stats( bin_sample::Vector{Float64} )
+
+Performs jacknife resampling to obtain the standard deviation per bin.
+
+"""
+function jackknife_stats(
+    bin_samples::Vector{Float64}
+)
+    N = length(bin_samples)
     if N ≤ 1
         return (mean=NaN, std=NaN)
     end
-    jk_means = [mean(deleteat!(copy(samples), i)) for i in 1:N]
+
+    jk_means = [mean(deleteat!(copy(bin_samples), i)) for i in 1:N]
     jk_mean = mean(jk_means)
     jk_std = sqrt((N - 1) / N * sum((jk_means .- jk_mean).^2))
+
     return (mean=jk_mean, std=jk_std)
 end
 
 
-## TEST ## General function to process scalar-valued JLD2 measurements
-# Process scalar JLD2 measurements (energy, density, double_occ)
+@doc raw"""
+
+    process_scalar_measurements( datafolder::String,
+                                 measurement::String,
+                                 output_csv.String )::Nothing
+
+For energy, density, or double occupancy measurements, avearages over all measurements
+in a certain bin. 
+
+"""
 function process_scalar_measurements(
     datafolder::String,
     measurement::String,        # "energy", "density", or "double_occ"
     output_csv::String
-)
+)::Nothing
     # All now live in 'simulation' directory
     measurement_dir = joinpath(datafolder, "simulation", measurement)
 
@@ -51,6 +69,8 @@ function process_scalar_measurements(
     sort!(results, :index)
     rename!(results, [:index, :local_mean, :local_std])
     CSV.write(output_csv, results)
+
+    return nothing
 end
 
 
