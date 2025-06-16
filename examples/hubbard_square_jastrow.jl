@@ -9,7 +9,7 @@ using VariationalMC
 # We define a top-level function for running the VMC simulation.
 # Note that the arguments of this function correspond to the command line
 # arguments used to run this script.
-function run_hubbard_chain_simulation(
+function run_hubbard_square_simulation(
     sID, 
     L,
     U,
@@ -29,19 +29,33 @@ function run_hubbard_chain_simulation(
     optimize = (
         # local s-wave pairing
         Δ_0 = false,
+        # site-dependent s-wave pairing  
+        Δ_spd = false,
+        # local d-wave pairing
+        Δ_d = true,
+        # site-dependent d-wave pairing 
+        Δ_dpd = false,          
+        # pairing momentum
+        q_p = false,
         # spin-x (in-plane magnetization)
         Δ_sx = false,
         # spin-z (out-of-plane magnetization)
         Δ_sz = true,
+        # site-dependent spin density
+        Δ_ssd = false,
         # (BCS) chemical potential
         μ = false,
         # uniform charge density 
-        Δ_cdw = false
+        Δ_cdw = false,
+        # site-dependent charge density
+        Δ_csd = false,
+        # density-density Jastrow 
+        djastrow = true,
     )
 
     # Specify whether the model will be particle-hole transformed.
     # Note that this is required if adding pair fields to the wavefunction.
-    pht = false
+    pht = true
 
     # Construct the foldername the data will be written.
     df_prefix = @sprintf "hubbard_chain_U%.2f_nup%.2f_ndn%.2f_L%d_opt" U, nup, ndn, L
@@ -77,9 +91,17 @@ function run_hubbard_chain_simulation(
     # matrix will be recomputed using the numerical stabilization procedure.
     n_stab_W = 50
 
+    # Set the frequency in Monte Carlo steps with which the Jastrow T vector will be
+    # recomputed using the numerical stabilization procedure.
+    n_stab_T = 50
+
     # Specify the maximum allowed error in the equal-time Green's function matrix that
     # is corrected by numerical stabilization.
     δW = 1e-3
+
+    # Specify the maximum allowed error in the Jastrow T vector that is corrected 
+    # by numerical stabilization.
+    δT = 1e-3
 
     # Specify the optimization bin size.
     # The optimization bin size if the number of measurments that are averaged over each time data
@@ -115,8 +137,8 @@ function run_hubbard_chain_simulation(
     # Initialize an instance of the UnitCell type.
     # This struct defines the UnitCell.
     unit_cell = UnitCell(
-        lattice_vecs = [[1.0]],
-        basis_vecs   = [[0.0]]
+        lattice_vecs = [[1.0, 0.0], [0.0, 1.0]],
+        basis_vecs   = [[0.0, 0.0]]
     )
 
     # Initialize an instance of the Lattice type.
@@ -124,25 +146,37 @@ function run_hubbard_chain_simulation(
     # Note that the current version of LatticeUtilities requires 
     # periodic boundary conditions be used.
     lattice = Lattice(
-        [L], 
-        [true]
+        [L, L], 
+        [true, true]
     )
 
-    # Define the nearest neighbor bond for a 1D chain.
+    # Define the nearest neighbor x-bond for a square lattice.
     bond_x = Bond(
         orbitals = (1,1), 
         displacement = [1]
     )
 
-    # Define the next-nearest neighbor bonds for a 1D chain.
-    bond_xp = Bond(
+    # Define the nearest neighbor y-bond for a square lattice.
+    bond_y = Bond(
         orbitals = (1,1), 
-        displacement = [2]
+        displacement = [0,1]
+    )
+
+    # Define the next-nearest neighbor bonds for a square lattice.
+    bond_xy = Bond(
+        orbitals = (1,1), 
+        displacement = [1,1]
+    )
+
+    # Define the next-nearest neighbor bonds for a square lattice.
+    bond_yx = Bond(
+        orbitals = (1,1), 
+        displacement = [1,-1]
     )
 
     # Collect all bond definitions into a single vector.
     # Note that this has the structure [[nearest],[next-nearest]].
-    bonds = [[bond_x], [bond_xp]]
+    bonds = [[bond_x, bond_y], [bond_xy, bond_yx]]
     
     # Initialize an instance of the ModelGeometry type.
     # This type helps keep track of all the relevant features of the lattice
@@ -205,6 +239,14 @@ function run_hubbard_chain_simulation(
         pht
     )
 
+    # Initialize density-density Jastrow variational parameters. 
+    djastrow_parameters = JastrowParameters(
+        "e-den-den",
+        optimize, 
+        model_geometry,
+        rng
+    )
+
     # Initialize the (fermionic) particle configuration cache.
     pconfig_cache = nothing
 
@@ -231,16 +273,29 @@ function run_hubbard_chain_simulation(
             pconfig_cache
         )   
 
+        # Initialize the density-density Jastrow factor.
+        djas_factor = get_jastrow_factor(
+            djastrow_parameters,
+            detwf,
+            model_geometry,
+            pht
+        )
+
         # Iterate over equilibration/thermalization updates.
         for step in 1:N_equil 
 
             # Attempt to update the fermionic particle configuration.
-            (acceptance_rate, detwf) = local_fermion_update!(
+            (acceptance_rate, detwf, djas_factor) = local_fermion_update!(
                 detwf, 
+                djas_factor,
+                djastrow_parameters,
                 Ne, 
                 model_geometry, 
+                pht,
                 n_stab_W,
+                n_stab_T,
                 δW, 
+                δT,
                 rng
             )
 
@@ -252,12 +307,17 @@ function run_hubbard_chain_simulation(
         for n in 1:opt_bin_size
 
             # Attempt to update the fermionic particle configuration.
-            (acceptance_rate, detwf) = local_fermion_update!(
+            (acceptance_rate, detwf, djas_factor) = local_fermion_update!(
                 detwf, 
+                djas_factor,
+                djastrow_parameters,
                 Ne, 
                 model_geometry, 
+                pht,
                 n_stab_W,
+                n_stab_T,
                 δW, 
+                δT,
                 rng
             ) 
                                                                                                         
@@ -269,6 +329,8 @@ function run_hubbard_chain_simulation(
                 measurement_container, 
                 detwf, 
                 tight_binding_model, 
+                djas_factor,
+                djastrow_parameters,
                 determinantal_parameters, 
                 model_geometry, 
                 Ne, 
@@ -294,6 +356,7 @@ function run_hubbard_chain_simulation(
         stochastic_reconfiguration!( 
             measurement_container,  
             determinantal_parameters, 
+            djastrow_parameters,
             η, 
             dt, 
             bin, 
@@ -330,11 +393,19 @@ function run_hubbard_chain_simulation(
             pconfig_cache
         )   
 
+        # Initialize the density-density Jastrow factor.
+        djas_factor = get_jastrow_factor(
+            djastrow_parameters,
+            detwf,
+            model_geometry,
+            pht
+        )
+
         # Iterate over equilibration/thermalization updates.
         for step in 1:N_equil 
 
             # Attempt to update the fermionic particle configuration.
-            (acceptance_rate, detwf) = local_fermion_update!(
+            (acceptance_rate, detwf, djas_factor) = local_fermion_update!(
                 detwf, 
                 Ne, 
                 model_geometry, 
@@ -353,10 +424,15 @@ function run_hubbard_chain_simulation(
             # Attempt to update the fermionic particle configuration.
             (acceptance_rate, detwf) = local_fermion_update!(
                 detwf, 
+                djas_factor,
+                djastrow_parameters,
                 Ne, 
                 model_geometry, 
+                pht,
                 n_stab_W,
+                n_stab_T,
                 δW, 
+                δT,
                 rng
             ) 
                                                                                                         
@@ -368,6 +444,8 @@ function run_hubbard_chain_simulation(
                 measurement_container, 
                 detwf, 
                 tight_binding_model, 
+                djas_factor,
+                djastrow_parameters,
                 determinantal_parameters, 
                 model_geometry, 
                 Ne, 
@@ -420,6 +498,5 @@ if abspath(PROGRAM_FILE) == @__FILE__
     N_bins = parse(Int, ARGS[9])
 
     # Run the simulation.
-    run_hubbard_chain_simulation(sID, L, U, nup, ndn, N_equil, N_opts, N_updates, N_bins)
+    run_hubbard_square_simulation(sID, L, U, nup, ndn, N_equil, N_opts, N_updates, N_bins)
 end
-

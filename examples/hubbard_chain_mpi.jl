@@ -2,9 +2,13 @@
 using LinearAlgebra
 using Random
 using Printf
+using MPI
 
 using LatticeUtilities
 using VariationalMC
+
+# Initialize MPI.
+MPI.Init()
 
 # We define a top-level function for running the VMC simulation.
 # Note that the arguments of this function correspond to the command line
@@ -43,11 +47,17 @@ function run_hubbard_chain_simulation(
     # Note that this is required if adding pair fields to the wavefunction.
     pht = false
 
+    # initialize the MPI communicator.
+    comm = MPI.COMM_WORLD
+
     # Construct the foldername the data will be written.
     df_prefix = @sprintf "hubbard_chain_U%.2f_nup%.2f_ndn%.2f_L%d_opt" U, nup, ndn, L
 
     # Append optimized parameter names to the foldername.
     datafolder_prefix = create_datafolder_prefix(optimize, df_prefix)
+
+    # Get the MPI comm rank, which fixes the process ID (pID).
+    pID = MPI.Comm_rank(comm)
 
     # Initialize an instance of the SimulationInfo type.
     # This type tracks of where the data is written, as well as 
@@ -55,7 +65,8 @@ function run_hubbard_chain_simulation(
     simulation_info = SimulationInfo(
         filepath = filepath, 
         datafolder_prefix = datafolder_prefix,
-        sID = sID
+        sID = sID,
+        pID = pID
     )
 
     # Initialize the directory the data will be written.
@@ -175,6 +186,11 @@ function run_hubbard_chain_simulation(
         measurement_container
     )
 
+    # Synchronize all the MPI processes.
+    # We need to ensure the sub-directories the measurements will be written are created
+    # prior to allowing any of the processes to move beyond this point.
+    MPI.Barrier(comm)
+
     ############################
     ### SET-UP VMC SIMULATION ##
     ############################
@@ -287,8 +303,15 @@ function run_hubbard_chain_simulation(
         # Record the last particle configuration used in the current bin. 
         pconfig_cache = detwf.pconfig
 
+        # Synchronize all the MPI processes.
+        # We need to ensure the sub-directories the measurements will be written are created
+        # prior to allowing any of the processes to move beyond this point.
+        MPI.Barrier(comm)
+
         # Process the measurement results, calculating error bars for all measurements. 
-        # process_measurements(simulation_info, opt_bin_size)
+        # if iszero(simulation_info.pID)
+        #     process_measurements(simulation_info, opt_bin_size)
+        # end
 
         # Attempt an update to the variational parameters using the Stochastic Reconfiguration procedure. 
         stochastic_reconfiguration!( 
@@ -386,8 +409,15 @@ function run_hubbard_chain_simulation(
         # Record the last particle configuration used in the current bin. 
         pconfig_cache = detwf.pconfig
 
+        # Synchronize all the MPI processes.
+        # We need to ensure the sub-directories the measurements will be written are created
+        # prior to allowing any of the processes to move beyond this point.
+        MPI.Barrier(comm)
+
         # Process the measurement results, calculating error bars for all measurements. 
-        # process_measurements(simulation_info, bin_size)
+        # if iszero(simulation_info.pID)
+        #     process_measurements(simulation_info, opt_bin_size)
+        # end
     end     
 
     # Record end time for the simulation. 
@@ -421,5 +451,7 @@ if abspath(PROGRAM_FILE) == @__FILE__
 
     # Run the simulation.
     run_hubbard_chain_simulation(sID, L, U, nup, ndn, N_equil, N_opts, N_updates, N_bins)
-end
 
+    # Finalize MPI (not strictly required).
+    MPI.Finalize()
+end
