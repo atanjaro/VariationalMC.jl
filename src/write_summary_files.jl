@@ -63,7 +63,7 @@ Writes parameter summary to file.
 """
 function parameter_summary(
     simulation_info::SimulationInfo,
-    determinantal_parameters:DeterminantalParameters
+    determinantal_parameters::DeterminantalParameters
 )::Nothing
 
     # if process ID is 1
@@ -102,7 +102,7 @@ Writes parameter summary to file.
 """
 function parameter_summary(
     simulation_info::SimulationInfo,
-    determinantal_parameters:DeterminantalParameters,
+    determinantal_parameters::DeterminantalParameters,
     jastrow_parametrs::JastrowParameters
 )::Nothing
 
