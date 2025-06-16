@@ -90,38 +90,48 @@ function DeterminantalParameters(
     # x-dimension
     Lx = model_geometry.lattice.L[1]
 
+    # number of lattice sites
+    N = model_geometry.lattice.N
+
     if dims > 1
         if pht
             det_pars = (
-                μ = 0.0,
                 Δ_0 = minabs_vpar,
+                Δ_spd = fill(minabs_vpar, N),
                 Δ_d = 0.0,
-                Δ_afm = minabs_vpar,
+                Δ_dpd = fill(0.0, N),
+                q_p = fill(0.0, dims),
+                Δ_sx = 0.0,
+                Δ_sz = minabs_vpar,
+                Δ_ssd = fill(0.0, Lx),
+                μ = 0.0,
                 Δ_cdw = 0.0,
-                Δ_sdc = fill(0.0, Lx),
-                Δ_sds = fill(0.0, Lx)
+                Δ_csd = fill(0.0, Lx)
             )
         else
             det_pars = (
+                Δ_sx = 0.0,
+                Δ_sz = minabs_vpar,
+                Δ_ssd = fill(0.0, Lx),
                 μ = get_tb_chem_pot(Ne, tight_binding_model, model_geometry),
-                Δ_afm = minabs_vpar,
                 Δ_cdw = 0.0,
-                Δ_sdc = fill(0.0, Lx),
-                Δ_sds = fill(0.0, Lx)
+                Δ_csd = fill(0.0, Lx),
             )
         end
     else
         if pht
             det_pars = (
-                μ = 0.0,
                 Δ_0 = minabs_vpar,
-                Δ_afm = minabs_vpar,
+                Δ_sx = 0.0,
+                Δ_sz = minabs_vpar,
+                μ = 0.0,
                 Δ_cdw = 0.0,
             )
         else
             det_pars = (
+                Δ_sx = 0.0,
+                Δ_sz = minabs_vpar,
                 μ = get_tb_chem_pot(Ne, tight_binding_model, model_geometry),
-                Δ_afm = minabs_vpar,
                 Δ_cdw = 0.0,
             )
         end
@@ -179,35 +189,42 @@ function DeterminantalParameters(
     if dims > 1
         if pht
             det_pars = (
+                Δ_0 = vpar_dict[:pairing0],
+                Δ_spd = vpar_dict[:spd],
+                Δ_d = vpar_dict[:pairingd], 
+                Δ_dpd = vpar_dict[:dpd],
+                q_p = vpar_dict[:q_p],
+                Δ_sx = vpar_dict[:sx],
+                Δ_sz = vpar_dict[:sz],
+                Δ_ssd = vpar_dict[:ssd],
                 μ = vpar_dict[:chemical_potential],
-                Δ_0 = vpar_dict[:pairing][1],
-                Δ_d = vpar_dict[:pairing][2],
-                Δ_afm = vpar_dict[:afm],
                 Δ_cdw = vpar_dict[:cdw],
-                Δ_sdc = vpar_dict[:sdc],
-                Δ_sds = vpar_dict[:sds]
+                Δ_csd = vpar_dict[:csd]
             )
         else
             det_pars = (
+                Δ_sx = vpar_dict[:sx],
+                Δ_sz = vpar_dict[:sz],
+                Δ_ssd = vpar_dict[:ssd],
                 μ = vpar_dict[:chemical_potential],
-                Δ_afm = vpar_dict[:afm],
                 Δ_cdw = vpar_dict[:cdw],
-                Δ_sdc = vpar_dict[:sdc],
-                Δ_sds = vpar_dict[:sds]
+                Δ_csd = vpar_dict[:csd]
             )
         end
     else
         if pht
             det_pars = (
+                Δ_0 = vpar_dict[:pairing0],
+                Δ_sx = vpar_dict[:sx],
+                Δ_sz = vpar_dict[:sz],
                 μ = vpar_dict[:chemical_potential],
-                Δ_0 = Δ_0 = vpar_dict[:pairing][1],
-                Δ_afm = vpar_dict[:afm],
                 Δ_cdw = vpar_dict[:cdw],
             )
         else
             det_pars = (
+                Δ_sx = vpar_dict[:sx],
+                Δ_sz = vpar_dict[:sz],
                 μ = vpar_dict[:chemical_potential],
-                Δ_afm = vpar_dict[:afm],
                 Δ_cdw = vpar_dict[:cdw],
             )
         end
@@ -463,33 +480,64 @@ end
 
     readin_parameters( filename::String )
 
-Parses standard file containing initial variational parameters. 
+Parses TOML file containing initial variational parameters. 
 
-- `filename::String`: name of parameter file.
+- `filename::String`: name of parameter summary file in TOML format.
 
 """
 function readin_parameters(
     filename::String
 )
-    lines = open(filename) do f
-        filter(!isempty, [
-            strip(split(line, "#")[1]) for line in eachline(f)
-        ])
+    toml_data = TOML.parsefile(filename)
+
+    det_dict = get(toml_data, "DeterminantalParameters", Dict())
+    jastrow_dict = get(toml_data, "JastrowParameters", Dict())
+    det_pars_raw = get(det_dict, "det_pars", Dict())
+    jpar_map = get(jastrow_dict, "jpar_map", Dict())
+
+    # Mapping from TOML keys to internal symbols
+    keymap = Dict(
+        "Δ_sx" => :sx,
+        "Δ_sz" => :sz,
+        "Δ_0" => :pairing0,
+        "Δ_d" => :pairingd,
+        "Δ_spd" => :spd,
+        "Δ_dpd" => :dpd,
+        "Δ_ssd" => :ssd,
+        "Δ_csd" => :csd,
+        "μ" => :chemical_potential,
+        "Δ_cdw" => :cdw,
+        "q_p" => :q_p
+    )
+
+    # Construct `vpar_dict` from whatever exists in the TOML file
+    vpar_dict = Dict{Symbol, Any}()
+
+    for (toml_key, sym_key) in keymap
+        if haskey(det_pars_raw, toml_key)
+            val = det_pars_raw[toml_key]
+            if startswith(toml_key, "Δ_") && toml_key == "Δ_0"
+                # Store pairing as first element in vector
+                vpar_dict[:pairing] = get(vpar_dict, :pairing, [])[1:0]
+                push!(vpar_dict[:pairing], val)
+            elseif toml_key == "Δ_d"
+                vpar_dict[:pairing] = get(vpar_dict, :pairing, [])[1:1]
+                push!(vpar_dict[:pairing], val)
+            else
+                vpar_dict[sym_key] = val
+            end
+        end
     end
 
-    parameters = [parse.(Float64, split(line)) for line in lines]
+    # # Also include jastrow if present
+    # if !isempty(jpar_map)
+    #     vpar_dict[:density_jastrow] = get(jpar_map, "(1, 2)", [])
+    #     vpar_dict[:spin_jastrow] = get(jpar_map, "(3, 4)", [])
+    # end
 
-    return Dict(
-        :chemical_potential => parameters[1][1],
-        :pairing            => parameters[2],
-        :afm                => parameters[3][1],
-        :sds                => parameters[4],
-        :cdw                => parameters[5][1],
-        :sdc                => parameters[6],
-        :density_jastrow    => parameters[7],
-        :spin_jastrow       => parameters[8]
-    )
+    return vpar_dict
 end
+
 
 
 

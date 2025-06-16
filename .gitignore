@@ -1,2 +1,3 @@
 /Manifest.toml
 test/hubbard_chain_test.jl
+test/hubbard_square_test.jl

@@ -251,28 +251,9 @@ function build_variational_hamiltonian(
     # initialize Hamiltonian and operator matrices
     H_vpars = []
     V = []
-    
-    # add chemical potential term
-    add_chemical_potential!(
-        determinantal_parameters, 
-        optimize, 
-        H_vpars, 
-        V, 
-        model_geometry, 
-        pht
-    )
 
-    debug && println("Hamiltonian::build_variational_hamiltonian() : ")
-    debug && println("adding chemical potential matrix")
-    debug && println("initial μ = ", determinantal_parameters.det_pars.μ)
-    if optimize.μ
-        debug && println("optimize = true")
-    else
-        debug && println("optimize = false")
-    end
-
-    # add s-wave term
     if pht == true
+        # add s-wave pairing 
         add_pairing_symmetry!(
             "s", 
             determinantal_parameters, 
@@ -292,8 +273,28 @@ function build_variational_hamiltonian(
             debug && println("optimize = false")
         end
 
-        # add d-wave pairing 
         if dims > 1
+            # add sPDW pairing
+            add_pairing_symmetry!(
+                "sPDW",
+                determinantal_parameters,
+                optimize,
+                H_vpars,
+                V,
+                model_geometry,
+                pht
+            )
+
+            debug && println("Hamiltonian::build_variational_hamiltonian() : ")
+            debug && println("adding site-dependent s-wave pairing matrix")
+            debug && println("initial Δ_spd = ", determinantal_parameters.det_pars.Δ_spd)
+            if optimize.Δ_spd
+                debug && println("optimize = true")
+            else
+                debug && println("optimize = false")
+            end
+
+            # add d-wave pairing 
             add_pairing_symmetry!(
                 "d", 
                 determinantal_parameters, 
@@ -312,19 +313,48 @@ function build_variational_hamiltonian(
             else
                 debug && println("optimize = false")
             end
+
+            # add dPDW pairing
+            add_pairing_symmetry!(
+                "dPDW",
+                determinantal_parameters,
+                optimize,
+                H_vpars,
+                V,
+                model_geometry,
+                pht
+            )
+
+            debug && println("Hamiltonian::build_variational_hamiltonian() : ")
+            debug && println("adding site-dependent d-wave pairing matrix")
+            debug && println("initial Δ_dpd = ", determinantal_parameters.det_pars.Δ_dpd)
+            if optimize.Δ_dpd
+                debug && println("optimize = true")
+            else
+                debug && println("optimize = false")
+            end
         end
     end
 
     # add in-plane magnetization term
-    # add_spin_order!(
-    #     "spin-x"
-    #     determinantal_parameters,
-    #     optimize,
-    #     H_vpars,
-    #     V,
-    #     model_geometry,
-    #     pht
-    # )
+    add_spin_order!(
+        "spin-x",
+        determinantal_parameters,
+        optimize,
+        H_vpars,
+        V,
+        model_geometry,
+        pht
+    )
+
+    debug && println("Hamiltonian::build_variational_hamiltonian() : ")
+    debug && println("adding spin-x matrix")
+    debug && println("initial Δ_spinx = ", determinantal_parameters.det_pars.Δ_spinz)
+    if optimize.Δ_spinz
+        debug && println("optimize = true")
+    else
+        debug && println("optimize = false")
+    end
 
     # add antiferromagnetic (Neél) term
     add_spin_order!(
@@ -339,8 +369,49 @@ function build_variational_hamiltonian(
 
     debug && println("Hamiltonian::build_variational_hamiltonian() : ")
     debug && println("adding spin-z matrix")
-    debug && println("initial Δ_afm = ", determinantal_parameters.det_pars.Δ_afm)
-    if optimize.Δ_afm
+    debug && println("initial Δ_spinz = ", determinantal_parameters.det_pars.Δ_spinz)
+    if optimize.Δ_spinz
+        debug && println("optimize = true")
+    else
+        debug && println("optimize = false")
+    end
+
+    # add site-dependent spin term
+    if dims > 1
+        add_spin_order!(
+            "site-dependent", 
+            determinantal_parameters, 
+            optimize, 
+            H_vpars, 
+            V, 
+            model_geometry, 
+            pht
+        )
+
+        debug && println("Hamiltonian::build_variational_hamiltonian() : ")
+        debug && println("adding site-dependent spin matrix")
+        debug && println("initial Δ_sds = ", determinantal_parameters.det_pars.Δ_sds)
+        if optimize.Δ_sds
+            debug && println("optimize = true")
+        else
+            debug && println("optimize = false")
+        end
+    end
+
+    # add chemical potential term
+    add_chemical_potential!(
+        determinantal_parameters, 
+        optimize, 
+        H_vpars, 
+        V, 
+        model_geometry, 
+        pht
+    )
+
+    debug && println("Hamiltonian::build_variational_hamiltonian() : ")
+    debug && println("adding chemical potential matrix")
+    debug && println("initial μ = ", determinantal_parameters.det_pars.μ)
+    if optimize.μ
         debug && println("optimize = true")
     else
         debug && println("optimize = false")
@@ -388,28 +459,6 @@ function build_variational_hamiltonian(
         end
     end
 
-    # add site-dependent spin term
-    if dims > 1
-        add_spin_order!(
-            "site-dependent", 
-            determinantal_parameters, 
-            optimize, 
-            H_vpars, 
-            V, 
-            model_geometry, 
-            pht
-        )
-
-        debug && println("Hamiltonian::build_variational_hamiltonian() : ")
-        debug && println("adding site-dependent spin matrix")
-        debug && println("initial Δ_sds = ", determinantal_parameters.det_pars.Δ_sds)
-        if optimize.Δ_sds
-            debug && println("optimize = true")
-        else
-            debug && println("optimize = false")
-        end
-    end
-
     @assert length(H_vpars) == determinantal_parameters.num_det_pars
     @assert length(V) == determinantal_parameters.num_det_opts
 
@@ -429,7 +478,7 @@ end
 
 Adds a pairing symmetry term to the auxiliary Hamiltonian. 
 
-- `symmetry::String`: type of pairing symmetry: "s" or "d"
+- `symmetry::String`: type of pairing symmetry: "s", "d", "sPDW", or "dPDW
 - `determinantal_parameters::DeterminantalParameters`: set of determinantal variational parameters.
 - `optimize::NamedTuple`: field of optimization flags.
 - `H_vpars::Vector{Any}`: vector of variational Hamiltonian matrices.
@@ -531,10 +580,182 @@ function add_pairing_symmetry!(
         H_d += Δ_d * V_dwave
         push!(H_vpars,H_d)
 
-        # if Δ_d is being optimized, store Vdwave matrix
+        # if Δ_d is being optimized, store V_dwave matrix
         if optimize.Δ_d
             push!(V, V_dwave)
         end
+    elseif symmetry == "sPDW"
+        @assert pht == true
+        @assert dims > 1
+        
+        # create neighbor table
+        nbr_table = build_neighbor_table(
+            bonds[1],
+            model_geometry.unit_cell,
+            model_geometry.lattice
+        )
+
+        # pairing momentum
+        q_p = determinantal_parameters.det_pars.q_p
+
+        # s-wave pair fields
+        Δ_spd = determinantal_parameters.det_pars.Δ_spd
+
+        # initialize sPDW matrices
+        H_sff = zeros(Complex, 2*N, 2*N)     
+        H_slo = zeros(Complex, 2*N, 2*N)     
+        V_spd = Matrix{Complex}[]
+        for i in 1:N
+            push!(V_spd, zeros(Complex, 2*N, 2*N))
+        end
+
+        # loop over neighbors in the x-direction 
+        for col in 1:N
+            i, j = nbr_table[:, col]
+
+            # loop over x-direction 
+            V_spd[i][i, j + N] = 1.0 
+            V_spd[j][j, i + N] = 1.0 
+
+            # Hermitian conjugate
+            V_spd[i][j + N, i] = 1.0 
+            V_spd[j][i + N, j] = 1.0 
+        end
+
+        # loop over neighbors in the y-direction 
+        for col in N+1:2*N
+            i, j = nbr_table[:, col]
+
+            V_spd[i][i, j + N] = 1.0 
+            V_spd[j][j, i + N] = 1.0 
+
+            # Hermitian conjugate
+            V_spd[i][j + N, i] = 1.0 
+            V_spd[j][i + N, j] = 1.0 
+        end
+
+        # get all lattice site positions
+        positions = []
+        for i in 1:N
+            pos = site_to_loc(i, unit_cell, lattice)[1]
+            push!(positions, pos)
+        end
+
+        for i in 1:N
+            # construct Fulde-Ferrell term
+            ff_phase = exp(im*dot(q_p, positions[i]))
+            H_sff += Δ_spd[i] * ff_phase * V_spd[i]      
+
+            # construct Larkin-Ovchinnikov term
+            lo_phase = exp(im*dot(q_p, positions[i])) + exp(-im*dot(q, positions[i]))
+            H_slo += Δ_spd[i] * lo_phase * V_spd[i]                
+
+            # if Δ_spd is being optimized, store each V_spd matrix
+            if optimize.Δ_spd
+                push!(V, V_spd[i])
+            end
+        end
+
+        # add Fulde-Ferrell sPDW matrix
+        push!(H_vpars, H_sff)
+
+        # add Larkin-Ovchinnikov sPDW matrix
+        push!(H_vpars, H_slo)
+
+        # # add complete sPDW matrix
+        # H_spdw = H_sff + Hslo
+        # push!(H_vpars, H_spdw)
+    elseif symmetry == "dPDW"
+        @assert pht == true
+        @assert dims > 1
+
+        # create neighbor table
+        nbr_table = build_neighbor_table(
+            bonds[1],
+            model_geometry.unit_cell,
+            model_geometry.lattice
+        )
+
+        # pairing momentum
+        q_p = determinantal_parameters.det_pars.q_p
+
+        # d-wave pair fields
+        Δ_dpd = determinantal_parameters.det_pars.Δ_dpd
+
+        # initialize dPDW matrices
+        H_dff = zeros(Float32, 2*N, 2*N)     
+        H_dlo = zeros(Float32, 2*N, 2*N)   
+        V_dpd = Matrix{Float32}[]
+        V_dpdx = Matrix{Float32}[]
+        V_dpdy = Matrix{Float32}[]
+        for i in 1:N
+            push!(V_dpd, zeros(Float32, 2*N, 2*N))
+            push!(V_dpdx, zeros(Float32, 2*N, 2*N))
+            push!(V_dpdy, zeros(Float32, 2*N, 2*N))
+        end
+
+        # loop over neighbors in the x-direction 
+        for col in 1:N
+            i, j = nbr_table[:, col]
+
+            # loop over x-direction 
+            V_dpdx[i][i, j + N] = 1.0
+            V_dpdx[j][j, i + N] = 1.0
+
+            # Hermitian conjugate
+            V_dpdx[i][j + N, i] = 1.0
+            V_dpdx[j][i + N, j] = 1.0
+        end
+
+        # loop over neighbors in the y-direction 
+        for col in N+1:2*N
+            i, j = nbr_table[:, col]
+
+            V_dpdy[i][i, j + N] = -1.0
+            V_dpdy[j][j, i + N] = -1.0
+
+            # Hermitian conjugate
+            V_dpdy[i][j + N, i] = -1.0
+            V_dpdy[j][i + N, j] = -1.0
+        end
+
+        # complete V_dpd matrix
+        for i in 1:N
+            V_dpd[i] += V_dpdx[i]
+            V_dpd[i] += V_dpdy[i] 
+        end
+
+        # get all lattice site positions
+        positions = []
+        for i in 1:N
+            pos = site_to_loc(i, unit_cell, lattice)[1]
+            push!(positions, pos)
+        end
+
+        for i in 1:N
+            # construct Fulde-Ferrell term
+            ff_phase = exp(im*dot(q_p, positions[i]))
+            H_dff += Δ_dpd[i] * ff_phase * V_dpd[i]       
+
+            # construct Larkin-Ovchinnikov term
+            lo_phase = exp(im*dot(q_p, positions[i])) + exp(-im*dot(q, positions[i]))
+            H_dlo += Δ_dpd[i] * lo_phase * V_dpd[i]                
+
+            # if Δ_dpd is being optimized, store each V_dpd matrix
+            if optimize.Δ_spd
+                push!(V, V_dpd[i])
+            end
+        end
+
+        # add Fulde-Ferrell dPDW matrix
+        push!(H_vpars, H_dff)
+
+        # add Larkin-Ovchinnikov dPDW matrix
+        push!(H_vpars, H_dlo)
+
+        # # add complete dPDW matrix
+        # H_dpdw = H_dff + Hdlo
+        # push!(H_vpars, H_dpdw)
     end
 
     return nothing
@@ -553,7 +774,7 @@ end
 
 Adds a spin order term to the auxiliary Hamiltonian. 
 
-- `order::String`: type of spin order: "spin-z" or "site-dependent"
+- `order::String`: type of spin order: "spin-x", "spin-z", or "site-dependent"
 - `determinantal_parameters::DeterminantalParameters`: set of determinantal variational parameters.
 - `optimize::NamedTuple`: field of optimization flags.
 - `H_vpars::Vector{Any}`: vector of variational Hamiltonian matrices.
@@ -581,7 +802,7 @@ function add_spin_order!(
         afm_vec = fill(1,2*N)
 
         # antiferromagnetic parameter
-        Δ_afm = determinantal_parameters.det_pars.Δ_afm
+        Δ_spinz = determinantal_parameters.det_pars.Δ_spinz
 
         if pht
             # stagger
@@ -609,11 +830,11 @@ function add_spin_order!(
             # add afm matrix
             H_afm = zeros(Complex, 2*N, 2*N)
             V_afm = LinearAlgebra.Diagonal(afm_vec)
-            H_afm += Δ_afm * V_afm
+            H_afm += Δ_spinz * V_afm
             push!(H_vpars, H_afm)
 
-            # if Δ_afm is being optimized, store Vafm matrix
-            if optimize.Δ_afm
+            # if Δ_spinz is being optimized, store Vafm matrix
+            if optimize.Δ_spinz
                 push!(V, V_afm)
             end
         else
@@ -646,37 +867,37 @@ function add_spin_order!(
             # add afm matrix
             H_afm = zeros(Complex, 2*N, 2*N)
             V_afm_neg = LinearAlgebra.Diagonal(afm_vec_neg)
-            H_afm += Δ_afm * V_afm_neg
+            H_afm += Δ_spinz * V_afm_neg
             push!(H_vpars, H_afm)
 
-            # if Δ_afm is being optimized, store Vafm matrix
-            if optimize.Δ_afm
+            # if Δ_spinz is being optimized, store Vafm matrix
+            if optimize.Δ_spinz
                 push!(V, V_afm_neg)
             end
         end
-    # elseif order == "spin-x"
-    #     # spin-x parameter
-    #     Δ_x = determinantal_parameters.det_pars.Δ_x
+    elseif order == "spin-x"
+        # spin-x parameter
+        Δ_x = determinantal_parameters.det_pars.Δ_x
 
-    #     # spin-x matrix (off-diagonal in spin)
-    #     H_sx = zeros(Complex, 2*N, 2*N)
+        # spin-x matrix (off-diagonal in spin)
+        H_sx = zeros(Complex, 2*N, 2*N)
 
-    #     for s in 1:N
-    #         up_idx = s
-    #         dn_idx = s + N
+        for s in 1:N
+            up_idx = s
+            dn_idx = s + N
 
-    #         # Add spin-flip terms: S^x = (1/2)(|↑⟩⟨↓| + |↓⟩⟨↑|)
-    #         H_sx[up_idx, dn_idx] += Δ_x / 2
-    #         H_sx[dn_idx, up_idx] += Δ_x / 2
-    #     end
+            # Add spin-flip terms: S^x = (1/2)(|↑⟩⟨↓| + |↓⟩⟨↑|)
+            H_sx[up_idx, dn_idx] += Δ_x / 2
+            H_sx[dn_idx, up_idx] += Δ_x / 2
+        end
 
-    #     # Add to variational Hamiltonian
-    #     push!(H_vpars, H_sx)
+        # Add to variational Hamiltonian
+        push!(H_vpars, H_sx)
 
-    #     # If Δ_x is being optimized, store the matrix
-    #     if optimize.Δ_x
-    #         push!(V, H_sx)
-    #     end
+        # If Δ_x is being optimized, store the matrix
+        if optimize.Δ_x
+            push!(V, H_sx)
+        end
     elseif order == "site-dependent"
         # lattice dimensions
         L = model_geometry.lattice.L

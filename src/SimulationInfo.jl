@@ -138,60 +138,6 @@ end
 
 @doc raw"""
 
-    model_summary( n̄::Float64,
-                   nup::Int,
-                   ndn::Int,
-                   simulation_info::SimulationInfo, 
-                   model_geometry::ModelGeometry, 
-                   tight_binding_model::TightBindingModel, 
-                   parameters::Tuple )::Nothing
-
-Writes model summary to file.
-
-"""
-function model_summary(
-        n̄::Float64,
-        nup::Int,
-        ndn::Int,
-        simulation_info::SimulationInfo, 
-        model_geometry::ModelGeometry, 
-        tight_binding_model::TightBindingModel, 
-        parameters::Tuple
-)::Nothing
-    # if process ID is 1
-    if iszero(simulation_info.pID)
-
-        # construct full filename, including filepath
-        fn = joinpath(simulation_info.datafolder, "model_summary.toml")
-
-        # open file to write to
-        open(fn, "w") do fout
-            # write n̄
-            @printf fout "n̄ = %.6f\n\n" n̄
-            # write nup
-            @printf fout "nup = %.6f\n\n" nup
-            # write ndn
-            @printf fout "ndn = %d\n\n" ndn
-
-            # write model geometry out to file
-            show(fout, "text/plain", model_geometry)
-
-            # write tight-binding model to file assuming spin symmetry
-            show(fout, MIME("text/plain"), tight_binding_model)
-
-            # write various parameters to file
-            for parameter in parameters
-                show(fout, "text/plain", interaction)
-            end
-        end
-    end
-
-    return nothing
-end
-
-
-@doc raw"""
-
     create_datafolder_prefix( optimize::NamedTuple, 
                               df_prefix::String )::String
 
