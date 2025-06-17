@@ -102,6 +102,7 @@ end
 
 
 @doc raw"""
+
     hop!( markov_move::MarkovMove, 
           pconfig::Vector{Int} )::Nothing
 
@@ -144,6 +145,7 @@ end
 
 
 @doc raw"""
+
     exchange!( markov_move::MarkovMove, 
                pconfig::Vector{Int},
                model_geometry::ModelGeometry )::Nothing
@@ -153,8 +155,9 @@ If proposed exchange move is accepted, updates the particle positions.
 - `markov_move::MarkovMove`: quantities related to a Markov move.  
 - `pconfig::Vector{Int}`: current particle configuration. 
 
-"""
 # TODO: need to debug!
+
+"""
 function exchange!(
     markov_move::MarkovMove, 
     pconfig::Vector{Int},

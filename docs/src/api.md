@@ -117,7 +117,6 @@ get_particle_density
 - [`VariationalMC.MarkovMove`](@ref)
 - [`VariationalMC.propose_random_move`](@ref)
 - [`VariationalMC.hop!`](@ref)
-- [`VariationalMC.exchange!`](@ref)
 - [`VariationalMC.generate_initial_fermion_configuration`](@ref)
 - [`VariationalMC.get_onsite_fermion_occupation`](@ref)
 - [`VariationalMC.get_spindex_type`](@ref)
@@ -129,7 +128,6 @@ get_particle_density
 VariationalMC.MarkovMove
 VariationalMC.propose_random_move
 VariationalMC.hop!
-VariationalMC.exchange!
 VariationalMC.generate_initial_fermion_configuration
 VariationalMC.get_onsite_fermion_occupation
 VariationalMC.get_spindex_type
