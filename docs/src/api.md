@@ -15,6 +15,7 @@ ModelGeometry
 - [`SpinModel`](@ref)
 - [`DeterminantalParameters`](@ref)
 - [`JastrowParameters`](@ref)
+- [`VariationalMC.collect_parameters`](@ref)
 
 
 ```@docs
@@ -22,6 +23,7 @@ TightBindingModel
 SpinModel
 DeterminantalParameters
 JastrowParameters
+VariationalMC.collect_parameters
 ```
 
 ## DeterminantalWavefunction Type and Methods
