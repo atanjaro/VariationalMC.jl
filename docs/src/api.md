@@ -4,9 +4,26 @@
 
 - [`ModelGeometry`](@ref)
 
-
 ```@docs
 ModelGeometry
+```
+
+### Internal Methods
+
+- [`VariationalMC.x`](@ref)
+- [`VariationalMC.y`](@ref)
+- [`VariationalMC.d`](@ref)
+- [`VariationalMC.reduce_index_2d`](@ref)
+- [`VariationalMC.reduce_index_1d`](@ref)
+- [`VariationalMC.max_dist`](@ref)
+
+```@docs
+VariationalMC.x
+VariationalMC.y
+VariationalMC.d
+VariationalMC.reduce_index_2d
+VariationalMC.reduce_index_1d
+VariationalMC.max_dist
 ```
 
 ## Parameters Types and Methods
@@ -15,15 +32,24 @@ ModelGeometry
 - [`SpinModel`](@ref)
 - [`DeterminantalParameters`](@ref)
 - [`JastrowParameters`](@ref)
-- [`VariationalMC.collect_parameters`](@ref)
-
 
 ```@docs
 TightBindingModel
 SpinModel
 DeterminantalParameters
 JastrowParameters
+```
+
+### Internal Methods
+
+- [`VariationalMC.collect_parameters`](@ref)
+- [`VariationalMC.update_parameters!`](@ref)
+- [`VariationalMC.readin_parameters`](@ref)
+
+```@docs
 VariationalMC.collect_parameters
+VariationalMC.update_parameters!
+VariationalMC.readin_parameters
 ```
 
 ## DeterminantalWavefunction Type and Methods
@@ -46,12 +72,34 @@ JastrowFactor
 get_jastrow_factor
 ```
 
+### Internal Methods
+
+- [`VariationalMC.get_fermionic_Tvec`](@ref)
+- [`VariationalMC.update_fermionic_Tvec!`](@ref)
+- [`VariationalMC.get_fermionic_jastrow_ratio`](@ref)
+- [`VariationalMC.map_jastrow_parameters`](@ref)
+
+```@docs
+VariationalMC.get_fermionic_Tvec
+VariationalMC.update_fermionic_Tvec!
+VariationalMC.get_fermionic_jastrow_ratio
+VariationalMC.map_jastrow_parameters
+```
+
 ## Markov Methods
 
 - [`local_fermion_update!`](@ref)
 
 ```@docs
 local_fermion_update!
+```
+
+### Internal Methods
+
+- [`VariationalMC.metropolis_step`](@ref)
+
+```@docs
+VariationalMC.metropolis_step
 ```
 
 ## ParticleConfiguration Types and Methods
@@ -62,6 +110,32 @@ local_fermion_update!
 ```@docs
 get_particle_numbers
 get_particle_density
+```
+
+### Internal Types and Methods
+
+- [`VariationalMC.MarkovMove`](@ref)
+- [`VariationalMC.propose_random_move`](@ref)
+- [`VariationalMC.hop!`](@ref)
+- [`VariationalMC.exchange!`](@ref)
+- [`VariationalMC.generate_initial_fermion_configuration`](@ref)
+- [`VariationalMC.get_onsite_fermion_occupation`](@ref)
+- [`VariationalMC.get_spindex_type`](@ref)
+- [`VariationalMC.get_index_from_spindex`](@ref)
+- [`VariationalMC.get_spindices_from_index`](@ref)
+- [`VariationalMC.get_linked_spindex`](@ref)
+
+```@docs
+VariationalMC.MarkovMove
+VariationalMC.propose_random_move
+VariationalMC.hop!
+VariationalMC.exchange!
+VariationalMC.generate_initial_fermion_configuration
+VariationalMC.get_onsite_fermion_occupation
+VariationalMC.get_spindex_type
+VariationalMC.get_index_from_spindex
+VariationalMC.get_spindices_from_index
+VariationalMC.get_linked_spindex
 ```
 
 ## Optimizer Methods

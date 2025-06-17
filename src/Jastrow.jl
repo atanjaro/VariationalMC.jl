@@ -269,6 +269,7 @@ end
 
 
 @doc raw"""
+
     get_fermionic_jastrow_ratio( markov_move::MarkovMove, 
                                  jastrow_parameters::JastrowParameters
                                  jastrow_factor::JastrowFactor, 
