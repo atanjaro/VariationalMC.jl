@@ -153,21 +153,21 @@ function create_datafolder_prefix(
 
     enabled_opts = [begin
         k_str = string(k)
-        if k_str == "Δ_0"
+        k_str_clean = replace(k_str, "_" => "")  # Remove underscores
+
+        if k_str_clean == "Δ0"
             "swave"
-        elseif k_str == "Δ_d"
+        elseif k_str_clean == "Δd"
             "dwave"
-        elseif k_str == "μ"
+        elseif k_str_clean == "μ"
             "mu"
-        elseif startswith(k_str, "Δ")
-            k_str[3:end]  # Drop the "Δ"
+        elseif startswith(k_str_clean, "Δ")
+            k_str_clean[3:end]  # drop "Δ" = 2-byte Unicode, start from index 3
         else
-            k_str
+            k_str_clean
         end
     end for k in opt_keys if optimize[k]]
 
     opt_suffix = isempty(enabled_opts) ? "_none" : "_" * join(enabled_opts, "_")
-    datafolder_prefix = df_prefix * opt_suffix
-
-    return datafolder_prefix
+    return df_prefix * opt_suffix
 end

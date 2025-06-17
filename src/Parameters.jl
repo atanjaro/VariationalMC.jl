@@ -97,14 +97,14 @@ function DeterminantalParameters(
         if pht
             det_pars = (
                 Δ_0 = minabs_vpar,
-                Δ_spd = fill(minabs_vpar, N),
+                Δ_spd = fill(0.0, N),
                 Δ_d = 0.0,
                 Δ_dpd = fill(0.0, N),
                 q_p = fill(0.0, dims),
                 Δ_sx = 0.0,
                 Δ_sz = minabs_vpar,
                 Δ_ssd = fill(0.0, Lx),
-                μ = 0.0,
+                μ = 3.0,
                 Δ_cdw = 0.0,
                 Δ_csd = fill(0.0, Lx)
             )

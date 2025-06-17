@@ -73,7 +73,41 @@ function process_scalar_measurements(
     return nothing
 end
 
+@doc raw"""
+
+    process_correlation_measurements()
+
+For either density-density or spin-spin correlation data, calculates the static structure factor.
+
+"""
+function process_correlation_measurements(correlation_type::String, model_geometry::ModelGeometry)
+    # calculate all momentum points that will used in the FT
+    q_points = calc_k_points(model_geometry.unit_cell, model_geometry.lattice)
+
+    if correlation_type == "density"
+        # read in the site-dependent density data 
+
+    elseif correlation_type == "spin"
+        # read in the site-dependent spin data
+
+    end
+
+    # calculate_structure_factor()
+
+    # write structure factor info to file
+end
+
 
 function process_measurements()
 
+    # # set the walkers to iterate over
+    # # this will be used for MPI
+    # if isempty(pIDs)
+
+    #     # get the number of MPI walkers
+    #     N_walkers = get_num_walkers(folder)
+
+    #     # get the pIDs
+    #     pIDs = collect(0:(N_walkers-1))
+    # end
 end

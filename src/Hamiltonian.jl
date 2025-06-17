@@ -58,10 +58,11 @@ function build_tight_binding_hamiltonian(
     model_geometry::ModelGeometry, 
     pht::Bool
 )
-    # number of sites
-    N = model_geometry.unit_cell.n*model_geometry.lattice.N 
+    N = model_geometry.unit_cell.n * model_geometry.lattice.N 
+    Lx = model_geometry.lattice.L[1]
+    Ly = model_geometry.lattice.L[2]
 
-    # generate neighbor table
+    # generate nearest neighbor table
     nbr0 = build_neighbor_table(
         bonds[1],
         model_geometry.unit_cell,
@@ -83,65 +84,31 @@ function build_tight_binding_hamiltonian(
     debug && println("particle-hole transformation : ", pht)
 
     if pht == true
+        @assert Lx > 2 && Ly > 2
+
         # add nearest-neighbor hopping
-        if Lx == 2 && Ly == 2 
-            for (i,j) in eachcol(nbr0)
-                H_t₀[i,j] += -t₀
-            end
-            for (i,j) in eachcol(nbr0 .+ N)    
-                H_t₀[i,j] += t₀
-            end
-        # special case for Lx = 2 
-        elseif Lx == 2 && Ly > Lx
-            for (i,j) in eachcol(nbr0[:,1:(size(nbr0,2) - Ly)])
-                H_t₀[i,j] += -t₀
+        for (i,j) in eachcol(nbr0)
+            H_t₀[i,j] += -t₀
+            if N > 2
                 H_t₀[j,i] += -t₀
             end
-            for (i,j) in eachcol(nbr0[:,1:(size(nbr0,2) - Ly)] .+ N)
-                H_t₀[i,j] += t₀
+        end
+        for (i,j) in eachcol(nbr0 .+ N)    
+            H_t₀[i,j] += t₀
+            if N > 2
                 H_t₀[j,i] += t₀
-            end 
-        # special case for Ly = 2 
-        elseif Ly == 2 && Lx > Ly
-            for (i,j) in eachcol(nbr0[:,1:(size(nbr0,2) - Lx)])
-                H_t₀[i,j] += -t₀
-                H_t₀[j,i] += -t₀
-            end
-            for (i,j) in eachcol(nbr0[:,1:(size(nbr0,2) - Lx)] .+ N)
-                H_t₀[i,j] += t₀
-                H_t₀[j,i] += t₀
-            end 
-        else
-            for (i,j) in eachcol(nbr0)
-                H_t₀[i,j] += -t₀
-                if model_geometry.lattice.N > 2
-                    H_t₀[j,i] += -t₀
-                else
-                end
-            end
-            for (i,j) in eachcol(nbr0 .+ N)    
-                H_t₀[i,j] += t₀
-                if model_geometry.lattice.N > 2
-                    H_t₀[j,i] += t₀
-                else
-                end
             end
         end
 
-        # add next-nearest neighbor hopping
-        nbr1 = build_neighbor_table(
-            bonds[2],
-            model_geometry.unit_cell,
-            model_geometry.lattice
-        )
-        if Lx == 2 && Ly == 2
-            for (i,j) in eachcol(nbr1)
-                H_t₁[i,j] += t₁/2
-            end
-            for (i,j) in eachcol(nbr1 .+ N)    
-                H_t₁[i,j] += -t₁/2
-            end
-        else
+        if t₁ != 0
+            # generate next-nearest neighbor table
+            nbr1 = build_neighbor_table(
+                bonds[2],
+                model_geometry.unit_cell,
+                model_geometry.lattice
+            )
+                
+            # add next-nearest neighbor hopping
             for (i,j) in eachcol(nbr1)
                 H_t₁[i,j] += t₁
                 H_t₁[j,i] += t₁
@@ -152,65 +119,31 @@ function build_tight_binding_hamiltonian(
             end
         end
     else
-        # nearest neighbor hopping
-        if Lx == 2 && Ly == 2 
-            for (i,j) in eachcol(nbr0)
-                H_t₀[i,j] += -t₀
-            end
-            for (i,j) in eachcol(nbr0 .+ N)    
-                H_t₀[i,j] += -t₀
-            end
-        # special case for Lx = 2 
-        elseif Lx == 2 && Ly > Lx
-            for (i,j) in eachcol(nbr0[:,1:(size(nbr0,2) - Ly)])
-                H_t₀[i,j] += -t₀
+        @assert Lx > 2 && Ly > 2
+
+        # add nearest neighbor hopping
+        for (i,j) in eachcol(nbr0)
+            H_t₀[i,j] += -t₀
+            if N > 2
                 H_t₀[j,i] += -t₀
             end
-            for (i,j) in eachcol(nbr0[:,1:(size(nbr0,2) - Ly)] .+ N)
-                H_t₀[i,j] += -t₀
+        end
+        for (i,j) in eachcol(nbr0 .+ N)    
+            H_t₀[i,j] += -t₀
+            if N > 2
                 H_t₀[j,i] += -t₀
-            end 
-        # special case for Ly = 2 
-        elseif Ly == 2 && Lx > Ly
-            for (i,j) in eachcol(nbr0[:,1:(size(nbr0,2) - Lx)])
-                H_t₀[i,j] += -t₀
-                H_t₀[j,i] += -t₀
-            end
-            for (i,j) in eachcol(nbr0[:,1:(size(nbr0,2) - Lx)] .+ N)
-                H_t₀[i,j] += -t₀
-                H_t₀[j,i] += -t₀
-            end  
-        else
-            for (i,j) in eachcol(nbr0)
-                H_t₀[i,j] += -t₀
-                if model_geometry.lattice.N > 2
-                    H_t₀[j,i] += -t₀
-                else
-                end
-            end
-            for (i,j) in eachcol(nbr0 .+ N)    
-                H_t₀[i,j] += -t₀
-                if model_geometry.lattice.N > 2
-                    H_t₀[j,i] += -t₀
-                else
-                end
             end
         end
 
-        # add next-nearest neighbor hopping 
-        nbr1 = build_neighbor_table(
-            bonds[2],
-            model_geometry.unit_cell,
-            model_geometry.lattice
-        )
-        if Lx == 2 && Ly ==2 
-            for (i,j) in eachcol(nbr1)
-                H_t₁[i,j] += t₁/2
-            end
-            for (i,j) in eachcol(nbr1 .+ N)    
-                H_t₁[i,j] += t₁/2
-            end
-        else
+        if t₁ != 0
+            # generate next-nearest neighbor table
+            nbr1 = build_neighbor_table(
+                bonds[2],
+                model_geometry.unit_cell,
+                model_geometry.lattice
+            )
+
+            # add next-nearest neighbor hopping
             for (i,j) in eachcol(nbr1)
                 H_t₁[i,j] += t₁
                 H_t₁[j,i] += t₁
@@ -349,8 +282,8 @@ function build_variational_hamiltonian(
 
     debug && println("Hamiltonian::build_variational_hamiltonian() : ")
     debug && println("adding spin-x matrix")
-    debug && println("initial Δ_spinx = ", determinantal_parameters.det_pars.Δ_spinz)
-    if optimize.Δ_spinz
+    debug && println("initial Δ_sx = ", determinantal_parameters.det_pars.Δ_sx)
+    if optimize.Δ_sz
         debug && println("optimize = true")
     else
         debug && println("optimize = false")
@@ -369,8 +302,8 @@ function build_variational_hamiltonian(
 
     debug && println("Hamiltonian::build_variational_hamiltonian() : ")
     debug && println("adding spin-z matrix")
-    debug && println("initial Δ_spinz = ", determinantal_parameters.det_pars.Δ_spinz)
-    if optimize.Δ_spinz
+    debug && println("initial Δ_sz = ", determinantal_parameters.det_pars.Δ_sz)
+    if optimize.Δ_sz
         debug && println("optimize = true")
     else
         debug && println("optimize = false")
@@ -390,8 +323,8 @@ function build_variational_hamiltonian(
 
         debug && println("Hamiltonian::build_variational_hamiltonian() : ")
         debug && println("adding site-dependent spin matrix")
-        debug && println("initial Δ_sds = ", determinantal_parameters.det_pars.Δ_sds)
-        if optimize.Δ_sds
+        debug && println("initial Δ_ssd = ", determinantal_parameters.det_pars.Δ_ssd)
+        if optimize.Δ_ssd
             debug && println("optimize = true")
         else
             debug && println("optimize = false")
@@ -451,16 +384,16 @@ function build_variational_hamiltonian(
 
         debug && println("Hamiltonian::build_variational_hamiltonian() : ")
         debug && println("adding site-dependent charge matrix")
-        debug && println("initial Δ_sdc = ", determinantal_parameters.det_pars.Δ_sdc)
-        if optimize.Δ_sdc
+        debug && println("initial Δ_csd = ", determinantal_parameters.det_pars.Δ_csd)
+        if optimize.Δ_csd
             debug && println("optimize = true")
         else
             debug && println("optimize = false")
         end
     end
 
-    @assert length(H_vpars) == determinantal_parameters.num_det_pars
-    @assert length(V) == determinantal_parameters.num_det_opts
+    # @assert length(H_vpars) == determinantal_parameters.num_det_pars
+    # @assert length(V) == determinantal_parameters.num_det_opts
 
     return sum(H_vpars), V
 end
@@ -647,7 +580,7 @@ function add_pairing_symmetry!(
             H_sff += Δ_spd[i] * ff_phase * V_spd[i]      
 
             # construct Larkin-Ovchinnikov term
-            lo_phase = exp(im*dot(q_p, positions[i])) + exp(-im*dot(q, positions[i]))
+            lo_phase = exp(im*dot(q_p, positions[i])) + exp(-im*dot(q_p, positions[i]))
             H_slo += Δ_spd[i] * lo_phase * V_spd[i]                
 
             # if Δ_spd is being optimized, store each V_spd matrix
@@ -738,7 +671,7 @@ function add_pairing_symmetry!(
             H_dff += Δ_dpd[i] * ff_phase * V_dpd[i]       
 
             # construct Larkin-Ovchinnikov term
-            lo_phase = exp(im*dot(q_p, positions[i])) + exp(-im*dot(q, positions[i]))
+            lo_phase = exp(im*dot(q_p, positions[i])) + exp(-im*dot(q_p, positions[i]))
             H_dlo += Δ_dpd[i] * lo_phase * V_dpd[i]                
 
             # if Δ_dpd is being optimized, store each V_dpd matrix
@@ -802,7 +735,7 @@ function add_spin_order!(
         afm_vec = fill(1,2*N)
 
         # antiferromagnetic parameter
-        Δ_spinz = determinantal_parameters.det_pars.Δ_spinz
+        Δ_sz = determinantal_parameters.det_pars.Δ_sz
 
         if pht
             # stagger
@@ -830,11 +763,11 @@ function add_spin_order!(
             # add afm matrix
             H_afm = zeros(Complex, 2*N, 2*N)
             V_afm = LinearAlgebra.Diagonal(afm_vec)
-            H_afm += Δ_spinz * V_afm
+            H_afm += Δ_sz * V_afm
             push!(H_vpars, H_afm)
 
-            # if Δ_spinz is being optimized, store Vafm matrix
-            if optimize.Δ_spinz
+            # if Δ_sz is being optimized, store Vafm matrix
+            if optimize.Δ_sz
                 push!(V, V_afm)
             end
         else
@@ -867,17 +800,17 @@ function add_spin_order!(
             # add afm matrix
             H_afm = zeros(Complex, 2*N, 2*N)
             V_afm_neg = LinearAlgebra.Diagonal(afm_vec_neg)
-            H_afm += Δ_spinz * V_afm_neg
+            H_afm += Δ_sz * V_afm_neg
             push!(H_vpars, H_afm)
 
-            # if Δ_spinz is being optimized, store Vafm matrix
-            if optimize.Δ_spinz
+            # if Δ_sz is being optimized, store Vafm matrix
+            if optimize.Δ_sz
                 push!(V, V_afm_neg)
             end
         end
     elseif order == "spin-x"
         # spin-x parameter
-        Δ_x = determinantal_parameters.det_pars.Δ_x
+        Δ_sx = determinantal_parameters.det_pars.Δ_sx
 
         # spin-x matrix (off-diagonal in spin)
         H_sx = zeros(Complex, 2*N, 2*N)
@@ -887,23 +820,23 @@ function add_spin_order!(
             dn_idx = s + N
 
             # Add spin-flip terms: S^x = (1/2)(|↑⟩⟨↓| + |↓⟩⟨↑|)
-            H_sx[up_idx, dn_idx] += Δ_x / 2
-            H_sx[dn_idx, up_idx] += Δ_x / 2
+            H_sx[up_idx, dn_idx] += Δ_sx / 2
+            H_sx[dn_idx, up_idx] += Δ_sx / 2
         end
 
         # Add to variational Hamiltonian
         push!(H_vpars, H_sx)
 
         # If Δ_x is being optimized, store the matrix
-        if optimize.Δ_x
+        if optimize.Δ_sx
             push!(V, H_sx)
         end
     elseif order == "site-dependent"
         # lattice dimensions
         L = model_geometry.lattice.L
 
-        Δ_sds = determinantal_parameters.det_pars.Δ_sds
-        sds_vectors = []
+        Δ_ssd = determinantal_parameters.det_pars.Δ_ssd
+        ssd_vectors = []
         if pht
             for shift in 0:(L[1]-1)
                 vec = zeros(Int, 2 * N)
@@ -915,7 +848,7 @@ function add_spin_order!(
                 end
                 # Flip the sign of the last N elements
                 vec[N+1:end] .*= -1
-                push!(sds_vectors, vec)
+                push!(ssd_vectors, vec)
             end
         else
             for shift in 0:(L[1]-1)
@@ -926,27 +859,27 @@ function add_spin_order!(
                         vec[idx] = 1
                     end
                 end
-                push!(sds_vectors, vec)  
+                push!(ssd_vectors, vec)  
             end
         end
 
-        for (i, sds_vec) in enumerate(sds_vectors)
-            H_sds = zeros(AbstractFloat, 2*N, 2*N)
-            sds_vec_neg = copy(sds_vec)
-            sds_vec_neg[N+1:2*N] .= -sds_vec_neg[N+1:2*N]
+        for (i, ssd_vec) in enumerate(ssd_vectors)
+            H_ssd = zeros(AbstractFloat, 2*N, 2*N)
+            ssd_vec_neg = copy(ssd_vec)
+            ssd_vec_neg[N+1:2*N] .= -ssd_vec_neg[N+1:2*N]
         
             for s in 1:2*N
                 idx = get_index_from_spindex(s, model_geometry)
                 loc = site_to_loc(idx, model_geometry.unit_cell, model_geometry.lattice)
-                sds_vec_neg[s] *= (-1)^(loc[1][1] + loc[1][2])
+                ssd_vec_neg[s] *= (-1)^(loc[1][1] + loc[1][2])
             end
         
-            V_sds_neg = LinearAlgebra.Diagonal(sds_vec_neg)
-            H_sds += Δ_sds[i] * V_sds_neg
-            push!(H_vpars, H_sds)
+            V_ssd_neg = LinearAlgebra.Diagonal(ssd_vec_neg)
+            H_ssd += Δ_ssd[i] * V_ssd_neg
+            push!(H_vpars, H_ssd)
         
-            if optimize.Δ_sds
-                push!(V, V_sds_neg)
+            if optimize.Δ_ssd
+                push!(V, V_ssd_neg)
             end
         end
     end
@@ -1073,8 +1006,8 @@ function add_charge_order!(
     elseif order == "site-dependent"
         # lattice dimensions
         L = model_geometry.lattice.L
-        Δ_sdc = determinantal_parameters.det_pars.Δ_sdc
-        sdc_vectors = []
+        Δ_csd = determinantal_parameters.det_pars.Δ_csd
+        csd_vectors = []
 
         if pht
             for shift in 0:(L[1]-1)
@@ -1086,7 +1019,7 @@ function add_charge_order!(
                     end
                 end
                 vec[N+1:end] .*= -1  # Flip sign of last N elements
-                push!(sdc_vectors, vec)
+                push!(csd_vectors, vec)
             end
         else
             for shift in 0:(L[1]-1)
@@ -1097,19 +1030,19 @@ function add_charge_order!(
                         vec[idx] = 1
                     end
                 end
-                push!(sdc_vectors, vec)  
+                push!(csd_vectors, vec)  
             end
         end
 
-        for (i, sdc_vec) in enumerate(sdc_vectors)
-            H_sdc = zeros(AbstractFloat, 2*N, 2*N)
-            V_sdc = LinearAlgebra.Diagonal(sdc_vec)
-            H_sdc += Δ_sdc[i] .* V_sdc
-            push!(H_vpars, H_sdc)
+        for (i, csd_vec) in enumerate(csd_vectors)
+            H_csd = zeros(AbstractFloat, 2*N, 2*N)
+            V_csd = LinearAlgebra.Diagonal(csd_vec)
+            H_csd += Δ_csd[i] .* V_csd
+            push!(H_vpars, H_csd)
 
-            # if Δ_sdc is being optimized, store Vsdc matrix
-            if optimize.Δ_sdc
-                push!(V, V_sdc)
+            # if Δ_csd is being optimized, store Vcsd matrix
+            if optimize.Δ_csd
+                push!(V, V_csd)
             end
         end
     end
@@ -1207,16 +1140,16 @@ end
 @doc raw"""
 
     is_openshell( ε::Vector{Float64},  
-                  Np::Int )::Bool
+                  Ne::Int )::Bool
 
 Checks whether a energy configuration is open shell.
 
 """
 function is_openshell(
     ε::Vector{Float64}, 
-    Np::Int
+    Ne::Int
 )::Bool
-    return ε[Np + 1] - ε[Np] < 0.0001
+    return ε[Ne + 1] - ε[Ne] < 0.0001
 end
 
 
@@ -1303,64 +1236,30 @@ function get_tb_chem_pot(
         model_geometry.unit_cell,
         model_geometry.lattice
     )
-    # special case for Lx, Ly = 2
-    if Lx == 2 && Ly == 2 
-        for (i,j) in eachcol(nbr0)
-            H_t₀[i,j] += -t₀
-        end
-        for (i,j) in eachcol(nbr0 .+ N)    
-            H_t₀[i,j] += -t₀
-        end
-    # special case for Lx = 2 
-    elseif Lx == 2 && Ly > Lx
-        for (i,j) in eachcol(nbr0[:,1:(size(nbr0,2) - Ly)])
-            H_t₀[i,j] += -t₀
+
+    # add nearest neighbor hopping
+    for (i,j) in eachcol(nbr0)
+        H_t₀[i,j] += -t₀
+        if model_geometry.lattice.N > 2
             H_t₀[j,i] += -t₀
-        end
-        for (i,j) in eachcol(nbr0[:,1:(size(nbr0,2) - Ly)] .+ N)
-            H_t₀[i,j] += -t₀
-            H_t₀[j,i] += -t₀
-        end 
-    # special case for Ly = 2 
-    elseif Ly == 2 && Lx > Ly
-        for (i,j) in eachcol(nbr0[:,1:(size(nbr0,2) - Lx)])
-            H_t₀[i,j] += -t₀
-            H_t₀[j,i] += -t₀
-        end
-        for (i,j) in eachcol(nbr0[:,1:(size(nbr0,2) - Lx)] .+ N)
-            H_t₀[i,j] += -t₀
-            H_t₀[j,i] += -t₀
-        end  
-    else
-        for (i,j) in eachcol(nbr0)
-            H_t₀[i,j] += -t₀
-            if model_geometry.lattice.N > 2
-                H_t₀[j,i] += -t₀
-            else
-            end
-        end
-        for (i,j) in eachcol(nbr0 .+ N)    
-            H_t₀[i,j] += -t₀
-            if model_geometry.lattice.N > 2
-                H_t₀[j,i] += -t₀
-            else
-            end
         end
     end
-    # add next nearest neighbor hopping
-    nbr1 = build_neighbor_table(
-        bonds[2],
-        model_geometry.unit_cell,
-        model_geometry.lattice
-    )
-    if Lx == 2 && Ly ==2 
-        for (i,j) in eachcol(nbr1)
-            H_t₁[i,j] += 0.5 * t₁
+    for (i,j) in eachcol(nbr0 .+ N)    
+        H_t₀[i,j] += -t₀
+        if model_geometry.lattice.N > 2
+            H_t₀[j,i] += -t₀
         end
-        for (i,j) in eachcol(nbr1 .+ N)    
-            H_t₁[i,j] += 0.5 * t₁
-        end
-    else
+    end
+
+    if t₁ != 0.0
+        # build next-nearest neighbor table
+        nbr1 = build_neighbor_table(
+            bonds[2],
+            model_geometry.unit_cell,
+            model_geometry.lattice
+        )
+
+        # add next-nearest neighbor hopping
         for (i,j) in eachcol(nbr1)
             H_t₁[i,j] += t₁
             H_t₁[j,i] += t₁
