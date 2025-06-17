@@ -8,7 +8,7 @@
 ModelGeometry
 ```
 
-### Internal Methods
+#### Internal Methods
 
 - [`VariationalMC.x`](@ref)
 - [`VariationalMC.y`](@ref)
@@ -40,7 +40,7 @@ DeterminantalParameters
 JastrowParameters
 ```
 
-### Internal Methods
+#### Internal Methods
 
 - [`VariationalMC.collect_parameters`](@ref)
 - [`VariationalMC.update_parameters!`](@ref)
@@ -50,6 +50,36 @@ JastrowParameters
 VariationalMC.collect_parameters
 VariationalMC.update_parameters!
 VariationalMC.readin_parameters
+```
+
+## Hamiltonian Methods
+
+#### Internal Methods
+
+- [`VariationalMC.build_auxiliary_hamiltonian`](@ref)
+- [`VariationalMC.build_tight_binding_hamiltonian`](@ref)
+- [`VariationalMC.build_variational_hamiltonian`](@ref)
+- [`VariationalMC.add_pairing_symmetry!`](@ref)
+- [`VariationalMC.add_spin_order!`](@ref)
+- [`VariationalMC.add_charge_order!`](@ref)
+- [`VariationalMC.add_chemical_potential!`](@ref)
+- [`VariationalMC.diagonalize`](@ref)
+- [`VariationalMC.is_openshell`](@ref)
+- [`VariationalMC.get_variational_matrices`](@ref)
+- [`VariationalMC.get_tb_chem_pot`](@ref)
+
+```@docs
+VariationalMC.build_auxiliary_hamiltonian
+VariationalMC.build_tight_binding_hamiltonian
+VariationalMC.build_variational_hamiltonian
+VariationalMC.add_pairing_symmetry!
+VariationalMC.add_spin_order!
+VariationalMC.add_charge_order!
+VariationalMC.add_chemical_potential!
+VariationalMC.diagonalize
+VariationalMC.is_openshell
+VariationalMC.get_variational_matrices
+VariationalMC.get_tb_chem_pot
 ```
 
 ## DeterminantalWavefunction Type and Methods
@@ -72,7 +102,7 @@ JastrowFactor
 get_jastrow_factor
 ```
 
-### Internal Methods
+#### Internal Methods
 
 - [`VariationalMC.get_fermionic_Tvec`](@ref)
 - [`VariationalMC.update_fermionic_Tvec!`](@ref)
@@ -94,7 +124,7 @@ VariationalMC.map_jastrow_parameters
 local_fermion_update!
 ```
 
-### Internal Methods
+#### Internal Methods
 
 - [`VariationalMC.metropolis_step`](@ref)
 
@@ -112,7 +142,7 @@ get_particle_numbers
 get_particle_density
 ```
 
-### Internal Types and Methods
+#### Internal Types and Methods
 
 - [`VariationalMC.MarkovMove`](@ref)
 - [`VariationalMC.propose_random_move`](@ref)
