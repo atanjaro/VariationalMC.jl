@@ -127,22 +127,19 @@ function get_local_kinetic_energy(
     # number of sites
     N = model_geometry.lattice.N
 
-    # generate neighbor table
+    # hopping amplitudes       
+    t₀ = tight_binding_model.t₀
+    t₁ = tight_binding_model.t₁
+
+    # generate nearest neighbor table
     nbr_table0 = build_neighbor_table(
         model_geometry.bond[1],
         model_geometry.unit_cell,
         model_geometry.lattice
     )
 
-    nbr_table1 = build_neighbor_table(
-        model_geometry.bond[2],
-        model_geometry.unit_cell,
-        model_geometry.lattice
-    )
-
-    # generate neighbor maps
+    # generate neighbor map
     nbr_map0 = map_neighbor_table(nbr_table0)
-    nbr_map1 = map_neighbor_table(nbr_table1)
 
     E_loc_kinetic = 0.0
 
@@ -171,24 +168,33 @@ function get_local_kinetic_energy(
             end
         end
 
-        # loop over next nearest neighbors
         sum_nnn = 0.0
-        for lsite in nbr_map1[ksite][2]
-            if spin == 1
-                l = get_spindices_from_index(lsite, model_geometry)[1]
-            else
-                l = get_spindices_from_index(lsite, model_geometry)[2]
-            end
+        if t₁ != 0.0
+            # generate next-nearest neighbor table
+            nbr_table1 = build_neighbor_table(
+                model_geometry.bond[2],
+                model_geometry.unit_cell,
+                model_geometry.lattice
+            )
 
-            # check that neighboring site is unoccupied
-            if detwf.pconfig[l] == 0
-                sum_nn += detwf.W[l, β]
+            # generate neighbor map
+            nbr_map1 = map_neighbor_table(nbr_table1)
+
+            # loop over next-nearest neighbors
+            sum_nnn = 0.0
+            for lsite in nbr_map1[ksite][2]
+                if spin == 1
+                    l = get_spindices_from_index(lsite, model_geometry)[1]
+                else
+                    l = get_spindices_from_index(lsite, model_geometry)[2]
+                end
+
+                # check that neighboring site is unoccupied
+                if detwf.pconfig[l] == 0
+                    sum_nnn += detwf.W[l, β]
+                end
             end
         end
-
-        # hopping amplitudes       
-        t₀ = tight_binding_model.t₀
-        t₁ = tight_binding_model.t₁
 
         if pht 
             if spin == 1
@@ -237,6 +243,10 @@ function get_local_kinetic_energy(
     # number of sites
     N = model_geometry.lattice.N
 
+    # hopping amplitudes       
+    t₀ = tight_binding_model.t₀
+    t₁ = tight_binding_model.t₁
+
     # generate neighbor table
     nbr_table0 = build_neighbor_table(
         model_geometry.bond[1],
@@ -244,15 +254,8 @@ function get_local_kinetic_energy(
         model_geometry.lattice
     )
 
-    nbr_table1 = build_neighbor_table(
-        model_geometry.bond[2],
-        model_geometry.unit_cell,
-        model_geometry.lattice
-    )
-
     # generate neighbor maps
     nbr_map0 = map_neighbor_table(nbr_table0)
-    nbr_map1 = map_neighbor_table(nbr_table1)
 
     E_loc_kinetic = 0.0
 
@@ -290,33 +293,42 @@ function get_local_kinetic_energy(
             end
         end
 
-        # loop over next nearest neighbors
         sum_nnn = 0.0
-        for lsite in nbr_map1[ksite][2]
-            if spin == 1
-                l = get_spindices_from_index(lsite, model_geometry)[1]
-            else
-                l = get_spindices_from_index(lsite, model_geometry)[2]
-            end
+        if t₁ != 0.0
+            # generate next-nearest neighbor table
+            nbr_table1 = build_neighbor_table(
+                model_geometry.bond[2],
+                model_geometry.unit_cell,
+                model_geometry.lattice
+            )
 
-            # check that neighboring site is unoccupied
-            if detwf.pconfig[l] == 0
-                Rⱼ = get_fermionic_jastrow_ratio(
-                    k, 
-                    l, 
-                    jastrow_parameters, 
-                    jastrow_factor, 
-                    pht, 
-                    spin, 
-                    model_geometry
-                )
-                sum_nn += Rⱼ * detwf.W[l, β]
+            # generate neighbor map
+            nbr_map1 = map_neighbor_table(nbr_table1)
+
+            # loop over next nearest neighbors
+            sum_nnn = 0.0
+            for lsite in nbr_map1[ksite][2]
+                if spin == 1
+                    l = get_spindices_from_index(lsite, model_geometry)[1]
+                else
+                    l = get_spindices_from_index(lsite, model_geometry)[2]
+                end
+
+                # check that neighboring site is unoccupied
+                if detwf.pconfig[l] == 0
+                    Rⱼ = get_fermionic_jastrow_ratio(
+                        k, 
+                        l, 
+                        jastrow_parameters, 
+                        jastrow_factor, 
+                        pht, 
+                        spin, 
+                        model_geometry
+                    )
+                    sum_nnn += Rⱼ * detwf.W[l, β]
+                end
             end
         end
-
-        # hopping amplitudes       
-        t₀ = tight_binding_model.t₀
-        t₁ = tight_binding_model.t₁
 
         if pht 
             if spin == 1
