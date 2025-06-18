@@ -174,6 +174,18 @@ VariationalMC.get_linked_spindex
 stochastic_reconfiguration!
 ```
 
+#### Internal Methods
+
+- [`VariationalMC.get_Δk`](@ref)
+- [`VariationalMC.get_covariance_matrix`](@ref)
+- [`VariationalMC.get_force_vector`](@ref)
+
+```@docs
+VariationalMC.get_Δk
+VariationalMC.get_covariance_matrix
+VariationalMC.get_force_vector
+```
+
 ## Measurement Methods
 
 ### Intitialize Measurements
@@ -181,10 +193,73 @@ stochastic_reconfiguration!
 - [`initialize_measurement_container`](@ref)
 - [`initialize_measurement_directories`](@ref)
 
-
 ```@docs
 initialize_measurement_container
 initialize_measurement_directories
+```
+
+### Scalar Measurements
+
+#### Internal Methods
+
+- [`VariationalMC.get_local_energy`](@ref)
+- [`VariationalMC.get_local_kinetic_energy`](@ref)
+- [`VariationalMC.get_local_hubbard_energy`](@ref)
+- [`VariationalMC.get_double_occ`](@ref)
+- [`VariationalMC.`](@ref)
+
+```@docs
+VariationalMC.get_local_energy
+VariationalMC.get_local_kinetic_energy
+VariationalMC.get_local_hubbard_energy
+VariationalMC.get_double_occ
+VariationalMC.get_n
+```
+
+### Optimization Measurements
+
+#### Internal Methods
+
+- [`VariationalMC.measure_parameters!`](@ref)
+- [`VariationalMC.measure_Δk!`](@ref)
+- [`VariationalMC.measure_ΔkΔkp!`](@ref)
+- [`VariationalMC.measure_ΔkE!`](@ref)
+
+```@docs
+VariationalMC.measure_parameters!
+VariationalMC.measure_Δk!
+VariationalMC.measure_ΔkΔkp!
+VariationalMC.measure_ΔkE!
+```
+
+### Simulation Measurements
+
+#### Internal Methods
+
+- [`VariationalMC.measure_local_energy!`](@ref)
+- [`VariationalMC.measure_double_occ!`](@ref)
+- [`VariationalMC.measure_n!`](@ref)
+
+```@docs
+VariationalMC.measure_local_energy!
+VariationalMC.measure_double_occ!
+VariationalMC.measure_n!
+```
+
+### Correlation Measurements
+
+#### Internal Methods
+
+- [`VariationalMC.measure_density_correlation!`](@ref)
+- [`VariationalMC.measure_spin_correlation!`](@ref)
+- [`VariationalMC.get_site_dependent_n`](@ref)
+- [`VariationalMC.get_site_dependent_s`](@ref)
+
+```@docs
+VariationalMC.measure_density_correlation!
+VariationalMC.measure_spin_correlation!
+VariationalMC.get_site_dependent_n
+VariationalMC.get_site_dependent_s
 ```
 
 ### Make Measurements
@@ -193,6 +268,14 @@ initialize_measurement_directories
 
 ```@docs
 make_measurements!
+```
+
+#### Internal Methods
+
+- [`VariationalMC.reset_measurements!`](@ref)
+
+```@docs
+VariationalMC.reset_measurements!
 ```
 
 ### Write Measurements
