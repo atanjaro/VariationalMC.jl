@@ -206,7 +206,7 @@ initialize_measurement_directories
 - [`VariationalMC.get_local_kinetic_energy`](@ref)
 - [`VariationalMC.get_local_hubbard_energy`](@ref)
 - [`VariationalMC.get_double_occ`](@ref)
-- [`VariationalMC.`](@ref)
+- [`VariationalMC.get_n`](@ref)
 
 ```@docs
 VariationalMC.get_local_energy
