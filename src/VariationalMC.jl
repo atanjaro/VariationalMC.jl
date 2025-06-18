@@ -61,6 +61,8 @@ include("Measurements/scalar_measurements.jl")
 
 include("Measurements/simulation_measurements.jl")
 
+include("Measurements/correlation_measurements.jl")
+
 include("Measurements/write_measurements.jl")
 export write_measurements!
 
