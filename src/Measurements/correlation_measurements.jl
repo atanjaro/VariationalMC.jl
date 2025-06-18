@@ -1,38 +1,91 @@
-# @doc raw"""
+@doc raw"""
 
-#     measure_density_correlation!( measurement_container::NameTuple,
-#                                   detwf::DeterminantalWavefunction,
-#                                   model_geometry::ModelGeometry )::Nothing
+    measure_density_correlation!( measurement_container::NameTuple,
+                                  detwf::DeterminantalWavefunction,
+                                  model_geometry::ModelGeometry )::Nothing
 
-# Measures the density-density correlation function.
+Measures the equal-time density-density correlation function.
 
-# """
-# function measure_density_correlation!(
-#     measurement_container::NamedTuple,
-#     detwf::DeterminantalWavefunction,
-#     model_geometry::ModelGeometry
-# )::Nothing
+- `measurement_container::NamedTuple`: container where measurements are stroed.
+- `detwf::DeterminantalWavefunction`: current variational wavefunction.
+- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
+
+"""
+function measure_density_correlation!(
+    measurement_container::NamedTuple,
+    detwf::DeterminantalWavefunction,
+    model_geometry::ModelGeometry
+)::Nothing
+    # get site-dependent density
+    n = get_site_dependent_n(detwf, model_geometry)
+
+    # calculate density-density correlation
+    n_corr_current = n * n'
+
+    # get current values from the container
+    n_corr_container = measurement_container.correlation_measurements["density-density"]
+
+    # update values for the current bin
+    current_n_corr_bin = n_corr_container[2]
+    current_n_corr_bin = n_corr_current
+
+    # update accumulator for this bin
+    thisbin_n_corr_sum = n_corr_container[1]
+    thisbin_n_corr_sum += n_corr_current
+
+    # combine the updated values 
+    updated_values = (thisbin_n_corr_sum, current_n_corr_bin)
+
+    # write the new values to the container
+    measurement_container.correlation_measurements["density-density"] = updated_values
+
+    return nothing
+end
 
 
-# end
+@doc raw"""
 
+    measure_spin_correlation!( measurement_container::NamedTuple,
+                               detwf::DeterminantalWavefunction,
+                               model_geometry::ModelGeometry )::Nothing
 
-# @doc raw"""
+Measures the equal-time spin-spin correlation function. 
 
-#     measure_spin_correlation!( measurement_container::NamedTuple,
-#                                detwf::DeterminantalWavefunction,
-#                                model_geometry::ModelGeometry )::Nothing
+- `measurement_container::NamedTuple`: container where measurements are stroed.
+- `detwf::DeterminantalWavefunction`: current variational wavefunction.
+- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 
-# Measures the spin-spin correlation function. 
+"""
+function measure_spin_correlation!(
+    measurement_container::NamedTuple,
+    detwf::DeterminantalWavefunction,
+    model_geometry::ModelGeometry
+)
+    # get site-dependent spin
+    s = get_site_dependent_s(detwf, model_geometry)
 
-# """
-# function measure_spin_correlation!(
-#     measurement_container::NamedTuple,
-#     detwf::DeterminantalWavefunction,
-#     model_geometry::ModelGeometry
-# )
+    # calculate spin-spin correlation
+    s_corr_current = s * s'
 
-# end
+    # get current values from the container
+    s_corr_container = measurement_container.correlation_measurements["spin-spin"]
+
+    # update values for the current bin
+    current_s_corr_bin = s_corr_container[2]
+    current_s_corr_bin = s_corr_current
+
+    # update accumulator for this bin
+    thisbin_s_corr_sum = s_corr_container[1]
+    thisbin_s_corr_sum += s_corr_current
+
+    # combine the updated values 
+    updated_values = (thisbin_s_corr_sum, current_s_corr_bin)
+
+    # write the new values to the container
+    measurement_container.correlation_measurements["spin-spin"] = updated_values
+
+    return nothing
+end
 
 
 @doc raw"""
@@ -95,6 +148,7 @@ function get_site_dependent_s(
 
     return s_occs
 end
+
 
 # @doc raw"""
 

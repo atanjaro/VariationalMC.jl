@@ -57,8 +57,11 @@ function initialize_measurement_container(
         ("pconfig", zeros(N))              
     ])                     
 
-    # TODO: dictionary to store correlation measurements
-    correlation_measurements = Dict{String, Any}()
+    # dictionary to store correlation measurements
+    correlation_measurements = Dict{String, Any}([
+        ("density-density", zeros(L, L), zeros(L, L), []),
+        ("spin-spin", zeros(L, L), zeros(L, L), [])
+    ])
 
     # create container
     measurement_container = (
@@ -142,8 +145,12 @@ function initialize_measurement_container(
         ("pconfig", zeros(N))              
     ])                     
 
-    # TODO: dictionary to store correlation measurements
-    correlation_measurements = Dict{String, Any}()
+    # dictionary to store correlation measurements
+    correlation_measurements = Dict{String, Any}([
+        ("density-density", zeros(L, L), zeros(L, L), []),
+        ("spin-spin", zeros(L, L), zeros(L, L), [])
+    ])
+
 
     # create container
     measurement_container = (
