@@ -1,33 +1,10 @@
 @doc raw"""
 
-    jackknife_stats( bin_sample::Vector{Float64} )
-
-Performs jacknife resampling to obtain the standard deviation per bin.
-
-"""
-function jackknife_stats(
-    bin_samples::Vector{Float64}
-)
-    N = length(bin_samples)
-    if N ≤ 1
-        return (mean=NaN, std=NaN)
-    end
-
-    jk_means = [mean(deleteat!(copy(bin_samples), i)) for i in 1:N]
-    jk_mean = mean(jk_means)
-    jk_std = sqrt((N - 1) / N * sum((jk_means .- jk_mean).^2))
-
-    return (mean=jk_mean, std=jk_std)
-end
-
-
-@doc raw"""
-
     process_scalar_measurements( datafolder::String,
                                  measurement::String,
                                  output_csv.String )::Nothing
 
-For energy, density, or double occupancy measurements, avearages over all measurements
+For energy, density, or double occupancy measurements, averages over all measurements
 in a certain bin. 
 
 """
@@ -73,6 +50,20 @@ function process_scalar_measurements(
     return nothing
 end
 
+
+@doc raw"""
+
+    process_optimization_measurements()
+
+For logarithmic derivative measurements, calculates the mean value.
+
+
+"""
+function process_optimization_measurements()
+
+end
+
+
 @doc raw"""
 
     process_correlation_measurements()
@@ -100,14 +91,22 @@ end
 
 function process_measurements()
 
-    # # set the walkers to iterate over
-    # # this will be used for MPI
-    # if isempty(pIDs)
+    # set the walkers to iterate over
+    # this will be used for MPI
+    if isempty(pIDs)
 
-    #     # get the number of MPI walkers
-    #     N_walkers = get_num_walkers(folder)
+        # get the number of MPI walkers
+        N_walkers = get_num_walkers(folder)
 
-    #     # get the pIDs
-    #     pIDs = collect(0:(N_walkers-1))
-    # end
+        # get the pIDs
+        pIDs = collect(0:(N_walkers-1))
+    end
+
+    process_scalar_measurements(datafolder, "density", output_csv)
+    process_scalar_measurements(datafolder, "double_occ", output_csv)
+    process_scalar_measurements(datafolder, "energy", output_csv)
+
+    # # only call if using
+    # process_optimization_measurements()
+    # process_correlation_measurements()
 end

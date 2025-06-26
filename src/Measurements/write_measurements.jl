@@ -6,7 +6,7 @@
                          simulation_info::SimulationInfo )::Nothing
 
 Writes optimization and simulation measurements in the current bin to file. 
-Files created are in JLD2 format. 
+Files created are in HDF5 format. 
 
 - `bin::Int`: current bin.
 - `step::Int`: current step within the bin.
@@ -14,7 +14,6 @@ Files created are in JLD2 format.
 - `simulation_info`: contains datafolder names.
 
 """ 
-# TODO: this function will be modifed to write to HDF5 files instead of JLD2.
 function write_measurements!(
     bin::Int, 
     step::Int, 
@@ -22,44 +21,53 @@ function write_measurements!(
     simulation_info::SimulationInfo
 )::Nothing
     (; datafolder, pID) = simulation_info
-    (; optimization_measurements, simulation_measurements) = measurement_container
+    (; simulation_measurements, optimization_measurements, correlation_measurements) = measurement_container
 
-    fn = @sprintf "bin-%d_pID-%d.jld2" bin pID  
+    # build path to simulation HDF5 bin file
+    sim_file_path = joinpath(datafolder, "simulation", @sprintf("bin-%d.h5", bin))
+    opt_file_path = joinpath(datafolder, "optimization", @sprintf("bin-%d.h5", bin))
+    corr_file_path = joinpath(datafolder, "correlation", @sprintf("bin-%d.h5", bin))
 
-    file_path_dblocc  = joinpath(datafolder, "simulation", "double_occ", fn)
-    file_path_den     = joinpath(datafolder, "simulation", "density", fn)
-    file_path_configs = joinpath(datafolder, "simulation", "configurations", fn)
-    file_path_energy  = joinpath(datafolder, "simulation", "energy", fn)
-
-    # Define step key string
+    # prepare step key
     step_key = "step_$step"
 
-    # Extract latest measurements
-    dblocc_measurement  = simulation_measurements["double_occ"][2]
-    den_measurement     = simulation_measurements["density"][2]
-    config_measurement  = simulation_measurements["pconfig"][2]
-    energy_measurement  = simulation_measurements["energy"][2]
+    # extract simulation measurements
+    density_measurement = simulation_measurements["density"][2]
+    double_occ_measurement = simulation_measurements["double_occ"][2]
+    energy_measurement = simulation_measurements["energy"][2]
+    pconfig_measurement = simulation_measurements["pconfig"][2]
+    # TODO: check for site-dependent density and spin measurements
 
-    # Use jldopen to save with dynamic keys
-    jldopen(file_path_dblocc, "a") do file
-        file[step_key] = dblocc_measurement
+    # extract correlation measurements, if measuring
+    if !isempty(correlation_measurements)
+        if !isempty(correlation_measurements["density"])
+            dcorr_measurement = correlation_measurements["density"][2]
+        elseif !isempty(correlation_measurements["spin"])
+            scorr_measurement = correlation_measurements["spin"][2]
+        end
     end
 
-    jldopen(file_path_den, "a") do file
-        file[step_key] = den_measurement
+    # extract optimization measurements, if storing
+    # Δk_measurement = optimization_measurements["Δk"][2]
+    # ΔkΔkp_measurement = optimization_measurements["ΔkΔkp"][2]
+    # ΔkE_measurement = optimization_measurements["ΔkE"][2]
+
+    # write to HDF5
+    h5open(sim_file_path, "a") do file
+        file["density/$step_key"] = density_measurement
+        file["double_occ/$step_key"] = double_occ_measurement
+        file["energy/$step_key"] = energy_measurement
+        file["pconfig/$step_key"] = pconfig_measurement
+        # file["density-density"] = dcorr_measurement
+        # file["spin-spin"] = scorr_measurement
+        # file["sd-density"] = sdden_measurement
+        # file["sd-spin"] = sdspin_measurement
     end
 
-    jldopen(file_path_configs, "a") do file
-        file[step_key] = config_measurement
-    end
-
-    jldopen(file_path_energy, "a") do file
-        file[step_key] = energy_measurement
-    end
-
-    # Reset for next measurement
+    # reset all measurements
     reset_measurements!(simulation_measurements)
     reset_measurements!(optimization_measurements)
+    # reset_measurements!(correlation_measurements)
 
     return nothing
 end
@@ -72,7 +80,7 @@ end
                          dblocc_bin::Vector{Any}, 
                          param_bin::Vector{Any} )::Nothing
 
-DEBUG version of the write_measurements!() method. Will write binned energies, double occupancy, and parameters
+DEBUG version of the write_measurements!() method. Will write individuallly binned energies, double occupancy, and parameters
 to specified vectors.  
 
 - `measurement_container::NamedTuple`: container where measurements are stored.

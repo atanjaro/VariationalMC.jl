@@ -34,22 +34,8 @@ function measure_local_energy!(
         pht
     )
 
-    # get current values from the container
-    energy_container = measurement_container.simulation_measurements["energy"]
-
-    # update value for the current bin
-    current_E_loc_bin = energy_container[2]
-    current_E_loc_bin = E_loc_current
-
-    # update accumuator for this bin
-    thisbin_E_loc_sum = energy_container[1]
-    thisbin_E_loc_sum += E_loc_current
-
-    # combine the updated values 
-    updated_values = (thisbin_E_loc_sum, current_E_loc_bin)
-
-    # write the new values to the container
-    measurement_container.simulation_measurements["energy"] = updated_values
+    # add the current measured energy to the accumulator
+    measurement_container.simulation_measurements["energy"] += E_loc_current
 
     return nothing
 end
@@ -99,22 +85,8 @@ function measure_local_energy!(
         pht
     )
 
-    # get current values from the container
-    energy_container = measurement_container.simulation_measurements["energy"]
-
-    # update value for the current bin
-    current_E_loc_bin = energy_container[2]
-    current_E_loc_bin = E_loc_current
-
-    # update accumuator for this bin
-    thisbin_E_loc_sum = energy_container[1]
-    thisbin_E_loc_sum += E_loc_current
-
-    # combine the updated values 
-    updated_values = (thisbin_E_loc_sum, current_E_loc_bin)
-
-    # write the new values to the container
-    measurement_container.simulation_measurements["energy"] = updated_values
+    # add the current measured energy to the accumulator
+    measurement_container.simulation_measurements["energy"] += E_loc_current
 
     return nothing
 end
@@ -148,22 +120,8 @@ function measure_double_occ!(
         pht
     )
 
-    # get current values from the container
-    dblocc_container = measurement_container.simulation_measurements["double_occ"]
-
-    # update value for the current bin
-    current_dblocc_bin = dblocc_container[2]
-    current_dblocc_bin = dblocc_current
-
-    # update accumuator for this bin
-    thisbin_dblocc_sum = dblocc_container[1]
-    thisbin_dblocc_sum += dblocc_current
-
-    # combine the updated values 
-    updated_values = (thisbin_dblocc_sum, current_dblocc_bin)
-
-    # write the new values to the container
-    measurement_container.simulation_measurements["double_occ"] = updated_values
+    # add the current measurement to the accumulator
+    measurement_container.simulation_measurements["double_occ"] += dblocc_current
 
     return nothing
 end
@@ -193,22 +151,8 @@ function measure_n!(
         model_geometry
     )
 
-    # get current values from the container
-    density_container = measurement_container.simulation_measurements["density"]
-
-    # update value for the current bin
-    current_density_bin = density_container[2]
-    current_density_bin = density_current
-
-    # update accumuator for this bin
-    thisbin_density_sum = density_container[1]
-    thisbin_density_sum += density_current
-
-    # combine the updated values 
-    updated_values = (thisbin_density_sum, current_density_bin)
-
-    # write the new values to the container
-    measurement_container.simulation_measurements["density"] = updated_values
+    # add the current measurement to the accumulator
+    measurement_container.simulation_measurements["density"] += density_current
 
     return nothing
 end

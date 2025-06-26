@@ -78,7 +78,7 @@ function get_determinantal_wavefunction(
     pconfig::Union{Nothing, Vector{Int}}=nothing
 )::DeterminantalWavefunction
     # number of lattice sites
-    N = model_geometry.lattice.N
+    N = model_geometry.lattice.N 
 
     # build auxiliary (mean-field) Hamiltonian and variational operators
     (H, V) = build_auxiliary_hamiltonian(

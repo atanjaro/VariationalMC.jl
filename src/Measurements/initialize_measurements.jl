@@ -29,7 +29,7 @@ function initialize_measurement_container(
     # total number of lattice sites
     N = model_geometry.lattice.N
     
-    # one side of the lattice
+    # dimensions of the lattice
     L = model_geometry.lattice.L
 
     # number of determinantal parameters
@@ -43,25 +43,22 @@ function initialize_measurement_container(
 
     # container to store optimization measurements
     optimization_measurements = Dict{String, Any}([
-        ("parameters", (init_vpars, init_vpars)),                    
-        ("Δk", (zeros(num_det_pars), zeros(num_det_pars),[])),                         
-        ("ΔkΔkp", (zeros(num_det_pars, num_det_pars), zeros(num_det_pars, num_det_pars),[])),         
-        ("ΔkE", (zeros(num_det_pars), zeros(num_det_pars),[])),                        
+        ("parameters", init_vpars),                    
+        ("Δk", zeros(num_det_pars)),                         
+        ("ΔkΔkp", zeros(num_det_pars)),         
+        ("ΔkE", zeros(num_det_pars)),                        
     ])      
 
     # dictionary to store simulation measurements
     simulation_measurements = Dict{String, Any}([
-        ("density", (0.0,  0.0)),         
-        ("double_occ", (0.0,  0.0)),       
-        ("energy", (0.0,  0.0)),           
-        ("pconfig", zeros(N))              
+        ("local_density", 0.0),         
+        ("double_occ", 0.0),       
+        ("local_energy", ComplexF64(0.0)),           
+        ("configuration", zeros(Int, N))              
     ])                     
 
     # dictionary to store correlation measurements
-    correlation_measurements = Dict{String, Any}([
-        ("density-density", zeros(L, L), zeros(L, L), []),
-        ("spin-spin", zeros(L, L), zeros(L, L), [])
-    ])
+    correlation_measurements = Dict{String, Any}()
 
     # create container
     measurement_container = (
@@ -129,27 +126,27 @@ function initialize_measurement_container(
     # number of variational parameters to be optimized
     num_vpars = determinantal_parameters.num_det_opts + jastrow_parameters.num_jpar_opts
 
+    # initial parameters
+    init_vpars = collect(values(determinantal_parameters.det_pars))
+
     # container to store optimization measurements
     optimization_measurements = Dict{String, Any}([
-        ("parameters", (zeros(num_vpars), zeros(num_vpars))),                     
-        ("Δk", (zeros(num_vpars), zeros(num_vpars),[])),                         
-        ("ΔkΔkp", (zeros(num_vpars,num_vpars), zeros(num_vpars,num_vpars),[])),       
-        ("ΔkE", (zeros(num_vpars), zeros(num_vpars),[])),                         
+        ("parameters", init_vpars),                     
+        ("Δk", zeros(num_vpars)),                         
+        ("ΔkΔkp", zeros(num_vpars,num_vpars)),       
+        ("ΔkE", zeros(num_vpars)),                         
     ])      
 
     # dictionary to store simulation measurements
     simulation_measurements = Dict{String, Any}([
-        ("density", (0.0,  0.0)),          
-        ("double_occ", (0.0,  0.0)),      
-        ("energy", (0.0,  0.0)),           
-        ("pconfig", zeros(N))              
+        ("global_density", 0.0),          
+        ("double_occ", 0.0),      
+        ("local_energy", ComplexF64(0.0)),           
+        ("configuration", zeros(Int, N))              
     ])                     
 
     # dictionary to store correlation measurements
-    correlation_measurements = Dict{String, Any}([
-        ("density-density", zeros(L, L), zeros(L, L), []),
-        ("spin-spin", zeros(L, L), zeros(L, L), [])
-    ])
+    correlation_measurements = Dict{String, Any}()
 
 
     # create container
@@ -173,12 +170,79 @@ function initialize_measurement_container(
 end
 
 
+@doc raw"""
+
+    initialize_correlation_measurement!( correlation_type::String,
+                                         measurement_container::NamedTuple,
+                                         model_geometry::ModelGeometry)::Nothing
+
+Initializes a specified equal-time correlation measurement. 
+
+- `correlation_type::String`: "density" or "spin" correlations.
+- `measurement_container::NamedTuple`: container where mesurements are stored.
+- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
+
+"""
+function initialize_correlation_measurement!(
+    correlation_type::String,
+    measurement_container::NamedTuple,
+    model_geometry::ModelGeometry
+)::Nothing
+    @assert correlation_type == "density" || correlation_type == "spin"
+
+    # number of lattice sites
+    N = model_geometry.lattice.n
+
+    # add to measurement container
+    measurement_container.correlation_measurements[correlation_type] = zeros(N, N)
+
+    return nothing
+end
+
+
+@doc raw"""
+
+    initialize_simulation_measurement!( type::String,
+                                        observable::String,
+                                        measurement_container::NamedTuple,
+                                        model_geometry::ModelGeometry )::Nothing
+
+Initializes a specified simulation observable measurement.
+
+- `type::String`: "local" or "site-dependent"
+- `observable::String`: "density" or "spin".
+- `measurement_container::NamedTuple`: container where mesurements are stored.
+- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
+
+"""
+function initialize_simulation_measurement!(
+    type::String,
+    observable::String,
+    measurement_container::NamedTuple,
+    model_geometry::ModelGeometry
+)::Nothing
+    @assert type == "local" || type == "site-dependent"
+    @assert observable == "density" || observable == "spin"
+
+    # number of lattice sites
+    N = model_geometry.lattice.N
+
+    if type == "local"
+        measurement_container.simulation_measurements[type * "_" * observable] = 0.0
+    elseif type == "site-dependent"
+        measurement_container.simulation_measurements[type * "_" * observable] = zeros(N)
+    end
+
+    return nothing
+end
+
+
 """
 
     initialize_measurement_directories( simulation_info::SimulationInfo, 
                                         measurement_container::NamedTuple )::Nothing
 
-Creates file directories and subdirectories for storing measurements. 
+Creates file directories and for storing measurements. 
 
 - `simulation_info::SimulationInfo`: contains datafolder information.
 - `measurement_container::NamedTuple`: container where measurements are contained.
@@ -202,33 +266,11 @@ function initialize_measurement_directories(
         simulation_directory = joinpath(datafolder, "simulation")
         mkdir(simulation_directory)
 
-        # # make global measurements directory
-        # global_directory = joinpath(datafolder, "global")
-        # mkdir(global_directory)
-
-        # make directories for each parameter measurement
-        detpars_directory = joinpath(optimization_directory, "determinantal")
-        mkdir(detpars_directory)
-        jpars_directory = joinpath(optimization_directory, "Jastrow")
-        mkdir(jpars_directory)
-
-        # make energy measurement directory
-        energy_directory = joinpath(simulation_directory, "energy")
-        mkdir(energy_directory)
-
-        # make configuration measurement directory
-        config_directory = joinpath(simulation_directory, "configurations")
-        mkdir(config_directory)
-
-        # make double occupancy measurement directory
-        dblocc_directory = joinpath(simulation_directory, "double_occ")
-        mkdir(dblocc_directory)
-
-        # make density measurement directory
-        density_directory = joinpath(simulation_directory, "density")
-        mkdir(density_directory)
-
-        # TODO: add correlation measurement directory initialization
+        # make correlation measurements directory
+        if !isempty(correlation_measurements)
+            correlation_directory = joinpath(datafolder, "correlation")
+            mkdir(correlation_directory)
+        end
     end
 
     return nothing
