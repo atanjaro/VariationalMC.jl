@@ -10,7 +10,6 @@ using HDF5
 using TOML
 using JLD2
 
-using Logging
 using Profile
 using Revise
 using DelimitedFiles
