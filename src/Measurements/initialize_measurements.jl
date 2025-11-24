@@ -1,31 +1,30 @@
 @doc raw"""
 
-    initialize_measurement_container( N_opts::Int, 
-                                      opt_bin_size::Int, 
-                                      N_bins::Int, 
-                                      bin_size::Int,
-                                      determinantal_parameters::DeterminantalParameters, 
-                                      model_geometry::ModelGeometry )::NamedTuple
+    initialize_measurement_container( N_opt::I, 
+                                      opt_bin_size::I, 
+                                      N_sim::I, 
+                                      sim_bin_size::I,
+                                      determinantal_parameters::DeterminantalParameters{I}, 
+                                      model_geometry::ModelGeometry ) where {I<:Integer}
 
-Initializes a set of dictionaries containing generic arrays for storing measurements. Each dictionary in the
-container has [keys => values] of the form: [observable name => (local value(s), current bin value(s))] 
+Initializes a set of dictionaries containing generic arrays for storing measurements.
     
-- `N_opts::Int`: number of optimization updates.
-- `opt_bin_size::Int`: length of an optimization bin.
-- `N_bins::Int`: number of simulation bins.
-- `bin_size::Int`: length of a simulation bin. 
-- `determinantal_parameters::DeterminantalParameters`: set of determinantal variational parameters.
+- `N_opt::I`: number of optimization updates.
+- `opt_bin_size::I`: length of an optimization bin.
+- `N_sim::I`: number of simulation bins.
+- `sim_bin_size::I`: length of a simulation bin. 
+- `determinantal_parameters::DeterminantalParameters{I}`: set of determinantal variational parameters.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 
 """
 function initialize_measurement_container(
-    N_opts::Int, 
-    opt_bin_size::Int, 
-    N_bins::Int, 
-    bin_size::Int,
-    determinantal_parameters::DeterminantalParameters, 
+    N_opt::I, 
+    opt_bin_size::I, 
+    N_sim::I, 
+    sim_bin_size::I,
+    determinantal_parameters::DeterminantalParameters{I}, 
     model_geometry::ModelGeometry
-)::NamedTuple
+) where {I<:Integer}
     # total number of lattice sites
     N = model_geometry.lattice.N
     
@@ -45,16 +44,16 @@ function initialize_measurement_container(
     optimization_measurements = Dict{String, Any}([
         ("parameters", init_vpars),                    
         ("Δk", zeros(num_det_pars)),                         
-        ("ΔkΔkp", zeros(num_det_pars)),         
+        ("ΔkΔkp", zeros(num_det_pars, num_det_pars)),         
         ("ΔkE", zeros(num_det_pars)),                        
     ])      
 
     # dictionary to store simulation measurements
     simulation_measurements = Dict{String, Any}([
-        ("local_density", 0.0),         
+        ("global_density", 0.0),         
         ("double_occ", 0.0),       
         ("local_energy", ComplexF64(0.0)),           
-        ("configuration", zeros(Int, N))              
+        ("pconfig", zeros(Int, 2*N))              
     ])                     
 
     # dictionary to store correlation measurements
@@ -67,11 +66,10 @@ function initialize_measurement_container(
         correlation_measurements  = correlation_measurements,                       
         L                         = L,
         N                         = N,
-        N_opts                    = N_opts,
+        N_opt                     = N_opt,
         opt_bin_size              = opt_bin_size,
-        N_updates                 = N_updates,
-        N_bins                    = N_bins,
-        bin_size                  = bin_size,
+        N_sim                     = N_sim,
+        sim_bin_size              = sim_bin_size,
         num_vpars                 = num_vpars,
         num_detpars               = num_det_pars                 
     )
@@ -82,35 +80,34 @@ end
 
 @doc raw"""
 
-    initialize_measurement_container( N_opts::Int, 
-                                      opt_bin_size::Int, 
-                                      N_bins::Int, 
-                                      bin_size::Int,
-                                      determinantal_parameters::DeterminantalParameters, 
-                                      jastrow_parameters::JastrowParameters,
-                                      model_geometry::ModelGeometry )::NamedTuple
+    initialize_measurement_container( N_opt::I, 
+                                      opt_bin_size::I, 
+                                      N_sim::I, 
+                                      sim_bin_size::I,
+                                      determinantal_parameters::DeterminantalParameters{I}, 
+                                      jastrow_parameters::JastrowParameters{S, K, V, I},
+                                      model_geometry::ModelGeometry ) where {I<:Integer, S<:AbstractString, K, V}
 
-Initializes a set of dictionaries containing generic arrays for storing measurements. Each dictionary in the
-container has [keys => values] of the form: [observable name => (local value(s), current bin value(s))] 
+Initializes a set of dictionaries containing generic arrays for storing measurements.
     
-- `N_opts::Int`: number of optimization updates.
-- `opt_bin_size::Int`: length of an optimization bin.
-- `N_bins::Int`: number of simulation bins.
-- `bin_size::Int`: length of a simulation bin. 
-- `determinantal_parameters::DeterminantalParameters`: set of determinantal variational parameters.
-- `jastrow_parameters::JastrowParameters`: set of Jastrow variational parameters.
+- `N_opt::I`: number of optimization updates.
+- `opt_bin_size::I`: length of an optimization bin.
+- `N_sim::I`: number of simulation bins.
+- `sim_bin_size::I`: length of a simulation bin. 
+- `determinantal_parameters::DeterminantalParameters{I}`: set of determinantal variational parameters.
+- `jastrow_parameters::JastrowParameters{S, K, V, I}`: set of Jastrow variational parameters.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 
 """
 function initialize_measurement_container(
-    N_opts::Int, 
-    opt_bin_size::Int, 
-    N_bins::Int, 
-    bin_size::Int,
-    determinantal_parameters::DeterminantalParameters, 
-    jastrow_parameters::JastrowParameters, 
+    N_opt::I, 
+    opt_bin_size::I, 
+    N_sim::I, 
+    sim_bin_size::I,
+    determinantal_parameters::DeterminantalParameters{I}, 
+    jastrow_parameters::JastrowParameters{S, K, V, I}, 
     model_geometry::ModelGeometry
-)::NamedTuple
+) where {I<:Integer, S<:AbstractString, K, V}
     # total number of lattice sites
     N = model_geometry.lattice.N
     
@@ -123,11 +120,102 @@ function initialize_measurement_container(
     # number of Jastrow parameters
     num_jpars = jastrow_parameters.num_jpars
 
-    # number of variational parameters to be optimized
-    num_vpars = determinantal_parameters.num_det_opts + jastrow_parameters.num_jpar_opts
+    # total number of variational parameters 
+    num_vpars = num_detpars + num_jpars
 
     # initial parameters
-    init_vpars = collect(values(determinantal_parameters.det_pars))
+    init_vpars = collect_parameters(determinantal_parameters, jastrow_parameters)
+
+    # container to store optimization measurements
+    optimization_measurements = Dict{String, Any}([
+        ("parameters", init_vpars),                     
+        ("Δk", zeros(num_vpars)),                         
+        ("ΔkΔkp", zeros(num_vpars, num_vpars)),       
+        ("ΔkE", zeros(num_vpars)),                         
+    ])      
+
+    # dictionary to store simulation measurements
+    simulation_measurements = Dict{String, Any}([
+        ("global_density", 0.0),          
+        ("double_occ", 0.0),      
+        ("local_energy", ComplexF64(0.0)),           
+        ("pconfig", zeros(Int, 2*N))              
+    ])                     
+
+    # dictionary to store correlation measurements
+    correlation_measurements = Dict{String, Any}()
+
+
+    # create container
+    measurement_container = (
+        simulation_measurements   = simulation_measurements,
+        optimization_measurements = optimization_measurements,         
+        correlation_measurements  = correlation_measurements,                       
+        L                         = L,
+        N                         = N,
+        N_opt                     = N_opt,
+        opt_bin_size              = opt_bin_size,
+        N_sim                     = N_sim,
+        sim_bin_size              = sim_bin_size,
+        num_vpars                 = num_vpars,
+        num_detpars               = num_detpars,
+        num_jpars                 = num_jpars                      
+    )
+
+    return measurement_container
+end
+
+
+@doc raw"""
+
+    initialize_measurement_container( N_opt::I, 
+                                      opt_bin_size::I, 
+                                      N_sim::I, 
+                                      sim_bin_size::I,
+                                      determinantal_parameters::DeterminantalParameters{I}, 
+                                      jastrow_parameters_1::JastrowParameters{S, K, V, I},
+                                      jastrow_parameters_2::JastrowParameters{S, K, V, I},
+                                      model_geometry::ModelGeometry ) where {I<:Integer, S<:AbstractString, K, V}
+
+Initializes a set of dictionaries containing generic arrays for storing measurements.
+    
+- `N_opt::I`: number of optimization updates.
+- `opt_bin_size::I`: length of an optimization bin.
+- `N_sim::I`: number of simulation bins.
+- `sim_bin_size::I`: length of a simulation bin. 
+- `determinantal_parameters::DeterminantalParameters{I}`: set of determinantal variational parameters.
+- `jastrow_parameters_1::JastrowParameters{S, K, V, I}`: first set of Jastrow variational parameters.
+- `jastrow_parameters_2::JastrowParameters{S, K, V, I}`: second set of Jastrow variational parameters.
+- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
+
+"""
+function initialize_measurement_container(
+    N_opt::I, 
+    opt_bin_size::I, 
+    N_sim::I, 
+    sim_bin_size::I,
+    determinantal_parameters::DeterminantalParameters{I}, 
+    jastrow_parameters_1::JastrowParameters{S, K, V, I}, 
+    jastrow_parameters_2::JastrowParameters{S, K, V, I}, 
+    model_geometry::ModelGeometry
+) where {I<:Integer, S<:AbstractString, K, V}
+    # total number of lattice sites
+    N = model_geometry.lattice.N
+    
+    # one side of the lattice
+    L = model_geometry.lattice.L
+
+    # number of determinantal_parameters
+    num_detpars = determinantal_parameters.num_det_pars
+
+    # number of Jastrow parameters
+    num_jpars = jastrow_parameters_1.num_jpars + jastrow_parameters_2.num_jpars 
+
+    # number of variational parameters to be optimized
+    num_vpars = determinantal_parameters.num_det_opts + jastrow_parameters_1.num_jpar_opts + jastrow_parameters_2.num_jpar_opts 
+
+    # initial parameters
+    init_vpars = collect_parameters(determinantal_parameters, jastrow_parameters_1, jastrow_parameters_2)
 
     # container to store optimization measurements
     optimization_measurements = Dict{String, Any}([
@@ -142,7 +230,7 @@ function initialize_measurement_container(
         ("global_density", 0.0),          
         ("double_occ", 0.0),      
         ("local_energy", ComplexF64(0.0)),           
-        ("configuration", zeros(Int, N))              
+        ("pconfig", zeros(Int, N))              
     ])                     
 
     # dictionary to store correlation measurements
@@ -156,11 +244,10 @@ function initialize_measurement_container(
         correlation_measurements  = correlation_measurements,                       
         L                         = L,
         N                         = N,
-        N_opts                    = N_opts,
+        N_opt                     = N_opt,
         opt_bin_size              = opt_bin_size,
-        N_updates                 = N_updates,
-        N_bins                    = N_bins,
-        bin_size                  = bin_size,
+        N_sim                     = N_sim,
+        sim_bin_size              = sim_bin_size,
         num_vpars                 = num_vpars,
         num_detpars               = num_detpars,
         num_jpars                 = num_jpars                      
@@ -172,22 +259,22 @@ end
 
 @doc raw"""
 
-    initialize_correlation_measurement!( correlation_type::String,
+    initialize_correlation_measurement!( correlation_type::S,
                                          measurement_container::NamedTuple,
-                                         model_geometry::ModelGeometry)::Nothing
+                                         model_geometry::ModelGeometry ) where {S<:AbstractString}
 
 Initializes a specified equal-time correlation measurement. 
 
-- `correlation_type::String`: "density" or "spin" correlations.
+- `correlation_type::S`: "density" or "spin".
 - `measurement_container::NamedTuple`: container where mesurements are stored.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 
 """
 function initialize_correlation_measurement!(
-    correlation_type::String,
+    correlation_type::S,
     measurement_container::NamedTuple,
     model_geometry::ModelGeometry
-)::Nothing
+) where {S<:AbstractString}
     @assert correlation_type == "density" || correlation_type == "spin"
 
     # number of lattice sites
@@ -202,34 +289,35 @@ end
 
 @doc raw"""
 
-    initialize_simulation_measurement!( type::String,
-                                        observable::String,
+    initialize_simulation_measurement!( type::S,
+                                        observable::S,
                                         measurement_container::NamedTuple,
-                                        model_geometry::ModelGeometry )::Nothing
+                                        model_geometry::ModelGeometry ) where {S<:AbstractString}
 
 Initializes a specified simulation observable measurement.
 
-- `type::String`: "local" or "site-dependent"
-- `observable::String`: "density" or "spin".
+- `type::S`: "local" or "site-dependent".
+- `observable::S`: "spin-z", "double_occ", "density" or "spin".
 - `measurement_container::NamedTuple`: container where mesurements are stored.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 
 """
 function initialize_simulation_measurement!(
-    type::String,
-    observable::String,
+    type::S,
+    observable::S,
     measurement_container::NamedTuple,
     model_geometry::ModelGeometry
-)::Nothing
+) where {S<:AbstractString}
     @assert type == "local" || type == "site-dependent"
-    @assert observable == "density" || observable == "spin"
 
     # number of lattice sites
     N = model_geometry.lattice.N
 
     if type == "local"
+        @assert observable == "spin-z" || "density" || observable == "spin"
         measurement_container.simulation_measurements[type * "_" * observable] = 0.0
     elseif type == "site-dependent"
+        @assert observable == "density" || observable == "spin"
         measurement_container.simulation_measurements[type * "_" * observable] = zeros(N)
     end
 
@@ -240,7 +328,7 @@ end
 """
 
     initialize_measurement_directories( simulation_info::SimulationInfo, 
-                                        measurement_container::NamedTuple )::Nothing
+                                        measurement_container::NamedTuple )
 
 Creates file directories and for storing measurements. 
 
@@ -251,7 +339,7 @@ Creates file directories and for storing measurements.
 function initialize_measurement_directories(
     simulation_info::SimulationInfo, 
     measurement_container::NamedTuple
-)::Nothing
+)
     (; datafolder, resuming, pID) = simulation_info
     (; optimization_measurements, simulation_measurements, correlation_measurements) = measurement_container
 

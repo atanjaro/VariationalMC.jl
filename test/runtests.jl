@@ -1,6 +1,7 @@
 using VariationalMC
 using Test
+using TestItemRunner
 
 @testset "VariationalMC.jl" begin
-    # Write your tests here.
+    @run_package_tests
 end

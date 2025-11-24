@@ -4,7 +4,10 @@ using Random
 using Printf
 
 using LatticeUtilities
-using VariationalMC
+using VariationalMC 
+
+# # Uncomment this to trigger output of debug statements
+# global_logger(ConsoleLogger(stderr, Logging.Debug))
 
 # We define a top-level function for running the VMC simulation.
 # Note that the arguments of this function correspond to the command line
@@ -16,15 +19,12 @@ function run_hubbard_square_simulation(
     nup,
     ndn,
     N_equil,
-    N_opts,
-    N_updates,
-    N_bins; 
+    N_opt,
+    N_opt_bins,
+    N_sim,
+    N_sim_bins; 
     filepath="."
 )
-    # DEBUG flag which writes information to terminal during the simulation.
-    # For efficeincy, this should always be turned off. 
-    debug = false
-
     # Select which parameters in the variational wavefunction will be optimized.
     optimize = (
         # local s-wave pairing
@@ -32,7 +32,7 @@ function run_hubbard_square_simulation(
         # site-dependent s-wave pairing  
         Δ_spd = false,
         # local d-wave pairing
-        Δ_d = true,
+        Δ_d = false,
         # site-dependent d-wave pairing 
         Δ_dpd = false,          
         # pairing momentum
@@ -50,15 +50,15 @@ function run_hubbard_square_simulation(
         # site-dependent charge density
         Δ_csd = false,
         # density-density Jastrow 
-        djastrow = true,
+        density_J = true,
     )
 
     # Specify whether the model will be particle-hole transformed.
     # Note that this is required if adding pair fields to the wavefunction.
-    pht = true
+    pht = false
 
     # Construct the foldername the data will be written.
-    df_prefix = @sprintf "hubbard_chain_U%.2f_nup%.2f_ndn%.2f_L%d_opt" U, nup, ndn, L
+    df_prefix = @sprintf("hubbard_chain_U%.2f_nup%.2f_ndn%.2f_L%d_opt", U, nup, ndn, L)
 
     # Append optimized parameter names to the foldername.
     datafolder_prefix = create_datafolder_prefix(optimize, df_prefix)
@@ -103,29 +103,30 @@ function run_hubbard_square_simulation(
     # by numerical stabilization.
     δT = 1e-3
 
-    # Specify the optimization bin size.
-    # The optimization bin size if the number of measurments that are averaged over each time data
-    # is written to file during optimization. 
-    opt_bin_size = 3000
+    # Calculate optimization bins size.
+    # The bin size is the number of measurements that are averaged over each time data is written
+    # to file during optimization.
+    opt_bin_size = div(N_opt, N_opt_bins) 
 
-    # Calculate the simulation bin size.
+    # Calculate simulation bins size.
     # The bin size is the number of measurements that are averaged over each time data is written
     # to file during the simulation.
-    bin_size = div(N_updates, N_bins)
+    sim_bin_size = div(N_sim, N_sim_bins)
 
     # Initialize a dictionary to store additional information about the simulation.
     # This is a sort of "notebook" for tracking extraneous parameters during the VMC simulation.
     metadata = Dict()
     metadata["N_equil"] = N_equil
-    metadata["N_opts"] = N_opts
-    metadata["N_updates"] = N_updates
-    metadata["N_bins"] = N_bins
+    metadata["N_opts"] = N_opt
+    metadata["N_sim"] = N_sim
+    metadata["N_opt_bins"] = N_opt_bins
+    metadata["N_sim_bins"] = N_sim_bins
     metadata["seed"] = seed
     metadata["pht"] = true
     metadata["δW"] = δW
     metadata["dt"] = dt 
+    metadata["acceptance_rate"] = 0.0
     metadata["opt_flags"] = optimize 
-    metadata["avg_acceptance_rate"] = 0.0
     metadata["opt_time"] = 0.0
     metadata["sim_time"] = 0.0
     metadata["total_time"] = 0.0
@@ -135,7 +136,7 @@ function run_hubbard_square_simulation(
     #######################
 
     # Initialize an instance of the UnitCell type.
-    # This struct defines the UnitCell.
+    # This struct defines the unit cell.
     unit_cell = UnitCell(
         lattice_vecs = [[1.0, 0.0], [0.0, 1.0]],
         basis_vecs   = [[0.0, 0.0]]
@@ -153,7 +154,7 @@ function run_hubbard_square_simulation(
     # Define the nearest neighbor x-bond for a square lattice.
     bond_x = Bond(
         orbitals = (1,1), 
-        displacement = [1]
+        displacement = [1,0]
     )
 
     # Define the nearest neighbor y-bond for a square lattice.
@@ -177,7 +178,7 @@ function run_hubbard_square_simulation(
     # Collect all bond definitions into a single vector.
     # Note that this has the structure [[nearest],[next-nearest]].
     bonds = [[bond_x, bond_y], [bond_xy, bond_yx]]
-    
+
     # Initialize an instance of the ModelGeometry type.
     # This type helps keep track of all the relevant features of the lattice
     # geometry being simulated, including the defintion of the unit cell,
@@ -195,11 +196,12 @@ function run_hubbard_square_simulation(
 
     # Initialize the container that measurements will be accumulated into.
     measurement_container = initialize_measurement_container(
-        N_opts, 
+        N_opt, 
         opt_bin_size, 
-        N_bins, 
-        bin_size,
+        N_sim, 
+        sim_bin_size,
         determinantal_parameters,
+        jastrow_parameters,
         model_geometry
     )
 
@@ -214,289 +216,242 @@ function run_hubbard_square_simulation(
     ############################
 
     # Determine the total particle density in the canonical ensemble. 
-    (density, Np, Ne) = get_particle_density(nup, ndn)
+    (density, Np, Ne, nup, ndn) = get_particle_density(nup, ndn, model_geometry, pht) 
 
     # Define the nearest neighbor hopping amplitude, setting the energy scale of the system. 
-    t = 1.0;
+    t = 1.0
 
     # Define the next-nearest neighbor hopping amplitude.
-    tp = 0.0;
+    tp = 0.0
+
+    # Define the third-nearest neighbor hopping amplitude.
+    tpd = 0.0
 
     # Define the non-interacting tight binding model.
-    tight_binding_model = TightBindingModel(t, tp)
-
-    # Specify the minimum value of each variational parameter.
-    # Note that this is done to avoid open shell issues.
-    minabs_vpar = 1e-4;
+    tight_binding_model = TightBindingModel(t, tp, tpd)
 
     # Initialize determinantal variational parameters.
     determinantal_parameters = DeterminantalParameters(
         optimize, 
         tight_binding_model, 
         model_geometry, 
-        minabs_vpar, 
         Ne, 
         pht
     )
 
-    # Initialize density-density Jastrow variational parameters. 
-    djastrow_parameters = JastrowParameters(
+    # Initialize density-density Jastrow variational parameters.
+    density_J_parameters = JastrowParameters(
         "e-den-den",
         optimize, 
         model_geometry,
         rng
     )
 
-    # Initialize the (fermionic) particle configuration cache.
-    pconfig_cache = nothing
+    # Initialize the (fermionic) particle configuration.
+    # Will start with a random initial configuration unless provided a starting configuration.
+    pconfig = Int[]
 
     ###########################
     ### OPTIMIZATION UPDATES ##
     ###########################
 
-    # Record start time for optimization. 
-    opt_start_time = time()
+    # Record start time for optimization.
+    opt_start = time()
 
-    # Iterate over optimization updates.
-    for bin in 1:N_opts
+    # Iterate over optimization bins.
+    for bin in 1:N_opt_bins
 
         # Initialize the determinantal wavefunction.
         detwf = get_determinantal_wavefunction(
             tight_binding_model, 
             determinantal_parameters, 
             optimize, 
-            Ne, 
+            Np, 
             nup, 
             ndn, 
             model_geometry, 
             rng,
-            pconfig_cache
-        )   
+            pht,
+            pconfig
+        )  
 
-        # Initialize the density-density Jastrow factor.
-        djas_factor = get_jastrow_factor(
-            djastrow_parameters,
+        # Initialize density-density Jastrow factor.
+        density_J_factor = get_jastrow_factor(
+            density_J_parameters,
             detwf,
             model_geometry,
             pht
         )
 
-        # Iterate over equilibration/thermalization updates.
-        for step in 1:N_equil 
-
-            # Attempt to update the fermionic particle configuration.
-            (acceptance_rate, detwf, djas_factor) = local_fermion_update!(
-                detwf, 
-                djas_factor,
-                djastrow_parameters,
-                Ne, 
-                model_geometry, 
-                pht,
-                n_stab_W,
-                n_stab_T,
-                δW, 
-                δT,
-                rng
-            )
-
-            # Record the acceptance rate for attempted local updates of the particle configuration.                                                         
-            metadata["avg_acceptance_rate"] += acceptance_rate;
-        end
-
-        # Iterate over the number of optimization bins.
+        # Iterate over optimization bin length
         for n in 1:opt_bin_size
 
-            # Attempt to update the fermionic particle configuration.
-            (acceptance_rate, detwf, djas_factor) = local_fermion_update!(
-                detwf, 
-                djas_factor,
-                djastrow_parameters,
-                Ne, 
-                model_geometry, 
-                pht,
-                n_stab_W,
-                n_stab_T,
-                δW, 
-                δT,
-                rng
-            ) 
-                                                                                                        
-            # Record the acceptance rate for attempted local updates of the particle configuration                                                       
-            metadata["avg_acceptance_rate"] += acceptance_rate;
-            
-            # Make measurements, with results being recorded in the measurement container. 
+            # Iterate over equilibration/thermalization updates
+            for equil in N_equil
+                (acceptance_rate, detwf, density_J_factor) = local_fermion_update!(
+                    detwf, 
+                    density_J_factor,
+                    density_J_parameters,
+                    Ne, 
+                    model_geometry, 
+                    pht,
+                    n_stab_W,
+                    n_stab_T,
+                    δW, 
+                    δT,
+                    rng
+                )
+            end
+
+            # Make measurements, with results being recorded in the measurement container.
             make_measurements!(
                 measurement_container, 
                 detwf, 
                 tight_binding_model, 
-                djas_factor,
-                djastrow_parameters,
+                density_J_parameters,
+                density_J_factor,
                 determinantal_parameters, 
                 model_geometry, 
-                Ne, 
+                Np, 
                 pht
-            )
-
-            # Write measurement for the current bin to file.
-            write_measurements!(
-                bin, 
-                n, 
-                measurement_container, 
-                simulation_info
             )
         end
 
-        # Record the last particle configuration used in the current bin. 
-        pconfig_cache = detwf.pconfig
+        # Record the last particle configuration used for the start of the next bin.
+        pconfig = detwf.pconfig
 
-        # Process the measurement results, calculating error bars for all measurements. 
-        # process_measurements(simulation_info, opt_bin_size)
-
-        # Attempt an update to the variational parameters using the Stochastic Reconfiguration procedure. 
-        stochastic_reconfiguration!( 
+        # Attempt to update the variational parameters using the Stochastic Reconfiguration procedure. 
+        optimize_parameters!( 
             measurement_container,  
             determinantal_parameters, 
-            djastrow_parameters,
+            density_J_parameters,
             η, 
             dt, 
-            bin, 
             opt_bin_size
         )  
-    end     
+
+        # Write measurement for the current bin to file.
+        write_measurements!(
+            bin, 
+            opt_bin_size,
+            measurement_container, 
+            simulation_info,
+            write_parameters=true
+        )
+
+        # TBA: Perform a check for parameter convergence
+        # If the convergence condition is satisfied, returns the first convergence bin.
+    end
 
     # Record end time for optimization.
-    opt_end_time = time()
+    opt_end = time()
 
-    # Calculate the total time for optimization. 
-    metadata["opt_time"] += opt_end_time - opt_start_time
+    # Record the total time for optimization.
+    metadata["opt_time"] += opt_end - opt_start
 
     #########################
     ### SIMULATION UPDATES ##
     #########################
 
-    # Record start time for the simulation.
-    sim_start_time = time()
+    # Record start time for simulation.
+    sim_start = time()
 
-    # Iterate over simulation updates.
-    for bin in 1:N_updates
+    # Iterate over simulation bins.
+    for bin in 1:N_sim_bins
 
         # Initialize the determinantal wavefunction.
         detwf = get_determinantal_wavefunction(
             tight_binding_model, 
             determinantal_parameters, 
             optimize, 
-            Ne, 
+            Np, 
             nup, 
             ndn, 
             model_geometry, 
             rng,
-            pconfig_cache
-        )   
+            pht,
+            pconfig
+        )  
 
-        # Initialize the density-density Jastrow factor.
-        djas_factor = get_jastrow_factor(
-            djastrow_parameters,
+        # Initialize density-density Jastrow factor.
+        density_J_factor = get_jastrow_factor(
+            density_J_parameters,
             detwf,
             model_geometry,
             pht
         )
 
-        # Iterate over equilibration/thermalization updates.
-        for step in 1:N_equil 
+        # Iterate over optimization bin length
+        for n in 1:sim_bin_size
 
-            # Attempt to update the fermionic particle configuration.
-            (acceptance_rate, detwf, djas_factor) = local_fermion_update!(
-                detwf, 
-                Ne, 
-                model_geometry, 
-                n_stab_W,
-                δW, 
-                rng
-            )
+            # Iterate over equilibration/thermalization updates
+            for equil in N_equil
+                (acceptance_rate, detwf, density_J_factor) = local_fermion_update!(
+                    detwf, 
+                    density_J_factor,
+                    density_J_parameters,
+                    Ne, 
+                    model_geometry, 
+                    pht,
+                    n_stab_W,
+                    n_stab_T,
+                    δW, 
+                    δT,
+                    rng
+                )
+            end
 
-            # Record the acceptance rate for attempted local updates of the particle configuration.                                                         
-            metadata["avg_acceptance_rate"] += acceptance_rate;
-        end
-
-        # Iterate over the number of simulation bins.
-        for n in 1:bin_size
-
-            # Attempt to update the fermionic particle configuration.
-            (acceptance_rate, detwf) = local_fermion_update!(
-                detwf, 
-                djas_factor,
-                djastrow_parameters,
-                Ne, 
-                model_geometry, 
-                pht,
-                n_stab_W,
-                n_stab_T,
-                δW, 
-                δT,
-                rng
-            ) 
-                                                                                                        
-            # Record the acceptance rate for attempted local updates of the particle configuration                                                       
-            metadata["avg_acceptance_rate"] += acceptance_rate;
-            
-            # Make measurements, with results being recorded in the measurement container. 
+            # Make measurements, with results being recorded in the measurement container.
             make_measurements!(
                 measurement_container, 
                 detwf, 
                 tight_binding_model, 
-                djas_factor,
-                djastrow_parameters,
+                density_J_parameters,
+                density_J_factor,
                 determinantal_parameters, 
                 model_geometry, 
-                Ne, 
+                Np, 
                 pht
-            )
-
-            # Write measurement for the current bin to file.
-            write_measurements!(
-                bin, 
-                n, 
-                measurement_container, 
-                simulation_info
             )
         end
 
-        # Record the last particle configuration used in the current bin. 
-        pconfig_cache = detwf.pconfig
+        # Record the last particle configuration used for the start of the next bin.
+        pconfig = detwf.pconfig
 
-        # Process the measurement results, calculating error bars for all measurements. 
-        # process_measurements(simulation_info, bin_size)
-    end     
+        # Write measurement for the current bin to file.
+        write_measurements!(
+            bin, 
+            opt_bin_size,
+            measurement_container, 
+            simulation_info
+        )
+    end
 
-    # Record end time for the simulation. 
-    sim_end_time = time()
+    # Record end time for simulation.
+    sim_end = time()
 
-    # Calculate total time for the simulation. 
-    metadata["sim_time"] += sim_end_time - sim_start_time
+    # Record the total simulation time.
+    metadata["sim_time"] += sim_end - sim_start
 
-    # Record the total runtime.
+    # Record the total VMC time.
     metadata["total_time"] += metadata["opt_time"] + metadata["sim_time"]
-
-    # # Write simulation summary TOML file.
-    # save_simulation_info(simulation_info, metadata)
-
-    return nothing
-end 
+end
 
 # Only execute if the script is run directly from the command line.
 if abspath(PROGRAM_FILE) == @__FILE__
 
     # Read in the command line arguments.
-    sID = parse(Int, ARGS[1]) # simulation ID
+    sID = parse(Int, ARGS[1])           # simulation ID
     L = parse(Int, ARGS[2])
     U = parse(Float64, ARGS[3])
     nup = parse(Int, ARGS[4])
     ndn = parse(Int, ARGS[5])
     N_equil = parse(Int, ARGS[6])
-    N_opts = parse(Int, ARGS[7])
-    N_updates = parse(Int, ARGS[8])
-    N_bins = parse(Int, ARGS[9])
+    N_opt = parse(Int, ARGS[7])
+    N_opt_bins = parse(Int, ARGS[8])
+    N_sim = parse(Int, ARGS[9])
+    N_sim_bins = parse(Int, ARGS[10])
 
     # Run the simulation.
-    run_hubbard_square_simulation(sID, L, U, nup, ndn, N_equil, N_opts, N_updates, N_bins)
+    run_hubbard_square_simulation(sID, L, U, nup, ndn, N_equil, N_opt, N_opt_bins, N_sim, N_sim_bins)
 end

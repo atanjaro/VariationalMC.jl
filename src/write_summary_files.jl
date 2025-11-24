@@ -17,6 +17,9 @@ function model_summary(
     ndn::Int,
     U::Float64,
     dt::Float64, 
+    N_equil::Int,
+    N_opt::Int,
+    N_opt_bins::Int,
     model_geometry::ModelGeometry,
     tight_binding_model::TightBindingModel
 )::Nothing
@@ -38,14 +41,26 @@ function model_summary(
             # write dt
             @printf fout "dt = %.6f\n\n" dt
 
-            # write model geometry out to file
-            show(fout, "text/plain", model_geometry)
+            # # write model geometry out to file
+            # show(fout, "text/plain", model_geometry)
 
-            # write tight binding model to file
-            show(fout, MIME("text/plain"), tight_binding_model)
+            # # write tight binding model to file
+            # show(fout, MIME("text/plain"), tight_binding_model)
 
             # write U
             @printf fout "U = %.6f\n\n" U
+
+            # write N_equil
+            @printf fout "N_equil = %d\n\n" N_equil
+
+            # write N_opt
+            @printf fout "N_opt = %d\n\n" N_opt
+
+            # write N_opt_bins
+            @printf fout "N_opt_bins = %d\n\n" N_opt_bins
+
+            # write seed
+            @printf fout "seed = %d\n\n" seed
         end
     end
 

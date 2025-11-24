@@ -1,32 +1,33 @@
 @doc raw"""
 
-    stochastic_reconfiguration!( measurement_container::NamedTuple, 
-                                 determinantal_parameters::DeterminantalParameters, 
-                                 η::Float64, 
-                                 dt::Float64, 
-                                 bin::Int,
-                                 bin_size::Int64 )::Nothing
+    optimize_parameters!( measurement_container::NamedTuple, 
+                          determinantal_parameters::DeterminantalParameters{I}, 
+                          η::E, 
+                          dt::E, 
+                          bin_size::I ) where {I<:Integer, E<:AbstractFloat}
 
-Updates variational parameters through stochastic optimization.
+Optimizes and updates variational parameters using the Stochastic Reconfiguration method, in
+which the variation in parameter ``\alpha_k`` can be found by solving ``\delta\alpha_k = (S + \eta\mathbb{I})f^{-1}``,
+where ``S`` is the covariance matrix, ``f`` is the force vector, and ``\eta`` is a stabilization parameter.
 
 - `measurement_container::NamedTuple`: container where measurements are stored. 
-- `determinantal_parameters::DeterminantalParameters`: set of determinantal variational parameters.
-- `η::Float64`: optimization stabilization factor. 
-- `dt::Float64`: optimization rate. 
-- `bin::Int`: current bin number.
-- `bin_size::Int64`: length of the current bin. 
+- `determinantal_parameters::DeterminantalParameters{I}`: set of determinantal variational parameters.
+- `η::E`: optimization stabilization factor. 
+- `dt::E`: optimization rate. 
+- `bin_size::I`: length of the bins. 
 
 """
-function stochastic_reconfiguration!(
+function optimize_parameters!(
     measurement_container::NamedTuple, 
-    determinantal_parameters::DeterminantalParameters, 
-    η::Float64, 
-    dt::Float64, 
-    bin::Int, 
-    opt_bin_size::Int64
-)::Nothing
-    debug && println("Optimizer::stochastic_reconfiguration!() : ")
-    debug && println("Start of optimization")
+    determinantal_parameters::DeterminantalParameters{I}, 
+    η::E, 
+    dt::E, 
+    opt_bin_size::I
+) where {I<:Integer, E<:AbstractFloat}
+    @debug """
+    Optimizer::optimize_parameters!() :
+    Start of optimization!
+    """
 
     # get S matrix
     S = get_covariance_matrix(
@@ -41,15 +42,17 @@ function stochastic_reconfiguration!(
     )
 
     # solve for variation in the parameters
-    δvpars = (S + η * I(size(S,1))) \ f  
+    δvpars = (S + η * LinearAlgebra.I(size(S,1))) \ f  
 
-    # new varitaional parameters
-    new_vpars = reduce(vcat, (isa(x, AbstractVector) ? x : [x] for x in values(determinantal_parameters.det_pars))) 
-    new_vpars .+= dt .* δvpars                                     
-
-    debug && println("Optimizer::stochastic_reconfiguration!() : ")
-    debug && println("Parameters have been updated")
-    debug && println("new parameters = ", new_vpars)
+    # new variational parameters
+    new_vpars = reduce(vcat, [x isa AbstractVector ? x : [x] for x in measurement_container.optimization_measurements["parameters"]])
+    new_vpars += dt .* δvpars               
+    
+    @debug """
+    Optimizer::optimize_parameters!() :
+    Parameters have been updated =>
+    new parameters = $(new_vpars)
+    """
 
     # push back determinantal parameters
     update_parameters!(
@@ -57,26 +60,10 @@ function stochastic_reconfiguration!(
         determinantal_parameters
     )
 
-    # extract container info
-    optimization_measurements = measurement_container.optimization_measurements
-
-    (; datafolder, pID) = simulation_info
-
-    # extract other container components
-    (; optimization_measurements) = measurement_container
-
-    # construct filenames
-    fn = @sprintf "bin-%d_pID-%d.jld2" bin pID  
-
-    # path to parameter directory
-    file_path_det_parameters = joinpath(datafolder, "optimization", "determinantal", fn)
-
-    # append parameter measurements to file
-    det_parameter_measurements = optimization_measurements["parameters"][2][1:end-num_jpars] 
-    JLD2.@save file_path_det_parameters det_parameter_measurements append=true
-
-    debug && println("Optimizer::stochastic_reconfiguration!() : ")
-    debug && println("End of optimization")
+    @debug """
+    Optimizer::optimize_parameters!() :
+    End of optimization!
+    """
 
     return nothing
 end
@@ -84,36 +71,40 @@ end
 
 @doc raw"""
 
-    stochastic_reconfiguration!( measurement_container::NamedTuple, 
-                                 determinantal_parameters::DeterminantalParameters, 
-                                 jastrow_parameters::JastrowParameters, 
-                                 η::Float64, 
-                                 dt::Float64, 
-                                 bin::Int, 
-                                 bin_size::Int64 )::Nothing
+    optimize_parameters!( measurement_container::NamedTuple, 
+                          determinantal_parameters::DeterminantalParameters{I}, 
+                          jastrow_parameters::JastrowParameters{T, K, V, I}, 
+                          η::E, 
+                          dt::E, 
+                          dt_J::E,
+                          bin_size::I ) where {I<:Integer, T<:AbstractString, K, V, E<:AbstractFloat}
 
-Updates variational parameters through stochastic optimization.
+Optimizes and updates variational parameters using the Stochastic Reconfiguration method, in
+which the variation in parameter ``\alpha_k`` can be found by solving ``\delta\alpha_k = (S + \eta\mathbb{I})f^{-1}``,
+where ``S`` is the covariance matrix, ``f`` is the force vector, and ``\eta`` is a stabilization parameter.
 
 - `measurement_container::NamedTuple`: container where measurements are stored. 
-- `determinantal_parameters::DeterminantalParameters`: set of determinantal variational parameters.
-- `jastrow_parameters::JastrowParameters`: set of Jastrow variational parameters. 
-- `η::Float64`: optimization stabilization factor. 
-- `dt::Float64`: optimization rate. 
-- `bin::Int`: current bin number.
-- `bin_size::Int64`: length of the current bin. 
+- `determinantal_parameters::DeterminantalParameters{I}`: set of determinantal variational parameters.
+- `jastrow_parameters::JastrowParameters{T, K, V, I}`: set of Jastrow variational parameters. 
+- `η::E`: optimization stabilization factor. 
+- `dt::E`: optimization rate. 
+- `dt_J::E`: boost in the optimization rate of the Jastrow parameters.
+- `bin_size::I`: length of the bins. 
 
 """
-function stochastic_reconfiguration!( 
+function optimize_parameters!( 
     measurement_container::NamedTuple, 
-    determinantal_parameters::DeterminantalParameters, 
-    jastrow_parameters::JastrowParameters, 
-    η::Float64, 
-    dt::Float64, 
-    bin::Int, 
-    opt_bin_size::Int64
-)::Nothing
-    debug && println("Optimizer::stochastic_reconfiguration!() : ")
-    debug && println("Start of optimization")
+    determinantal_parameters::DeterminantalParameters{I}, 
+    jastrow_parameters::JastrowParameters{T, K, V, I}, 
+    η::E, 
+    dt::E, 
+    dt_J::E,
+    opt_bin_size::I
+) where {I<:Integer, T<:AbstractString, K, V, E<:AbstractFloat}
+    @debug """
+    Optimizer::optimize_parameters!() :
+    Start of optimization!
+    """
 
     # get S matrix
     S = get_covariance_matrix(
@@ -128,15 +119,22 @@ function stochastic_reconfiguration!(
     )
 
     # solve for variation in the parameters
-    δvpars = (S + η * I(size(S,1))) \ f  
+    δvpars = (S + η * LinearAlgebra.I(size(S,1))) \ f  
 
-    # new varitaional parameters
-    vpars = collect_parameters(determinantal_parameters, jastrow_parameters)
-    vpars += dt * δvpars
+    # new variational parameters
+    new_vpars = reduce(vcat, [x isa AbstractVector ? x : [x] for x in measurement_container.optimization_measurements["parameters"]])
 
-    debug && println("Optimizer::stochastic_reconfiguration!() : ")
-    debug && println("Parameters have been updated")
-    debug && println("new parameters = ", vpars)
+    # apply Jastrow convergence boost
+    new_vpars[determinantal_parameters.num_det_pars+1:end] *= dt_J
+
+    # update parameters
+    new_vpars += dt * δvpars
+
+    @debug """
+    Optimizer::optimize_parameters!() :
+    Parameters have been updated =>
+    new parameters = $(new_vpars)
+    """
 
     # push back determinantal_parameters
     update_parameters!(
@@ -145,31 +143,89 @@ function stochastic_reconfiguration!(
         jastrow_parameters
     )
 
-    # extract container info
-    optimization_measurements = measurement_container.optimization_measurements
+    @debug """
+    Optimizer::optimize_parameters!() :
+    End of optimization!
+    """
 
-    (; datafolder, pID) = simulation_info
+    return nothing
+end
 
-    # extract other container components
-    (; optimization_measurements) = measurement_container
 
-    # construct filenames
-    fn = @sprintf "bin-%d_pID-%d.jld2" bin pID  
+@doc raw"""
 
-    # path to parameter directories
-    file_path_det_parameters = joinpath(datafolder, "optimization", "determinantal", fn)
-    file_path_jas_parameters = joinpath(datafolder, "optimization", "Jastrow", fn)
+    optimize_parameters!( measurement_container::NamedTuple, 
+                          determinantal_parameters::DeterminantalParameters{I}, 
+                          jastrow_parameters_1::JastrowParameters{T, K, V, I},
+                          jastrow_parameters_2::JastrowParameters{T, K, V, I}, 
+                          η::E, 
+                          dt::E, 
+                          bin_size::I ) where {I<:Integer, T<:AbstractString, K, V, E<:AbstractFloat}
 
-    # seperate determinantal and Jastrow parameters  
-    det_parameter_measurements = optimization_measurements["parameters"][2][1:end-num_jpars] 
-    jas_parameter_measurements = optimization_measurements["parameters"][2][end-num_jpars+1:end]
+Optimizes and updates variational parameters using the Stochastic Reconfiguration method, in
+which the variation in parameter ``\alpha_k`` can be found by solving ``\delta\alpha_k = (S + \eta\mathbb{I})f^{-1}``,
+where ``S`` is the covariance matrix, ``f`` is the force vector, and ``\eta`` is a stabilization parameter.
 
-    # append parameter measurements to file
-    JLD2.@save file_path_det_parameters det_parameter_measurements append=true
-    JLD2.@save file_path_jas_parameters jas_parameter_measurements append=true
+- `measurement_container::NamedTuple`: container where measurements are stored. 
+- `determinantal_parameters::DeterminantalParameters{I}`: set of determinantal variational parameters.
+- `jastrow_parameters_1::JastrowParameters{T, K, V, I}`: set of Jastrow variational parameters.
+- `jastrow_parameters_2::JastrowParameters{T, K, V, I}`: set of Jastrow variational parameters. 
+- `η::E`: optimization stabilization factor. 
+- `dt::E`: optimization rate. 
+- `bin_size::I`: length of the bins. 
 
-    debug && println("Optimizer::stochastic_reconfiguration!() : ")
-    debug && println("End of optimization")
+"""
+function optimize_parameters!( 
+    measurement_container::NamedTuple, 
+    determinantal_parameters::DeterminantalParameters{I}, 
+    jastrow_parameters_1::JastrowParameters{T, K, V, I},
+    jastrow_parameters_2::JastrowParameters{T, K, V, I}, 
+    η::E, 
+    dt::E, 
+    opt_bin_size::I
+) where {I<:Integer, T<:AbstractString, K, V, E<:AbstractFloat}
+    @debug """
+    Optimizer::optimize_parameters!() :
+    Start of optimization!
+    """
+
+    # get S matrix
+    S = get_covariance_matrix(
+        measurement_container, 
+        opt_bin_size
+    ) 
+
+    # get f vector
+    f = get_force_vector(
+        measurement_container, 
+        opt_bin_size
+    )
+
+    # solve for variation in the parameters
+    δvpars = (S + η * LinearAlgebra.I(size(S,1))) \ f  
+
+    # new varitaional parameters
+    new_vpars = reduce(vcat, [x isa AbstractVector ? x : [x] for x in measurement_container.optimization_measurements["parameters"]])
+    new_vpars += dt * δvpars 
+
+    @debug """
+    Optimizer::optimize_parameters!() :
+    Parameters have been updated =>
+    new parameters = $(new_vpars)
+    """
+
+    # push back determinantal_parameters
+    update_parameters!(
+        new_vpars, 
+        determinantal_parameters,
+        jastrow_parameters_1,
+        jastrow_parameters_2
+    )
+
+    @debug """
+    Optimizer::optimize_parameters!() :
+    End of optimization!
+    """
 
     return nothing
 end
@@ -178,186 +234,131 @@ end
 @doc raw"""
 
     get_Δk( optimize::NamedTuple, 
-            determinantal_parameters::DeterminantalParameters, 
-            detwf::DeterminantalWavefunction, 
+            determinantal_parameters::DeterminantalParameters{I}, 
+            detwf::DeterminantalWavefunction{T, V, E, I}, 
             model_geometry::ModelGeometry, 
-            Ne::Int )::Vector{Float64}
+            Np::I ) where {I<:Integer, T<:Number, V, E<:AbstractFloat}
 
-Calculates the local logarithmic derivative Δₖ(x) = ∂lnΨ(x)/∂αₖ, with respect to the kth variational parameter αₖ,
-in the determinantal part of the wavefunction. Returns a vector of derivatives.
+Calculates the local logarithmic derivative ``\Delta_k = \frac{\partial\ln\Psi_{T}}{\partial\alpha_k}``, 
+for each determinantal variational parameter ``\alpha_k`` and returns a vector of derivatives.
 
 - `optimize::NamedTuple`: field of optimization flags.
-- `determinantal_parameters::DeterminantalParameters`: set of determinantal variational parameters.
-- `detwf::DeterminantalWavefunction`: current variational wavefunction. 
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `Ne::Int`: total number of electrons. 
+- `determinantal_parameters::DeterminantalParameters{I}`: set of determinantal variational parameters.
+- `detwf::DeterminantalWavefunction{T, V, E, I}`: current variational wavefunction. 
+- `model_geometry::ModelGeometry: contains unit cell and lattice quantities.
+- `Np::I`: total number of particles in the system.
 
 """
 function get_Δk(
     optimize::NamedTuple, 
-    determinantal_parameters::DeterminantalParameters, 
-    detwf::DeterminantalWavefunction, 
+    determinantal_parameters::DeterminantalParameters{I}, 
+    detwf::DeterminantalWavefunction{T, V, E, I}, 
     model_geometry::ModelGeometry, 
-    Ne::Int
-)::Vector{Float64}
+    Np::I
+) where {I<:Integer, T<:Number, V, E<:AbstractFloat}
     # number of lattice sites
     N = model_geometry.unit_cell.n * model_geometry.lattice.N
 
     # current determinantal_parameters
     det_pars = determinantal_parameters.det_pars
 
-    # total number of parameters in the model
+    # number of determinantal parameters 
     num_det_pars = determinantal_parameters.num_det_pars
-
-    # # number of parameters being optimized
-    # num_det_opts = determinantal_parameters.num_det_opts
 
     # resultant derivatives
     result = zeros(Float64, num_det_pars)
 
-    # perform derivatives
     @assert any(values(optimize))
     G = zeros(Complex, 2*N, 2*N)
-    for β in 1:Ne
+    for β in 1:Np
         k = findfirst(x -> x == β, detwf.pconfig)
 
         G[k, :] .= detwf.W[:, β]
     end
 
+    # perform derivatives    
     opt_idx = 1
-    for (i, pname) in enumerate(keys(det_pars))
+    res_idx = 1
+    for (pname, pval) in pairs(det_pars)
         if getfield(optimize, pname)
-            result[i] = sum(detwf.A[opt_idx] .* G)
-            opt_idx += 1
+            if isa(pval, AbstractVector)
+                for _ in eachindex(pval)
+                    result[res_idx] = sum(detwf.A[opt_idx] .* G)
+                    opt_idx += 1
+                    res_idx += 1
+                end
+            else
+                result[res_idx] = sum(detwf.A[opt_idx] .* G)
+                opt_idx += 1
+                res_idx += 1
+            end
+        else
+            # skip over these but still count them
+            res_idx += isa(pval, AbstractVector) ? length(pval) : 1
         end
     end
-
+    
     return result
 end
 
 
-"""
+@doc raw"""
 
     get_Δk( optimize::NamedTuple, 
-            determinantal_parameters::DeterminantalParameters, 
-            jastrow_parameters::JastrowParameters,
-            detwf::DeterminantalWavefunction, 
-            model_geometry::ModelGeometry, 
-            Ne::Int,
-            pht::Bool )::Vector{Float64}
+            jastrow_parameters::JastrowParameters{T, K, V, I},
+            detwf::DeterminantalWavefunction{Q, F, E, I}, 
+            pht::Bool ) where {T<:AbstractString, K, V, I<:Integer, Q<:Number, F, E<:AbstractFloat}
 
-Calculates the local logarithmic derivative Δₖ(x) = ∂lnΨ(x)/∂αₖ, with respect to the kth variational parameter αₖ,
-in the determinantal part of the wavefunction. Returns a vector of derivatives.
+Calculates the local logarithmic derivative ``\Delta_k = \frac{\partial\ln\Psi_{T}}{\partial\alpha_k}``, 
+for each determinantal variational parameter ``\alpha_k`` and returns a vector of derivatives.
 
 - `optimize::NamedTuple`: field of optimization flags.
-- `determinantal_parameters::DeterminantalParameters`: set of determinantal variational parameters.
-- `jastrow_parameters::JastrowParameters`: current set of Jastrow variational parameters. 
-- `detwf::DeterminantalWavefunction`: current variational wavefunction. 
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `Ne::Int`: total number of electrons. 
+- `jastrow_parameters::JastrowParameters{T, K, V, I}`: current set of Jastrow variational parameters. 
+- `detwf::DeterminantalWavefunction{Q, F, E, I}`: current variational wavefunction. 
 - `pht::Bool`: whether model is particle-hole transformed.
 
 """
 function get_Δk(
     optimize::NamedTuple, 
-    determinantal_parameters::DeterminantalParameters, 
-    jastrow_parameters::JastrowParameters,
-    detwf::DeterminantalWavefunction, 
-    model_geometry::ModelGeometry, 
-    Ne::Int,
+    jastrow_parameters::JastrowParameters{T, K, V, I},
+    detwf::DeterminantalWavefunction{Q, F, E, I}, 
     pht::Bool
-)::Vector{Float64}
-    # number of lattice sites
-    N = model_geometry.unit_cell.n * model_geometry.lattice.N
-
-    # current determinantal_parameters
-    det_pars = determinantal_parameters.det_pars
-
-    # total number of parameters in the model
-    num_det_pars = determinantal_parameters.num_det_pars
-
-    # # number of determinantal parameters being optimized
-    # num_det_opts = determinantal_parameters.num_det_opts
-
+) where {T<:AbstractString, K, V, I<:Integer, Q<:Number, F, E<:AbstractFloat}
     # type of Jastrow parameters
     jastrow_type = jastrow_parameters.jastrow_type
 
     # map of current Jastrow parameters
     jpar_map = jastrow_parameters.jpar_map
 
-    # # total number of Jastrow parameters
-    # num_jpars = jastrow_parameters.num_jpars
-
-    # number of Jastrow parametes being optimized
-    num_jpars = jastrow_parameters.num_jpar_opts
+    # number of Jastrow parameters
+    num_jpars = jastrow_parameters.num_jpars
 
     # resultant derivatives
-    result = zeros(Float64, num_det_pars)
+    result = zeros(num_jpars)
 
-    # perform determinantal derivatives
-    @assert any(values(optimize)) 
-    G = zeros(Complex, 2*N, 2*N)
-    for β in 1:Ne
-        k = findfirst(x -> x == β, detwf.pconfig)
+    jpar = 0
+    for (irr_index, _) in jpar_map
+        jpar += 1
+        if jpar < num_jpars
+            for (i,j) in jpar_map[irr_index][1]
+                # current site occupations
+                n_i_up, n_i_dn = get_onsite_fermion_occupation(i+1, detwf.pconfig)[1:2]
+                n_j_up, n_j_dn = get_onsite_fermion_occupation(j+1, detwf.pconfig)[1:2]
 
-        G[k, :] .= detwf.W[:, β]
-    end
-
-    opt_idx = 1
-    for (i, pname) in enumerate(keys(det_pars))
-        if getfield(optimize, pname)
-            result[i] = sum(detwf.A[opt_idx] .* G)
-            opt_idx += 1
-        end
-    end
-
-    # perform Jastrow derivatives
-    @assert optimize.djastrow == true || optimize.sjastrow == true
-
-    irr_indices = collect(keys(jpar_map))
-    if jastrow_type == "e-den-den"
-        for num in 1:num_jpars
-            indices, _ = jpar_map[irr_indices[num]]
-
-            for idx in indices
-                i = idx[1]
-                j = idx[2]
-
-                # double counting correction
-                dbc_corr = (j==i) ? 0.5 : 1.0
-
-                # get occupations
-                nup_i = get_onsite_fermion_occupation(i+1, detwf.pconfig)[1]
-                ndn_i = get_onsite_fermion_occupation(i+1, detwf.pconfig)[2]
-                nup_j = get_onsite_fermion_occupation(j+1, detwf.pconfig)[1]
-                ndn_j = get_onsite_fermion_occupation(j+1, detwf.pconfig)[2]
-                if pht
-                    result[num_det_pars + num] += -dbc_corr * (nup_i - ndn_i) * (nup_j - ndn_j)
-                else
-                    result[num_det_pars + num] += -dbc_corr * (nup_i + ndn_i) * (nup_j + ndn_j)
-                end
-            end
-        end
-    elseif jastrow_type == "e-spn-spn"
-        for num in 1:num_jpars
-            indices, _ = jpar_map[irr_indices[num]]
-
-            for idx in indices
-                i = idx[1]
-                j = idx[2]
-
-                # double counting correction
-                dbc_corr = (j==i) ? 0.5 : 1.0
-
-                # get occupations
-                nup_i = get_onsite_fermion_occupation(i+1, detwf.pconfig)[1]
-                ndn_i = get_onsite_fermion_occupation(i+1, detwf.pconfig)[2]
-                nup_j = get_onsite_fermion_occupation(j+1, detwf.pconfig)[1]
-                ndn_j = get_onsite_fermion_occupation(j+1, detwf.pconfig)[2]
-                if pht
-                    result[num_det_pars + num] += -0.5 * dbc_corr * (nup_i - ndn_i) * (nup_j - ndn_j)
-                else
-                    result[num_det_pars + num] += -0.5 * dbc_corr * (nup_i + ndn_i) * (nup_j + ndn_j)
+                if jastrow_type == "e-den-den"
+                    # calculate derivative
+                    if pht
+                        result[jpar] += 0.5 * (n_i_up - n_i_dn) * (n_j_up - n_j_dn)
+                    else
+                        result[jpar] += 0.5 * (n_i_up + n_i_dn) * (n_j_up + n_j_dn)
+                    end
+                elseif jastrow_type == "e-spn-spn"
+                    # calculate derivative
+                    if pht
+                        result[jpar] += 0.25 * (n_i_up - n_i_dn) * (n_j_up - n_j_dn)
+                    else
+                        result[jpar] += 0.25 * (n_i_up + n_i_dn) * (n_j_up + n_j_dn)
+                    end
                 end
             end
         end
@@ -370,24 +371,23 @@ end
 @doc raw"""
 
     get_covariance_matrix( measurement_container::NamedTuple, 
-                           opt_bin_size::Int64 )
+                           opt_bin_size::I ) where {I<:Integer}
 
-Calculates the covariance matrix S, for Stochastic Reconfiguration, with elements
-S_kk' = <Δ_kΔk'> - <Δ_k><Δ_k'>.
+Calculates the covariance matrix ``S`` with elements ``S_{kk}' = \langle \Delta_{k}\Delta_{k^\prime}\rangle - \langle \Delta_{k} \rangle\langle \Delta_{k^\prime} \rangle``.
 
 - `measurement_container::NamedTuple`: container where measurements are stored. 
-- `opt_bin_size::Int64`: length of the current bin.
+- `opt_bin_size::I`: length of the current bin.
 
 """
 function get_covariance_matrix(
     measurement_container::NamedTuple, 
-    opt_bin_size::Int64
-)
+    opt_bin_size::I
+) where {I<:Integer}
     # measure local parameters derivatives ⟨Δₖ⟩ for the current bin
-    Δk = measurement_container.optimization_measurements["Δk"][1]/opt_bin_size
+    Δk = measurement_container.optimization_measurements["Δk"]/opt_bin_size
     
     # measure the product of local derivatives ⟨ΔₖΔₖ'⟩ for the current bin
-    ΔkΔkp = measurement_container.optimization_measurements["ΔkΔkp"][1]/opt_bin_size
+    ΔkΔkp = measurement_container.optimization_measurements["ΔkΔkp"]/opt_bin_size
     
     # calculate the product of local derivatives ⟨Δₖ⟩⟨Δₖ'⟩
     ΔkΔk = Δk * Δk'  
@@ -402,30 +402,29 @@ end
 @doc raw"""
 
     get_force_vector( measurement_container::NamedTuple, 
-                      opt_bin_size::Int64 )
+                      opt_bin_size::I ) where {I<:Integer}
 
-Generates the force vector f, for Stochastic Reconfiguration with elements 
-f_k = <Δ_k><H> - <Δ_kH>.
+Constructs force vector ``f`` with elements ``f_k = \langle \Delta_{k} \rangle\langle H\rangle - \langle \Delta_{k}H\rangle``.
 
 - `measurement_container::NamedTuple`: container where measurements are stored. 
-- `opt_bin_size::Int64`: length of the current bin.
+- `opt_bin_size::I`: length of the current bin.
 
 """
 function get_force_vector(
     measurement_container::NamedTuple, 
-    opt_bin_size::Int64
-)
+    opt_bin_size::I
+) where {I<:Integer}
     # initialize force vector
     f = Float64[]
 
     # measure local parameters derivatives ⟨Δₖ⟩ for the current bin
-    Δk = measurement_container.optimization_measurements["Δk"][1]/opt_bin_size
+    Δk = measurement_container.optimization_measurements["Δk"]/opt_bin_size
 
     # measure local energy E = ⟨H⟩ for the current bin
-    E = measurement_container.simulation_measurements["energy"][1]/opt_bin_size
+    E = measurement_container.simulation_measurements["local_energy"]/opt_bin_size 
 
     # measure product of local derivatives with energy ⟨ΔkE⟩ for the current bin
-    ΔkE = measurement_container.optimization_measurements["ΔkE"][1]/opt_bin_size
+    ΔkE = measurement_container.optimization_measurements["ΔkE"]/opt_bin_size
 
     # calculate product of local derivative with the local energy ⟨Δk⟩⟨H⟩
     ΔktE = Δk * E
@@ -437,5 +436,4 @@ function get_force_vector(
 
     return f 
 end
-
 

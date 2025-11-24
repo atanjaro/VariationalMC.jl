@@ -1,50 +1,53 @@
 @doc raw"""
 
-    MarkovMove( particle::Int, 
-                k::Int, 
-                l::Int, 
-                possible::Bool )
+    MarkovMove{I<:Integer}
 
-A type defining a Markov move.
+A type defining a Markov process where a particle is proposed to moved from spindex ``k``
+to spindex ``l`` and a Boolean denoting whether said move is possible.
+
+- `particle::I`: the particle undergoing a Markov process.
+- `k::I`: initial spindex of the particle.
+- `l::I`: final spindex of the particle. 
+- `possible::B`: whether the Markov process is possible.
 
 """
-struct MarkovMove
+struct MarkovMove{I<:Integer}
     # particle
-    particle::Int
+    particle::I
 
     # initial spindex
-    k::Int
+    k::I
 
     # neighboring spindex
-    l::Int
+    l::I
 
-    # hop possible
+    # move possible
     possible::Bool
 end
 
 
 @doc raw"""
 
-    propose_random_move( Ne::Int64, 
-                         pconfig::Vector{Int64}, 
+    propose_random_move( Np::I, 
+                         pconfig::AbstractVector{I}, 
                          model_geometry::ModelGeometry, 
-                         rng::Xoshiro )::MarkovMove
+                         rng::AbstractRNG ) where {I<:Integer}
 
-Proposes randomly hopping or exchanging a particle from some intial site 'k' to a neighboring site 'l' 
-and returns an instance of the MarkovMove type. 
+Proposes randomly moving (via hopping or exchange) a particle from some intial spindex ``k`` 
+to a neighboring spindex ``l`` and returns an instance of `MarkovMove`.
 
-- `Ne::Int64`: total number of electrons.  
-- `pconfig::Vector{Int64}`: current particle configuration. 
+- `Np::I`: total number of particles in the system.  
+- `pconfig::AbstractVector{I}`: current particle configuration. 
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities. 
-- `rng::Xoshiro`: random number generator.
+- `rng::AbstractRNG`: random number generator.
 
 """
 function propose_random_move(
-    Ne::Int64, 
-    pconfig::Vector{Int64}, 
+    Np::I, 
+    pconfig::Vector{I}, 
     model_geometry::ModelGeometry, 
-    rng::Xoshiro
-)::MarkovMove
+    rng::AbstractRNG
+) where {I<:Integer}
     # create nearest neighbor table
     nbr_table = build_neighbor_table(
         model_geometry.bond[1],
@@ -63,8 +66,8 @@ function propose_random_move(
     #     nbr_map_p = map_neighbor_table(nbr_table_p)
     # end
 
-    # select a particle, β
-    β = rand(rng, 1:Ne)
+    # select a random particle
+    β = rand(rng, 1:Np)
 
     # spindex position of particle β
     k = findfirst(x -> x == β, pconfig)
@@ -87,8 +90,13 @@ function propose_random_move(
 
     @assert(get_spindex_type(k, model_geometry) == get_spindex_type(l, model_geometry))
 
-    debug && println("ParticleConfiguration::propose_random_move() : proposing random move")
-    debug && println("particle: ", β, ", isite: ", k, ", jsite: ", l)
+    @debug """
+    ParticleConfiguration::propose_random_move() :
+    proposing random move =>
+    particle: $(β)
+    isite: $(k)
+    jsite: $(l)
+    """
 
     # whether move is possible
     if pconfig[l] == 0
@@ -103,19 +111,20 @@ end
 
 @doc raw"""
 
-    hop!( markov_move::MarkovMove, 
-          pconfig::Vector{Int} )::Nothing
+    hop!( markov_move::MarkovMove{I}, 
+          pconfig::AbstractVector{I} ) where {I<:Integer}
 
-If proposed hopping move is accepted, updates the particle positions.
+If a proposed move (hopping) is accepted, updates the particle positions in 
+the currenrt configuration.
 
-- `markov_move::MarkovMove`: quantities related to a Markov move.  
-- `pconfig::Vector{Int}`: current particle configuration. 
+- `markov_move::MarkovMove{I}`: quantities related to a Markov process.  
+- `pconfig::AbstractVector{I}`: current particle configuration. 
 
 """
 function hop!(
-    markov_move::MarkovMove, 
-    pconfig::Vector{Int}
-)::Nothing
+    markov_move::MarkovMove{I}, 
+    pconfig::Vector{I}
+) where {I<:Integer}
     @assert(markov_move.possible)
 
     # particle number
@@ -130,15 +139,21 @@ function hop!(
     @assert(pconfig[k] !== 0)
     @assert(pconfig[l] == 0)
 
-    debug && println("ParticleConfiguration::hop!() : preparing to hop")
-    debug && println("particle ", β, " from ", k, " to ", l)
+    @debug """
+    ParticleConfiguration::hop!() :
+    preparing to hop =>
+    particle $(β) from $(k) to $(l)
+    """
 
     # update particle positions
     pconfig[l] = pconfig[k]
     pconfig[k] = 0
 
-    debug && println("ParticleConfiguration::hop!() : particle positions are")
-    debug && println(pconfig)
+    @debug """
+    ParticleConfiguration::hop!() :
+    particle positions are =>
+    $(pconfig)
+    """
 
     return nothing
 end
@@ -146,23 +161,24 @@ end
 
 @doc raw"""
 
-    exchange!( markov_move::MarkovMove, 
-               pconfig::Vector{Int},
-               model_geometry::ModelGeometry )::Nothing
+    exchange!( markov_move::MarkovMove{I}, 
+               pconfig::AbstractVector{I},
+               model_geometry::ModelGeometry ) where {I<:Integer}
 
-If proposed exchange move is accepted, updates the particle positions.
+If a proposed move (exchange) is accepted, updates the particle positions
+in the current configuration.
 
-- `markov_move::MarkovMove`: quantities related to a Markov move.  
-- `pconfig::Vector{Int}`: current particle configuration. 
-
-# TODO: need to debug!
+- `markov_move::MarkovMove{I}`: quantities related to a Markov process.  
+- `pconfig::AbstractVector{I}`: current particle configuration. 
+- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 
 """
+# TODO: this method needs to be debugged!
 function exchange!(
-    markov_move::MarkovMove, 
-    pconfig::Vector{Int},
+    markov_move::MarkovMove{I}, 
+    pconfig::Vector{I},
     model_geometry::ModelGeometry
-)::Nothing
+) where {I<:Integer}
     @assert(markov_move.possible)
 
     # particle number
@@ -178,8 +194,14 @@ function exchange!(
     ksite = get_index_from_spindex(k, model_geometry)
     lsite = get_index_from_spindex(l, model_geometry)
 
-    debug && println("ParticleConfiguration::exchange!() : preparing to exchange")
-    debug && println("particle: ", β, ", isite: ", k, ", jsite ", l)
+    @debug """
+    ParticleConfiguration::exchange!() :
+    preparing to exchange =>
+    particle: $(β₁)
+    site1: $(k)
+    particle2: $(β₂)
+    site2: $(l)
+    """
 
     # update particle positions
     pconfig[lsite] = pconfig[ksite]
@@ -187,48 +209,55 @@ function exchange!(
     pconfig[ksite] = 0
     pconfig[ksite + N] = 0
 
-    debug && println("ParticleConfiguration::exchange!() : particle positions are")
-    debug && println(pconfig)
+    @debug """
+    ParticleConfiguration::exchange!() :
+    particle positions are =>
+    $(pconfig)
+    """
 
     return nothing
 end
 
 
 @doc raw"""
-    generate_initial_fermion_configuration( nup::Int64, 
-                                            ndn::Int64, 
-                                            model_geometry::ModelGeometry, 
-                                            rng::Xoshiro )::Vector{Int64}
 
-Generates a random initial configuration of spin-up and spin-down fermions. The first N elements correspond 
-to spin-up and the last N correspond to spin-down. Occupation is denoted by a positive integer corresponding 
-to that particle's creation operator label. 
+    generate_initial_fermion_configuration!( pconfig::AbstractVector{I},
+                                             nup::I, 
+                                             ndn::I, 
+                                             model_geometry::ModelGeometry, 
+                                             rng::AbstractRNG ) where {I<:Integer}
 
-- `nup::Int64`: number of spin-up electrons.
-- `ndn::Int64`: number of spin-down electrons.
+Generates a random initial configuration of spin-up and spin-down fermions. The first `N` 
+elements correspond to spin-up and the last `N` correspond to spin-down. Occupation is 
+denoted by a positive integer corresponding to that particle's creation operator label. 
+
+- `pconfig::Vector{I}`: vector to store configurations.
+- `nup::I`: number of spin-up fermions.
+- `ndn::I`: number of spin-down fermions.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `rng::Xoshiro`: random number generator.
+- `rng::AbstractRNG`: random number generator.
 
 """
-function generate_initial_fermion_configuration(
-    nup::Int64, 
-    ndn::Int64, 
+function generate_initial_fermion_configuration!(
+    pconfig::Vector{I},
+    nup::I, 
+    ndn::I, 
     model_geometry::ModelGeometry, 
-    rng::Xoshiro
-)::Vector{Int64}
+    rng::AbstractRNG
+) where {I<:Integer}
     # lattice sites
     N = model_geometry.lattice.N
 
-    # initialize configuration
-    pconfig = fill(0, 2 * N)
+    # reset configuration to zeros
+    fill!(pconfig, 0)
 
-    # Ensure unique random assignments for up-spin electrons
+    # assign spin-up electrons
     up_indices = shuffle(rng, 1:N)[1:nup]
     for (i, idx) in enumerate(up_indices)
         pconfig[idx] = i
     end
 
-    # Ensure unique random assignments for down-spin electrons
+    # assign spin-down electrons
     down_indices = shuffle(rng, 1:N)[1:ndn]
     for (i, idx) in enumerate(down_indices)
         pconfig[idx + N] = i + nup
@@ -240,365 +269,259 @@ end
 
 @doc raw"""
 
-    get_onsite_fermion_occupation( site::Int, 
-                                   pconfig::Vector{Int} )::Tuple{Int64, Int64, Int64}
+    get_onsite_fermion_occupation( site::I, 
+                                   pconfig::AbstractVector{I} ) where {I<:Integer}
 
-Returns the number of spin-up and spin-down electrons occupying a real lattice site 'i'.  
+Returns the number of spin-up and spin-down fermions occupying a real lattice site `i`.  
 
-- `site::Int`: lattice site. 
-- `pconfig::Vector{Int}`: current particle configuration.
+- `site::I`: lattice site. 
+- `pconfig::AbstractVector{I}`: current particle configuration.
 
 """
 function get_onsite_fermion_occupation(
-    site::Int, 
-    pconfig::Vector{Int}
-)::Tuple{Int64, Int64, Int64}
-    # count number of spin-up electrons
+    site::I, 
+    pconfig::Vector{I}
+) where {I<:Integer}
+    # count number of fermions
     num_up = pconfig[site] > 0 ? 1 : 0
 
-    # count number of spin-down electrons
+    # count number of spin-down fermions
     num_dn = pconfig[site + model_geometry.lattice.N] > 0 ? 1 : 0
 
-    # total number of electrons
-    num_e = num_up + num_dn
+    # total number of fermions
+    num_f = num_up + num_dn
 
-    return num_up, num_dn, num_e
+    return num_up, num_dn, num_f
 end
 
 
 @doc raw"""
 
-    get_particle_numbers( density::Float64 )::NTuple{4, Int64}
+    get_particle_density( density::E, 
+                          model_geometry::ModelGeometry,
+                          pht::Bool ) where {E<:AbstractFloat}
 
-Given a particle density, returns the total number of particles Np, number of spin-up particles Npu, 
-number of spin-down particles Npd, and total number of electrons Ne.
+Given a particle density, returns the total number of particles ``N_p``, the total number of 
+electrons ``N_e`` number of spin-up fermions ``n_{\uparrow}``, number of spin-down fermions ``n_{\downarrow}``.
+In cases where the given density is not a commensurate filling, a new density will be 
+calculated to correspond with the new particle number. 
 
-- `density::Float64`: desired electronic density.
-
-"""
-function get_particle_numbers(
-    density::Float64
-)::NTuple{4, Int64}
-    N = model_geometry.lattice.N
-    Np = density * N
-
-    # Check if the total number of particles Np is an integer
-    @assert isapprox(Np, round(Np), atol=1e-8) "Density does not correspond to a commensurate filling (Np must be an integer)"
-    
-    # Np must also be even
-    @assert Np % 2 == 0 "Np must be even"
-    
-    if !pht
-        # Number of spin-up and spin-down particles for particle-hole transformation off
-        Npu = Np ÷ 2
-        Npd = Np ÷ 2
-        nup = Npu
-        ndn = Npd
-        Ne = Np
-    else
-        # Particle-hole transformation on
-        nup = Np ÷ 2
-        Npu = nup
-        ndn = N + nup - Np
-        Npd = N - ndn
-        Ne = nup + ndn
-    end
-    
-    return Int(Np), Int(Ne), Int(nup), Int(ndn)
-end
-
-
-@doc raw"""
-
-    get_particle_density( nup::Int64, 
-                          ndn::Int64 )::Tuple{Float64, Int64, Int64}
-
-Given the number of spin-up electrons nup, and number of spin-down electrons ndn, returns 
-the particle density, total number of particles Np, and the total number of electrons Ne.
-
-- `nup::Int`: number of spin-up electrons.
-- `ndn::Int`: number of spin-down electrons.
+- `density::E`: desired electronic density.
+- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities. 
+- `pht::Bool`: whether model is particle-hole transformed.
 
 """
 function get_particle_density(
-    nup::Int, 
-    ndn::Int
-)::Tuple{Float64, Int64, Int64}
+    density::E,
+    model_geometry::ModelGeometry,
+    pht::Bool
+) where {E<:AbstractFloat}
+    # total number of lattice sites
     N = model_geometry.lattice.N
 
-    if !pht
-        # Number of spin-up and spin-down particles for particle-hole transformation off
-        Npu = nup  
-        Npd = ndn 
-        Np = Npu + Npd
-        Ne = Np
-    else
-        # Particle-hole transformation on
-        Npu = nup
-        Npd = N - ndn 
-        Np = Npu + Npd
-        Ne = nup + ndn
+    # total number of particles
+    Np = 2 * round(Int, (density * N) / 2)
+    
+    # update to the appropriate density 
+    if Np / N != density
+        density = Np / N
+        @debug """
+        ParticleConfiguration::get_particle_numbers() :
+        Particle density has been updated -> density = $density 
+        """
     end
 
-    # calculate particle density
-    density = Np / N
+    # number of spin-up particles
+    nup = Np / 2
 
-    return density, Int(Np), Int(Ne)
+    # number of spin-down particles
+    if !pht
+        ndn = nup
+    else
+        ndn = nup + N - Np
+    end
+
+    # total number of electrons
+    Ne = nup + ndn
+
+    return density, Int(Np), Int(Ne), Int(nup), Int(ndn)
 end
 
 
 @doc raw"""
-    get_spindex_type( spindex::Int, 
-                      model_geometry::ModelGeometry )::Int
+
+    get_particle_density( Np::I,
+                          model_geometry::ModelGeometry,
+                          pht::Bool ) where {I<:Integer}
+
+Given the total number of particles in the lattice ``N_p``, returns the particle density, 
+the total number of electrons ``N_e``, the number of spin-up fermions ``n_{\uparrow}`` and 
+the number of spin-down fermions ``n_{\downarrow}``.
+
+- `Np::I`: total number of particles. 
+- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities. 
+- `pht::Bool`: whether model is particle-hole transformed.
+
+"""
+function get_particle_density(
+    Np::I,
+    model_geometry::ModelGeometry,
+    pht::Bool
+) where {I<:Integer}
+    # check that the given Np is an integer
+    @assert Np isa Integer && isinteger(Np) "Np must be an integer, but got $Np"
+
+    # total number of lattice sites
+    N = model_geometry.lattice.N
+
+    # number of spin-up particles
+    nup = Np / 2
+
+    # number of spin-down particles
+    if !pht
+        ndn = nup
+    else
+        ndn = nup + N - Np
+    end
+
+    # total number of electrons
+    Ne = nup + ndn
+
+    # particle density
+    density = Np / N
+
+    return density, Np, Int(Ne), Int(nup), Int(ndn)
+end
+
+
+@doc raw"""
+
+    get_particle_density( nup::I, 
+                          ndn::I,
+                          model_geometry::ModelGeometry, 
+                          pht::Bool ) where {I<:Integer}
+
+Given the number of spin-up fermions ``n_{\uparrow}``, and number of spin-down fermions ``n_{\downarrow}``, 
+returns the particle density, total number of particles ``N_p``, and the total number of electrons ``N_e``.
+
+- `nup::I`: number of spin-up fermions.
+- `ndn::I`: number of spin-down fermions.
+- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
+- `pht::Bool`: whether model is particle-hole transformed.
+
+"""
+function get_particle_density(
+    nup::I, 
+    ndn::I,
+    model_geometry::ModelGeometry,
+    pht::Bool
+) where {I<:Integer}
+    # check that nup and ndn are integers
+    @assert nup isa Integer && isinteger(nup) "nup must be an integer, but got $nup"
+    @assert ndn isa Integer && isinteger(ndn) "ndn must be an integer, but got $ndn"
+
+    # total number of lattice sites
+    N = model_geometry.lattice.N
+
+    # total number of particles and electrons
+    if !pht
+        Np = nup + ndn
+        Ne = Np
+    else
+        Np = nup + N - ndn 
+        Ne = nup + ndn
+    end
+
+     # particle density 
+    density = Np / N
+
+    return density, Int(Np), Int(Ne), nup, ndn
+end
+
+
+@doc raw"""
+
+    get_spindex_type( spindex::I, 
+                      model_geometry::ModelGeometry ) where {I<:Integer}
 
 Returns the spin species at a given spindex.
 
-- `spindex::Int`: spin index.
+- `spindex::I`: spin index.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 
 """
 function get_spindex_type(
-    spindex::Int, 
+    spindex::I, 
     model_geometry::ModelGeometry
-)::Int
+) where {I<:Integer}
     @assert spindex < 2 * model_geometry.lattice.N + 1
+
     return spindex < model_geometry.lattice.N + 1 ? 1 : -1
 end
 
 
 @doc raw"""
-    get_index_from_spindex( spindex::Int, 
-                            model_geometry::ModelGeometry )::Int 
 
-Returns the lattice site i for a given spindex.
+    get_index_from_spindex( spindex::I, 
+                            model_geometry::ModelGeometry ) where {I<:Integer}
 
-- `spindex::Int`: spin index.
+Returns the lattice site ``i`` for a given spindex.
+
+- `spindex::I`: spin index.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 
 """
 function get_index_from_spindex(
-    spindex::Int, 
+    spindex::I, 
     model_geometry::ModelGeometry
-)::Int
+) where {I<:Integer}
     L = model_geometry.lattice.N
     @assert spindex < 2 * L + 1
+
     return spindex <= L ? spindex : spindex - L
 end
 
 
 @doc raw"""
-    get_spindices_from_index( index::Int, 
-                              model_geometry::ModelGeometry )::Tuple{Int64, Int64}
+
+    get_spindices_from_index( index::I, 
+                              model_geometry::ModelGeometry ) where {I<:Integer}
 
 Returns spin-up and spin-down indices from a given site index.
 
-- `index::Int`: lattice site index.
+- `index::I`: lattice site index.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 
 """
 function get_spindices_from_index(
-    index::Int, 
+    index::I, 
     model_geometry::ModelGeometry
-)::Tuple{Int64, Int64}
+) where {I<:Integer}
     L = model_geometry.lattice.N
     @assert index <= L
+
     return index, index + L
 end
 
 
 @doc raw"""
-    get_linked_spindex( i::Int, 
-                        N::Int )::Int
 
-Returns an index in the spin-down sector, given an index in the spin-up sector.
+    get_linked_spindex( i::I, 
+                        N::I ) where {I<:Integer}
 
-- i::Int: lattice index in the spin-up sector.
-- N::Int: total number of lattice sites. 
+ Given an index ``i`` in the spin-up sector, returns an index in the spin-down sector.
+
+- i::I: lattice index in the spin-up sector.
+- N::I: total number of lattice sites. 
 
 """
 function get_linked_spindex(
-    i::Int, 
-    N::Int
-)::Int
+    i::I, 
+    N::I
+) where {I<:Integer}
     @assert i < 2 * N
+
     return i + (1 - 2 * (i ÷ N)) * N
 end
-
-
-##################################################### DEPRECATED FUNCTIONS #####################################################
-# """
-#     change_particle_number!( met_step, phconfig::Vector{Int}, model_geometry::ModelGeometry )
-
-# If proposed particle addition or removal is accepted, add or remove a particle, and update the particle 
-# configuration..
-
-# """
-# function change_particle_number!(met_step, phconfig, model_geometry)
-#     # lattice site
-#     N = model_geometry.lattice.N
-#     i = met_step[3]
-
-#     # addition or removal
-#     cran = met_step[2]
-
-#     if cran == 1
-#         phconfig[i] += 1
-#     elseif cran == -1
-#         phconfig -= 1
-#     end
-
-#     return nothing
-# end
-
-
-# """
-#     [DEPRECATED]
-#     get_particle_positions( pconfig::Vector{Int}, model_geometry::ModelGeometry, Ne::Int )
-
-# Given vector of spindex occupations, returns a vector κ of particle positions according to particle number.
-# This vector is gives the order of creation operator which create the configuration. Initial configurations
-# are automatically normal ordered.
-
-# """
-# function get_particle_positions(pconfig::Vector{Int}, model_geometry::ModelGeometry, Ne::Int)
-#     N = model_geometry.lattice.N
-
-#     # get current spindex occupations
-#     config_indices = findall(x -> x == 1, pconfig)
-
-#     κ = zeros(Int, 2 * N)
-
-#     # fill κ according to position of particles
-#     for i in 1:Ne
-#         idx = config_indices[i]
-#         κ[idx] = i 
-#     end
-
-#     return κ
-# end
-
-# """
-#     [DEPRECATED]
-#     get_onsite_fermion_occupation( site::Int, pconfig::Vector{Int} )
-
-# Returns the number of spin-up and spin-down electrons occupying a real lattice site i.  
-
-# """
-# function get_onsite_fermion_occupation(site::Int, pconfig::Vector{Int})
-#     nup = pconfig[site]
-#     ndn = pconfig[site+model_geometry.lattice.N]
-#     Ne = pconfig[site] + pconfig[site+model_geometry.lattice.N]
-#     return nup, ndn, Ne
-# end
-
-# """
-
-#     generate_initial_phonon_density_configuration()
-
-# Returns initial vector to store phonon occupations.
-
-# """
-# function generate_initial_phonon_density_configuration(model_geometry::ModelGeometry)
-#     N = model_geometry.lattice.N
-#     init_phconfig = zeros(Int, N)
- 
-#     return init_phconfig
-# end
-
-
-
-# """
-
-#     generate_initial_phonon_displacement_configuration( )
-
-# Returns initial matrix to store phonon displacements. Each column represents displacements in each dimension. 
-
-# """
-# function generate_initial_phonon_displacement_configuration(loc::AbstractString, model_geometry::ModelGeometry)
-#     # dimensions
-#     dims = size(model_geometry.lattice.L)[1]
-#     N = model_geometry.lattice.N
-
-#     if loc == "bond"
-#         # create neighbor table
-#         nbr_table = build_neighbor_table(bonds[1],
-#         model_geometry.unit_cell,
-#         model_geometry.lattice)
-
-#         # maps neighbor table to dictionary of bonds and neighbors                                
-#         nbrs = map_neighbor_table(nbr_table)
-
-#         # Collect all bonds into a Set to ensure uniqueness
-#         unique_bonds = Set{Int}()
-
-#         for (site, bond_info) in nbrs
-#         # Add bonds to the set (automatically handles duplicates)
-#         for bond in bond_info.bonds
-#         push!(unique_bonds, bond)
-#         end
-#         end
-
-#         # The total number of unique bonds is the length of the set
-#         total_bonds = length(unique_bonds)
-
-#         # initialize phonon configuration
-#         init_phconfig = zeros(AbstractFloat, total_bonds, dims)        
-#     elseif loc == "onsite"
-#         # initialize phonon configuration
-#         init_phconfig = zeros(AbstractFloat, N, dims)
-#     else
-#         println("ERROR: Not a valid location in the lattice!")
-#     end
-
-#     return init_phconfig
-# end
-
-# """
-#     get_phonon_occupation( site::Int, phconfig::Vector{Int} )
-
-# Returns the number of phonons occupying a real lattice site i or a lattice bond i.  
-
-# """
-# function get_phonon_occupation(i::Int, phconfig::Vector{Int})
-#     nph = phconfig[i]
-
-#     return nph
-# end
-
-
-# """
-#     get_onsite_phonon_displacement( site::Int, phconfig::Vector{Int} )
-
-# Returns the X and Y displacements of a phonon at site i.
-
-# """
-# function get_onsite_phonon_displacement(i::Int, phconfig::Matrix{AbstractFloat})
-#     Xᵢ, Yᵢ = phconfig[i, :]
-
-#     return (Xᵢ, Yᵢ)
-# end
-
-
-# """
-#     get_bond_phonon_displacement( b::Int, phconfig::Vector{Int} )
-
-# Given a bond in the lattice b, returns the displacement of phonon located on that bond. 
-
-# """
-# function get_bond_phonon_displacement(b::Int, phconfig::Matrix{AbstractFloat})
-#     Xᵢ, Yᵢ = phconfig[i, :]
-
-#     return [Xᵢ, Yᵢ]
-# end
-
-
-
-
-
-
-
-
-
-
 
 

@@ -1,21 +1,21 @@
 @doc raw"""
 
     measure_density_correlation!( measurement_container::NameTuple,
-                                  detwf::DeterminantalWavefunction,
-                                  model_geometry::ModelGeometry )::Nothing
+                                  detwf::DeterminantalWavefunction{T, Q, E, I},
+                                  model_geometry::ModelGeometry ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
 
-Measures the equal-time density-density correlation function.
+Measures the equal-time density-density correlation function ``\langle n_{i}n_{j}\rangle``.
 
 - `measurement_container::NamedTuple`: container where measurements are stroed.
-- `detwf::DeterminantalWavefunction`: current variational wavefunction.
+- `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 
 """
 function measure_density_correlation!(
     measurement_container::NamedTuple,
-    detwf::DeterminantalWavefunction,
+    detwf::DeterminantalWavefunction{T, Q, E, I},
     model_geometry::ModelGeometry
-)::Nothing
+) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
     # get site-dependent density
     n = get_site_dependent_n(detwf, model_geometry)
 
@@ -46,21 +46,21 @@ end
 @doc raw"""
 
     measure_spin_correlation!( measurement_container::NamedTuple,
-                               detwf::DeterminantalWavefunction,
-                               model_geometry::ModelGeometry )::Nothing
+                               detwf::DeterminantalWavefunction{T, Q, E, I},
+                               model_geometry::ModelGeometry ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
 
-Measures the equal-time spin-spin correlation function. 
+Measures the equal-time spin-spin correlation function ``\langle S_{i}S_{j}\rangle``. 
 
 - `measurement_container::NamedTuple`: container where measurements are stroed.
-- `detwf::DeterminantalWavefunction`: current variational wavefunction.
+- `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 
 """
 function measure_spin_correlation!(
     measurement_container::NamedTuple,
-    detwf::DeterminantalWavefunction,
+    detwf::DeterminantalWavefunction{T, Q, E, I},
     model_geometry::ModelGeometry
-)
+) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
     # get site-dependent spin
     s = get_site_dependent_s(detwf, model_geometry)
 
@@ -90,19 +90,19 @@ end
 
 @doc raw"""
 
-    get_site_dependent_n( detwf::DeterminantalWavefunction, 
-                          model_geometry::ModelGeometry )::Vector{Int}
+    get_site_dependent_n( detwf::DeterminantalWavefunction{T, Q, E, I}, 
+                          model_geometry::ModelGeometry ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
 
-Calculates the density on each lattice site.
+Calculates the local density ``n_{\boldsymbol{i}}`` on each lattice site.
 
-- `detwf::DeterminantalWavefunction`: current variational wavefunction.
+- `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 
 """
 function get_site_dependent_n(
-    detwf::DeterminantalWavefunction, 
+    detwf::DeterminantalWavefunction{T, Q, E, I}, 
     model_geometry::ModelGeometry
-)::Vector{Int}
+) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
     # number of lattice sites
     N = model_geometry.lattice.N
 
@@ -121,19 +121,19 @@ end
 
 @doc raw"""
 
-    get_site_dependent_s( detwf::DeterminantalParameters
-                          model_geometry::ModelGeometry )::Vector{Int}
+    get_site_dependent_s( detwf::DeterminantalParameters{T, Q, E, I}
+                          model_geometry::ModelGeometry )
 
-Calculates the spin on each lattice site.
+Calculates the local spin ``S_{\boldsymbol{i}}`` on each lattice site.
 
-- `detwf::DeterminantalParameters`: current variational wavefunction.
+- `detwf::DeterminantalParameters{T, Q, E, I}`: current variational wavefunction.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 
 """
 function get_site_dependent_s(
-    detwf::DeterminantalWavefunction,
+    detwf::DeterminantalWavefunction{T, Q, E, I},
     model_geometry::ModelGeometry
-)::Vector{Int}
+) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
     # number of lattice sites
     N = model_geometry.lattice.N
 
@@ -148,15 +148,3 @@ function get_site_dependent_s(
 
     return s_occs
 end
-
-
-# @doc raw"""
-
-#     calculate_structure_factor()
-
-# Computes the static structure factor from either density or spin correlation data.
-
-# """
-# function calculate_structure_factor()
-
-# end

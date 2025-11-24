@@ -1,73 +1,153 @@
 @doc raw"""
 
-    write_measurements!( bin::Int, 
-                         step::Int, 
+    write_measurements!( bin::I, 
+                         bin_size::I,
                          measurement_container::NamedTuple, 
-                         simulation_info::SimulationInfo )::Nothing
+                         simulation_info::SimulationInfo;
+                         write_parameters=false ) where {I<:Integer}
 
-Writes optimization and simulation measurements in the current bin to file. 
+Writes simulation and correlation (if measured) measurements in the current bin to file. 
 Files created are in HDF5 format. 
 
-- `bin::Int`: current bin.
-- `step::Int`: current step within the bin.
+- `bin::I`: current bin.
+- `bin_size::I`: size of the current bins.
 - `measurement_container::NamedTuple`: container where measurements are stored.
-- `simulation_info`: contains datafolder names.
+- `simulation_info::SimulationInfo`: contains datafolder names.
+- `write_parameters=false`: whether parameters are written to file. Set to `true` during optimization.
+
+Data in each file can be accessed by doing:
+
+h5open(sim_file, "r") do f
+    # list all top-level measurements
+    println(keys(f))  # e.g., ["global_density", "double_occ", ...]
+
+    # access a specific dataset
+    data = read(f["/local_energy/bin-1/"])  # returns a Julia array
+    println(data)
+end
+
+for num in 1:N_opt_bins
+    h5open(opt_file, "r") do f
+        data = read(f["/parameters/bin-$(num)/"]) 
+        println(data)
+    end
+end
 
 """ 
 function write_measurements!(
-    bin::Int, 
-    step::Int, 
-    measurement_container::NamedTuple, 
-    simulation_info::SimulationInfo
-)::Nothing
+    bin::I,
+    bin_size::I,
+    measurement_container::NamedTuple,
+    simulation_info::SimulationInfo;
+    write_parameters=false
+) where {I<:Integer}
     (; datafolder, pID) = simulation_info
     (; simulation_measurements, optimization_measurements, correlation_measurements) = measurement_container
 
-    # build path to simulation HDF5 bin file
-    sim_file_path = joinpath(datafolder, "simulation", @sprintf("bin-%d.h5", bin))
-    opt_file_path = joinpath(datafolder, "optimization", @sprintf("bin-%d.h5", bin))
-    corr_file_path = joinpath(datafolder, "correlation", @sprintf("bin-%d.h5", bin))
+    # ensure directories exist
+    mkpath(datafolder)
+    sim_dir  = joinpath(datafolder, "simulation")
+    opt_dir = joinpath(datafolder, "optimization")
+    corr_dir = joinpath(datafolder, "correlation")
+    mkpath(sim_dir)
+    mkpath(opt_dir)
+    mkpath(corr_dir)
 
-    # prepare step key
-    step_key = "step_$step"
+    sim_file  = joinpath(sim_dir,  "simulation_measurements.h5")
+    opt_file = joinpath(opt_dir, "optimization_measurements.h5")
+    corr_file = joinpath(corr_dir, "correlation_measurements.h5")
 
-    # extract simulation measurements
-    density_measurement = simulation_measurements["density"][2]
-    double_occ_measurement = simulation_measurements["double_occ"][2]
-    energy_measurement = simulation_measurements["energy"][2]
-    pconfig_measurement = simulation_measurements["pconfig"][2]
-    # TODO: check for site-dependent density and spin measurements
+    bin_group = @sprintf("bin-%d", bin)
 
-    # extract correlation measurements, if measuring
-    if !isempty(correlation_measurements)
-        if !isempty(correlation_measurements["density"])
-            dcorr_measurement = correlation_measurements["density"][2]
-        elseif !isempty(correlation_measurements["spin"])
-            scorr_measurement = correlation_measurements["spin"][2]
+    # write simulation data
+    sim_mode = isfile(sim_file) ? "r+" : "w"
+    h5open(sim_file, sim_mode) do f
+        if !haskey(attrs(f), "created_by")
+            attrs(f)["created_by"] = "VariationalMC"
+            attrs(f)["proc_id"]    = pID
+        end
+
+        expected = ["global_density", "double_occ", "local_energy", "pconfig"]
+        for key in expected
+            if haskey(simulation_measurements, key)
+                data = simulation_measurements[key]
+                data_to_write = normalize_measurements(data, bin_size, key)
+                dset_path = "/" * key * "/" * bin_group
+
+                if haskey(f, dset_path)
+                    delete!(f, dset_path)
+                end
+                f[dset_path] = data_to_write
+            end
         end
     end
 
-    # extract optimization measurements, if storing
-    # Δk_measurement = optimization_measurements["Δk"][2]
-    # ΔkΔkp_measurement = optimization_measurements["ΔkΔkp"][2]
-    # ΔkE_measurement = optimization_measurements["ΔkE"][2]
+    # write variational parameters to file (if optimizing)
+    if write_parameters
+        opt_mode = isfile(opt_file) ? "r+" : "w"
+        h5open(opt_file, opt_mode) do f
+            if !haskey(attrs(f), "created_by")
+                attrs(f)["created_by"] = "VariationalMC"
+                attrs(f)["proc_id"]    = pID
+            end
 
-    # write to HDF5
-    h5open(sim_file_path, "a") do file
-        file["density/$step_key"] = density_measurement
-        file["double_occ/$step_key"] = double_occ_measurement
-        file["energy/$step_key"] = energy_measurement
-        file["pconfig/$step_key"] = pconfig_measurement
-        # file["density-density"] = dcorr_measurement
-        # file["spin-spin"] = scorr_measurement
-        # file["sd-density"] = sdden_measurement
-        # file["sd-spin"] = sdspin_measurement
+            data_to_write = optimization_measurements["parameters"]
+            dset_path = "/" * "parameters" * "/" * bin_group
+            if haskey(f, dset_path)
+                delete!(f, dset_path)
+            end
+            f[dset_path] = data_to_write
+        end
     end
 
-    # reset all measurements
+    # write correlation data (if measuring)
+    if !isempty(correlation_measurements)
+        corr_mode = isfile(corr_file) ? "r+" : "w"
+        h5open(corr_file, corr_mode) do f
+            if !haskey(attrs(f), "created_by")
+                attrs(f)["created_by"] = "VariationalMC"
+                attrs(f)["proc_id"]    = pID
+            end
+
+            for key in keys(correlation_measurements)
+                data = correlation_measurements[key]
+                if !isempty(data)
+                    data_to_write = normalize_measurements(data, bin_size, string(key))
+                    dset_path = "/" * string(key) * "/" * bin_group
+                    if haskey(f, dset_path)
+                        delete!(f, dset_path)
+                    end
+                    f[dset_path] = data_to_write
+                end
+            end
+        end
+    end
+
+    @debug """
+    Measurements::write_measurements!() :
+    Simulation data written to HDF5: $(abspath(sim_file))
+    """
+
+    if isfile(corr_file)
+        @debug """
+        Measurements::write_measurements!() :
+        Correlation data written to HDF5: $(abspath(corr_file))
+        """
+    else
+        @debug """
+        Measurements::write_measurements!() :
+        No correlation file written (no correlation measurements).
+        """
+    end
+
+    # reset measurement containers
     reset_measurements!(simulation_measurements)
-    reset_measurements!(optimization_measurements)
-    # reset_measurements!(correlation_measurements)
+    if write_parameters
+        reset_measurements!(optimization_measurements)
+    end
+    if !isempty(correlation_measurements)
+        reset_measurements!(correlation_measurements)
+    end
 
     return nothing
 end
@@ -75,38 +155,49 @@ end
 
 @doc raw"""
 
-    write_measurements!( measurement_container::NamedTuple, 
-                         energy_bin::Vector{Any}, 
-                         dblocc_bin::Vector{Any}, 
-                         param_bin::Vector{Any} )::Nothing
+    normalize_measurements( data, 
+                            bin_size::I, 
+                            key::AbstractString )
 
-DEBUG version of the write_measurements!() method. Will write individuallly binned energies, double occupancy, and parameters
-to specified vectors.  
+Normalizes different types of data by the length of a bin.
 
-- `measurement_container::NamedTuple`: container where measurements are stored.
-- `energy_bin::Vector{Float64}`: externally specified vector for storing energy measurements.
-- `dblocc_bin::Vector{Float64}`: externally specified vector for storing double occupancy measurements.
-- `param_bin::Vector{Any}`: externally specified vector for storing parameter measurements.
+- `data`: data of abstract type.
+- `bin_size::I`: length of the bin.
+- `key::AbstractString`: name of measurement.
 
-""" 
-function write_measurements!(
-    measurement_container::NamedTuple, 
-    energy_bin::Vector{Float64}, 
-    dblocc_bin::Vector{Float64}, 
-    param_bin::Vector{Any}
-)::Nothing
-    # extract container info
-    simulation_measurements = measurement_container.simulation_measurements
-    optimization_measurements = measurement_container.optimization_measurements
+"""
+function normalize_measurements(
+    data, 
+    bin_size::I, 
+    key::AbstractString
+) where {I<:Integer}
+    if key == "pconfig"
+        return data
+    end
 
-    # append accumulated values to the storage vectors
-    push!(energy_bin, simulation_measurements["energy"][1])
-    push!(dblocc_bin, simulation_measurements["double_occ"][1])
-    push!(param_bin, optimization_measurements["parameters"][1])
-    
-    # reset all measurements
-    reset_measurements!(simulation_measurements)
-    reset_measurements!(optimization_measurements)
-
-    return nothing
+    if isa(data, Number)
+        return data / bin_size
+    elseif isa(data, AbstractArray)
+        return data ./ bin_size
+    elseif isa(data, Dict)
+        return Dict(k => normalize_measurements(v, bin_size, string(k)) for (k, v) in data)
+    elseif isa(data, NamedTuple)
+        return NamedTuple{keys(data)}(Tuple(normalize_measurements(v, bin_size, string(k)) for (k, v) in pairs(data)))
+    elseif isa(data, Tuple)
+        return tuple((normalize_measurements(x, bin_size, key) for x in data)...)
+    else
+        try
+            return data ./ bin_size
+        catch
+            return data
+        end
+    end
 end
+
+
+
+
+
+
+
+
