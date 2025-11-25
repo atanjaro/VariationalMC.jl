@@ -102,9 +102,7 @@ function run_hubbard_chain_simulation(
     metadata["N_opt_bins"] = N_opt_bins
     metadata["N_sim_bins"] = N_sim_bins
     metadata["δW"] = δW
-    metadata["δT"] = δT
     metadata["n_stab_W"] = n_stab_W
-    metadata["n_stab_T"] = n_stab_T
     metadata["dt"] = dt 
     metadata["opt_flags"] = optimize 
     metadata["acceptance_rate"] = 0.0
