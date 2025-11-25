@@ -16,8 +16,7 @@ function run_hubbard_square_simulation(
     sID, 
     L,
     U,
-    nup,
-    ndn,
+    density,
     N_equil,
     N_opt,
     N_opt_bins,
@@ -58,7 +57,7 @@ function run_hubbard_square_simulation(
     pht = false
 
     # Construct the foldername the data will be written.
-    df_prefix = @sprintf("hubbard_chain_U%.2f_nup%.2f_ndn%.2f_L%d_opt", U, nup, ndn, L)
+    df_prefix = @sprintf("hubbard_square_U%.2f_density%.2f_Lx%d_Ly%d_opt", U, density, L, L)
 
     # Append optimized parameter names to the foldername.
     datafolder_prefix = create_datafolder_prefix(optimize, df_prefix)
@@ -82,7 +81,10 @@ function run_hubbard_square_simulation(
     rng = Xoshiro(seed)
 
     # Set the optimization rate for the VMC simulation.
-    dt = 0.03     
+    dt = 0.1
+    
+    # Set the optional boost in the Jastrow optimization rate.
+    dt_J = 1.0
 
     # Set the stabilization factor used in parameter optimization. 
     η = 1e-4    
@@ -116,20 +118,22 @@ function run_hubbard_square_simulation(
     # Initialize a dictionary to store additional information about the simulation.
     # This is a sort of "notebook" for tracking extraneous parameters during the VMC simulation.
     metadata = Dict()
+    metadata["seed"] = seed
+    metadata["pht"] = pht
     metadata["N_equil"] = N_equil
-    metadata["N_opts"] = N_opt
+    metadata["N_opt"] = N_opt
     metadata["N_sim"] = N_sim
     metadata["N_opt_bins"] = N_opt_bins
     metadata["N_sim_bins"] = N_sim_bins
-    metadata["seed"] = seed
-    metadata["pht"] = true
     metadata["δW"] = δW
+    metadata["δT"] = δT
+    metadata["n_stab_W"] = n_stab_W
+    metadata["n_stab_T"] = n_stab_T
     metadata["dt"] = dt 
-    metadata["acceptance_rate"] = 0.0
     metadata["opt_flags"] = optimize 
     metadata["opt_time"] = 0.0
     metadata["sim_time"] = 0.0
-    metadata["total_time"] = 0.0
+    metadata["vmc_time"] = 0.0
 
     #######################
     ### DEFINE THE MODEL ##
@@ -190,33 +194,12 @@ function run_hubbard_square_simulation(
         bonds
     )
 
-    ##############################
-    ### INITIALIZE MEASUREMENTS ##
-    ##############################
-
-    # Initialize the container that measurements will be accumulated into.
-    measurement_container = initialize_measurement_container(
-        N_opt, 
-        opt_bin_size, 
-        N_sim, 
-        sim_bin_size,
-        determinantal_parameters,
-        jastrow_parameters,
-        model_geometry
-    )
-
-    # Initialize the sub-directories to which the various measurements will be written.
-    initialize_measurement_directories(
-        simulation_info, 
-        measurement_container
-    )
-
     ############################
     ### SET-UP VMC SIMULATION ##
     ############################
 
     # Determine the total particle density in the canonical ensemble. 
-    (density, Np, Ne, nup, ndn) = get_particle_density(nup, ndn, model_geometry, pht) 
+    (density, Np, Ne, nup, ndn) = get_particle_density(density, model_geometry, pht) 
 
     # Define the nearest neighbor hopping amplitude, setting the energy scale of the system. 
     t = 1.0
@@ -250,6 +233,28 @@ function run_hubbard_square_simulation(
     # Initialize the (fermionic) particle configuration.
     # Will start with a random initial configuration unless provided a starting configuration.
     pconfig = Int[]
+
+
+    ##############################
+    ### INITIALIZE MEASUREMENTS ##
+    ##############################
+
+    # Initialize the container that measurements will be accumulated into.
+    measurement_container = initialize_measurement_container(
+        N_opt, 
+        opt_bin_size, 
+        N_sim, 
+        sim_bin_size,
+        determinantal_parameters,
+        density_J_parameters,
+        model_geometry
+    )
+
+    # Initialize the sub-directories to which the various measurements will be written.
+    initialize_measurement_directories(
+        simulation_info, 
+        measurement_container
+    )
 
     ###########################
     ### OPTIMIZATION UPDATES ##
@@ -292,7 +297,7 @@ function run_hubbard_square_simulation(
                     detwf, 
                     density_J_factor,
                     density_J_parameters,
-                    Ne, 
+                    Np, 
                     model_geometry, 
                     pht,
                     n_stab_W,
@@ -327,20 +332,19 @@ function run_hubbard_square_simulation(
             density_J_parameters,
             η, 
             dt, 
+            dt_J,
             opt_bin_size
         )  
 
         # Write measurement for the current bin to file.
         write_measurements!(
+            "opt",
             bin, 
             opt_bin_size,
             measurement_container, 
             simulation_info,
             write_parameters=true
         )
-
-        # TBA: Perform a check for parameter convergence
-        # If the convergence condition is satisfied, returns the first convergence bin.
     end
 
     # Record end time for optimization.
@@ -390,7 +394,7 @@ function run_hubbard_square_simulation(
                     detwf, 
                     density_J_factor,
                     density_J_parameters,
-                    Ne, 
+                    Np, 
                     model_geometry, 
                     pht,
                     n_stab_W,
@@ -420,6 +424,7 @@ function run_hubbard_square_simulation(
 
         # Write measurement for the current bin to file.
         write_measurements!(
+            "sim",
             bin, 
             opt_bin_size,
             measurement_container, 
@@ -434,7 +439,21 @@ function run_hubbard_square_simulation(
     metadata["sim_time"] += sim_end - sim_start
 
     # Record the total VMC time.
-    metadata["total_time"] += metadata["opt_time"] + metadata["sim_time"]
+    metadata["vmc_time"] += metadata["opt_time"] + metadata["sim_time"]
+
+    # Process all optimization and simulation measurements.
+    # Each observable will be written to CSV files for later processing.
+    process_measurements(
+        measurement_container, 
+        simulation_info, 
+        determinantal_parameters, 
+        jastrow_parameters
+    )
+
+    # Write model summary to file.
+    model_summary(simulation_info, metadata)
+
+    return nothing
 end
 
 # Only execute if the script is run directly from the command line.
@@ -444,14 +463,13 @@ if abspath(PROGRAM_FILE) == @__FILE__
     sID = parse(Int, ARGS[1])           # simulation ID
     L = parse(Int, ARGS[2])
     U = parse(Float64, ARGS[3])
-    nup = parse(Int, ARGS[4])
-    ndn = parse(Int, ARGS[5])
-    N_equil = parse(Int, ARGS[6])
-    N_opt = parse(Int, ARGS[7])
-    N_opt_bins = parse(Int, ARGS[8])
-    N_sim = parse(Int, ARGS[9])
-    N_sim_bins = parse(Int, ARGS[10])
+    density = parse(Int, ARGS[4])
+    N_equil = parse(Int, ARGS[5])
+    N_opt = parse(Int, ARGS[6])
+    N_opt_bins = parse(Int, ARGS[7])
+    N_sim = parse(Int, ARGS[8])
+    N_sim_bins = parse(Int, ARGS[9])
 
     # Run the simulation.
-    run_hubbard_square_simulation(sID, L, U, nup, ndn, N_equil, N_opt, N_opt_bins, N_sim, N_sim_bins)
+    run_hubbard_square_simulation(sID, L, U, density, N_equil, N_opt, N_opt_bins, N_sim, N_sim_bins)
 end

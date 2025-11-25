@@ -1,6 +1,7 @@
 @doc raw"""
 
-    write_measurements!( bin::I, 
+    write_measurements!( step::AbstractString
+                         bin::I, 
                          bin_size::I,
                          measurement_container::NamedTuple, 
                          simulation_info::SimulationInfo;
@@ -9,6 +10,7 @@
 Writes simulation and correlation (if measured) measurements in the current bin to file. 
 Files created are in HDF5 format. 
 
+- `step::AbstractString`: VMC step: `opt` or `sim`, `optimization` or `simulation`.
 - `bin::I`: current bin.
 - `bin_size::I`: size of the current bins.
 - `measurement_container::NamedTuple`: container where measurements are stored.
@@ -35,6 +37,7 @@ end
 
 """ 
 function write_measurements!(
+    step::AbstractString,
     bin::I,
     bin_size::I,
     measurement_container::NamedTuple,
@@ -46,16 +49,20 @@ function write_measurements!(
 
     # ensure directories exist
     mkpath(datafolder)
+
     sim_dir  = joinpath(datafolder, "simulation")
-    opt_dir = joinpath(datafolder, "optimization")
-    corr_dir = joinpath(datafolder, "correlation")
     mkpath(sim_dir)
+
+    opt_dir = joinpath(datafolder, "optimization")
     mkpath(opt_dir)
+
+    corr_dir = joinpath(datafolder, "correlation")
     mkpath(corr_dir)
 
-    sim_file  = joinpath(sim_dir,  "simulation_measurements.h5")
-    opt_file = joinpath(opt_dir, "optimization_measurements.h5")
-    corr_file = joinpath(corr_dir, "correlation_measurements.h5")
+    step_filename = step * "_bin_measurements.h5"
+    sim_file  = joinpath(sim_dir,  step_filename)
+    opt_file = joinpath(opt_dir, step_filename)
+    corr_file = joinpath(corr_dir, step_filename)
 
     bin_group = @sprintf("bin-%d", bin)
 

@@ -19,6 +19,9 @@ function process_measurements(
     (; datafolder, pID) = simulation_info
     (; N_opt, N_sim) = measurement_container
 
+    # merge `opt` and `sim` bins
+    merge_bin_measurements!(datafolder * "/simulation/")
+
     # process all scalar measurements
     process_scalar_measurements(
         datafolder, 
@@ -71,7 +74,10 @@ function process_measurements(
     (; datafolder, pID) = simulation_info
     (; N_opt, N_sim) = measurement_container
 
-        # process all scalar measurements
+    # merge `opt` and `sim` bins
+    merge_bin_measurements!(datafolder * "/simulation/")
+
+    # process all scalar measurements
     process_scalar_measurements(
         datafolder, 
         "local_energy"
@@ -118,9 +124,10 @@ function process_scalar_measurements(
     measurement::T,
     N_bins::Union{I, Nothing}=nothing
 ) where {T<:AbstractString, I<:Integer}
-    sim_file = joinpath(datafolder, "simulation", "simulation_measurements.h5")
+    sim_file = joinpath(datafolder, "simulation" ,"bin_measurements.h5")
     @assert isfile(sim_file) "HDF5 file not found: $sim_file"
-
+    # sim_file = joinpath(datafolder, "simulation", "simulation_measurements.h5")
+    
     allowed = Set(["local_energy", "double_occ", "global_density", "pconfig"])
     results = Vector{Any}()
 
@@ -394,7 +401,7 @@ function process_optimization_measurements(
     jastrow_parameters::JastrowParameters;
     N_bins::Union{I, Nothing}=nothing
 ) where {T<:AbstractString, I<:Integer}
-    opt_file = joinpath(datafolder, "optimization", "optimization_measurements.h5")
+    opt_file = joinpath(datafolder, "optimization", "opt_bin_measurements.h5")
     @assert isfile(opt_file) "HDF5 file not found: $opt_file"
 
     # helper function to convert filenames to ASCII
@@ -734,3 +741,277 @@ function calculate_structure_factor(correlation_type::String, model_geometry::Mo
     end
 end
 
+
+"""
+
+    merge_bin_measurements!( datafolder::AbstractString;
+                             opt_name::AbstractString="opt_bin_measurements.h5",
+                             sim_name::AbstractString="sim_bin_measurements.h5",
+                             out_name::AbstractString="bin_measurements.h5",
+                             clear_src::Bool=false )
+
+Merge the HDF5 files `opt_name` and `sim_name` (located inside `datafolder`)
+into a single HDF5 file named `out_name` (also inside `datafolder`).
+
+Bins from the sim file are offset by the maximum bin index found in the opt file,
+so the result has contiguous, non-overlapping `bin-%d` subgroup names.
+
+- `datafolder::AbstractString`: path to data files.
+- `opt_name::AbstractString="opt_bin_measurements.h5"`: name of opt_bin file.
+- `sim_name::AbstractString="sim_bin_measurements.h5"`: name of sim_bin file.
+- `out_name::AbstractString="bin_measurements.h5"`: output file name.
+- `clear_src::Bool=false`: optionallyy clear source bin files after merger.
+
+"""
+function merge_bin_measurements!(
+    datafolder::AbstractString;
+    opt_name::AbstractString="opt_bin_measurements.h5",
+    sim_name::AbstractString="sim_bin_measurements.h5",
+    out_name::AbstractString="bin_measurements.h5",
+    clear_src::Bool=false
+)
+    opt_file = joinpath(datafolder, opt_name)
+    sim_file = joinpath(datafolder, sim_name)
+    out_file = joinpath(datafolder, out_name)
+
+    bin_regex = r"^bin-(\d+)$"
+    parse_bin(s::AbstractString) = begin
+        m = match(bin_regex, s)
+        m === nothing ? nothing : parse(Int, m.captures[1])
+    end
+
+    function top_level_groups(fname)
+        if !isfile(fname)
+            @warn "File not found: $fname"
+            return String[]
+        end
+        groups = String[]
+        h5open(fname, "r") do f
+            append!(groups, collect(keys(f)))   # use keys() instead of names()
+        end
+        return groups
+    end
+
+    function max_bin_in_file(fname)
+        if !isfile(fname)
+            return 0
+        end
+        maxbin = 0
+        h5open(fname, "r") do f
+            for g in collect(keys(f))
+                # g is a top-level name
+                gpath = "/" * g
+                # attempt to iterate children using keys on the group object
+                try
+                    grp = f[gpath]
+                    for n in collect(keys(grp))
+                        b = parse_bin(n)
+                        if b !== nothing && b > maxbin
+                            maxbin = b
+                        end
+                    end
+                catch
+                    # ignore non-group entries
+                end
+            end
+        end
+        return maxbin
+    end
+
+    # Copy attributes from src object to dst object (datasets only)
+    function copy_attrs_obj!(srcobj, dstobj)
+        for (k, v) in pairs(attrs(srcobj))
+            attrs(dstobj)[k] = v
+        end
+    end
+
+    # read everything from a given group/bin in src and write into dst with optionally renumbered bin index
+    function copy_group_bin!(srcfname, dstf, groupname::String, binname::String, new_bin_index::Int)
+        src_gpath = "/" * groupname * "/" * binname
+        dst_gpath = "/" * groupname
+        dst_binname = @sprintf("bin-%d", new_bin_index)
+        dst_full = dst_gpath * "/" * dst_binname
+
+        h5open(srcfname, "r") do sf
+            if !haskey(sf, src_gpath)
+                return
+            end
+
+            src_node = sf[src_gpath]
+
+            # try to list children using keys()
+            children = try
+                collect(keys(src_node))
+            catch
+                String[]
+            end
+
+            if isempty(children)
+                data = read(src_node)
+                if haskey(dstf, dst_full)
+                    delete!(dstf, dst_full)
+                end
+                # writing to dst_full will create intermediate groups automatically
+                dstf[dst_full] = data
+                try
+                    copy_attrs_obj!(src_node, dstf[dst_full])
+                catch
+                end
+            else
+                # src bin is a group with children; copy each child dataset
+                for child in children
+                    child_src = src_gpath * "/" * child
+                    child_dst = dst_full * "/" * child
+                    src_child_node = sf[child_src]
+                    grand = try
+                        collect(keys(src_child_node))
+                    catch
+                        String[]
+                    end
+
+                    if isempty(grand)
+                        data = read(src_child_node)
+                        if haskey(dstf, child_dst)
+                            delete!(dstf, child_dst)
+                        end
+                        dstf[child_dst] = data
+                        try
+                            copy_attrs_obj!(src_child_node, dstf[child_dst])
+                        catch
+                        end
+                    else
+                        # nested group - copy leaf datasets one level deep
+                        for gchild in grand
+                            gchild_src = child_src * "/" * gchild
+                            gchild_dst = child_dst * "/" * gchild
+                            data = read(sf[gchild_src])
+                            if haskey(dstf, gchild_dst)
+                                delete!(dstf, gchild_dst)
+                            end
+                            dstf[gchild_dst] = data
+                            try
+                                copy_attrs_obj!(sf[gchild_src], dstf[gchild_dst])
+                            catch
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    max_opt = max_bin_in_file(opt_file)
+    # @info "max bin index found in opt file: $max_opt"
+
+    out_mode = isfile(out_file) ? "r+" : "w"
+    h5open(out_file, out_mode) do outf
+        # copy file attrs from opt if present else sim (best-effort)
+        if isfile(opt_file)
+            h5open(opt_file, "r") do optf
+                for (k,v) in pairs(attrs(optf))
+                    if !haskey(attrs(outf), k)
+                        attrs(outf)[k] = v
+                    end
+                end
+            end
+        elseif isfile(sim_file)
+            h5open(sim_file, "r") do simf
+                for (k,v) in pairs(attrs(simf))
+                    if !haskey(attrs(outf), k)
+                        attrs(outf)[k] = v
+                    end
+                end
+            end
+        end
+
+        # union of top-level groups
+        top_groups = union(top_level_groups(opt_file), top_level_groups(sim_file))
+
+        # copy opt file content (original bin numbers)
+        if isfile(opt_file)
+            h5open(opt_file, "r") do optf
+                for g in collect(keys(optf))
+                    gpath = "/" * g
+                    # iterate children of the group one-level deep
+                    grp = try
+                        optf[gpath]
+                    catch
+                        nothing
+                    end
+                    if grp === nothing
+                        continue
+                    end
+                    for binname in collect(keys(grp))
+                        b = parse_bin(binname)
+                        if b === nothing
+                            # non-bin entry: copy as dataset (overwrite if present)
+                            src_path = gpath * "/" * binname
+                            dst_path = src_path
+                            data = read(optf[src_path])
+                            if haskey(outf, dst_path)
+                                delete!(outf, dst_path)
+                            end
+                            outf[dst_path] = data
+                            try
+                                copy_attrs_obj!(optf[src_path], outf[dst_path])
+                            catch
+                            end
+                        else
+                            copy_group_bin!(opt_file, outf, g, binname, b)
+                        end
+                    end
+                end
+            end
+        end
+
+        # copy sim file content, offsetting bin indices
+        if isfile(sim_file)
+            h5open(sim_file, "r") do simf
+                for g in collect(keys(simf))
+                    gpath = "/" * g
+                    grp = try
+                        simf[gpath]
+                    catch
+                        nothing
+                    end
+                    if grp === nothing
+                        continue
+                    end
+                    for binname in collect(keys(grp))
+                        b = parse_bin(binname)
+                        if b === nothing
+                            src_path = gpath * "/" * binname
+                            dst_path = src_path
+                            data = read(simf[src_path])
+                            if haskey(outf, dst_path)
+                                delete!(outf, dst_path)
+                            end
+                            outf[dst_path] = data
+                            try
+                                copy_attrs_obj!(simf[src_path], outf[dst_path])
+                            catch
+                            end
+                        else
+                            new_index = max_opt + b
+                            copy_group_bin!(sim_file, outf, g, binname, new_index)
+                        end
+                    end
+                end
+            end
+        end
+    end
+    # @info "Merge complete. Output written to $(abspath(out_file))"
+        # optionally delete source files
+    if clear_src
+        if isfile(opt_file)
+            rm(opt_file; force=true)
+            # @info "Deleted source file: $opt_file"
+        end
+        if isfile(sim_file)
+            rm(sim_file; force=true)
+            # @info "Deleted source file: $sim_file"
+        end
+    end
+
+    return nothing
+end

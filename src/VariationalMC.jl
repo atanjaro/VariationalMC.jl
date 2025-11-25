@@ -66,5 +66,6 @@ include("Measurements/write_measurements.jl")
 export write_measurements!
 
 include("Measurements/process_measurements.jl")
+export process_measurements
 
 end

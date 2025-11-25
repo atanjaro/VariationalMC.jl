@@ -9,7 +9,6 @@ A type defining quantities related to a Jastrow factor.
 - `nq_updates_T::I`: tracker for the number of quick updates to the T vector.
 
 """
-## UPDATED
 mutable struct JastrowFactor{E<:AbstractFloat, I<:Integer}
     # fermionic T vector
     Tvec_f::Vector{E}
@@ -38,7 +37,6 @@ returns a instance of the `JastrowFactor` type.
 - `pht::Bool`: whether model is particle-hole transformed. 
 
 """
-## UPDATED
 function get_jastrow_factor(
     jastrow_parameters::JastrowParameters{S, K, V, I}, 
     detwf::DeterminantalWavefunction{T, Q, E, I}, 
@@ -93,7 +91,6 @@ Jastrow peseudopotentials and ``n_{i}`` are the total fermion occupations.
 - `pht::Bool`: whether model is particle-hole transformed.
 
 """
-## UPDATED
 function get_fermionic_Tvec(
     jastrow_type::S,
     jpar_map::OrderedDict{Any, Any},
@@ -157,7 +154,6 @@ after a single particle completes a move from site ``k`` to site ``l`` using the
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 
 """
-## UPDATED
 function get_fermionic_jastrow_ratio(
     markov_move::MarkovMove{I}, 
     jastrow_parameters::JastrowParameters{S, K, V, I},
@@ -241,7 +237,6 @@ after a single particle completes a move from site ``k`` to site ``l`` using the
 - `model_geometry`::ModelGeometry: contains unit cell and lattice quantities.
 
 """
-## UPDATED 
 function get_fermionic_jastrow_ratio(
     k::I, 
     l::I, 
@@ -321,7 +316,6 @@ Updates elements ``T_{i}`` of the fermion-type T vector after an accepted Metrop
 - `pht::Bool`: whether model is particle-hole transformed.
 
 """
-## UPDATED
 function update_fermionic_Tvec!(
     markov_move::MarkovMove{I}, 
     spin::I, 
@@ -453,7 +447,6 @@ lattice index pairs ``(i,j)``, which generate ``k``, and their associated Jastro
 - `rng::AbstractRNG`: random number generator.
 
 """
-## PASSED
 function map_jastrow_parameters(
     model_geometry::ModelGeometry, 
     rng::AbstractRNG
@@ -592,7 +585,6 @@ Checks floating point error accumulation in the fermionic T vector.
 - `Tvec_r::Vector{E}`: recalculated T vector. 
 
 """
-## UPDATED
 function check_deviation(
     jastrow_Tvec::Vector{E}, 
     Tvec_r::Vector{E}

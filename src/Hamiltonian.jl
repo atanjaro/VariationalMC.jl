@@ -130,6 +130,7 @@ function build_tight_binding_hamiltonian(
     end
 
     # neighbor table
+    bonds = model_geometry.bond
     nbr0 = build_neighbor_table(
         bonds[1], 
         model_geometry.unit_cell, 
@@ -280,6 +281,9 @@ function build_variational_hamiltonian(
 
     # number of sites
     N = model_geometry.lattice.N
+
+    # bonds of the lattice
+    bonds = model_geometry.bond
    
     # initialize Hamiltonian and operator matrices
     H_vpars = Vector{Matrix{AbstractFloat}}()
@@ -323,6 +327,7 @@ function build_variational_hamiltonian(
                 determinantal_parameters,
                 optimize,
                 H_vpars,
+                bonds,
                 V,
                 dims,
                 N,
@@ -354,6 +359,7 @@ function build_variational_hamiltonian(
                 optimize, 
                 H_vpars, 
                 V, 
+                bonds,
                 dims,
                 N,
                 pht
@@ -384,6 +390,7 @@ function build_variational_hamiltonian(
                 optimize,
                 H_vpars,
                 V,
+                bonds,
                 dims,
                 N,
                 pht
@@ -627,6 +634,7 @@ function add_pairing_symmetry!(
     optimize::NamedTuple,
     H_vpars::Vector{Matrix{T}},
     V::Vector{Matrix{T}},
+    bonds::Vector{Vector{Bond{I}}},
     dims::I,
     N::I,
     pht::Bool
@@ -1388,6 +1396,9 @@ function get_tb_chem_pot(
 ) where {I<:Integer, E<:AbstractFloat}
     # number of lattice sites
     N = model_geometry.lattice.N
+
+    # bonds of the lattice
+    bonds = model_geometry.bond
     
     # preallocate matrices
     H_t₀ = zeros(Complex, 2*N, 2*N)
