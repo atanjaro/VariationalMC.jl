@@ -315,6 +315,7 @@ for each determinantal variational parameter ``\alpha_k`` and returns a vector o
 - `optimize::NamedTuple`: field of optimization flags.
 - `jastrow_parameters::JastrowParameters{T, K, V, I}`: current set of Jastrow variational parameters. 
 - `detwf::DeterminantalWavefunction{Q, F, E, I}`: current variational wavefunction. 
+- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 - `pht::Bool`: whether model is particle-hole transformed.
 
 """
@@ -322,8 +323,12 @@ function get_Δk(
     optimize::NamedTuple, 
     jastrow_parameters::JastrowParameters{T, K, V, I},
     detwf::DeterminantalWavefunction{Q, F, E, I}, 
+    model_geometry::ModelGeometry,
     pht::Bool
 ) where {T<:AbstractString, K, V, I<:Integer, Q<:Number, F, E<:AbstractFloat}
+    # total number of sites
+    N = model_geometry.lattice.N
+
     # type of Jastrow parameters
     jastrow_type = jastrow_parameters.jastrow_type
 
@@ -342,8 +347,8 @@ function get_Δk(
         if jpar < num_jpars
             for (i,j) in jpar_map[irr_index][1]
                 # current site occupations
-                n_i_up, n_i_dn = get_onsite_fermion_occupation(i+1, detwf.pconfig)[1:2]
-                n_j_up, n_j_dn = get_onsite_fermion_occupation(j+1, detwf.pconfig)[1:2]
+                n_i_up, n_i_dn = get_onsite_fermion_occupation(i+1, detwf.pconfig, N)[1:2]
+                n_j_up, n_j_dn = get_onsite_fermion_occupation(j+1, detwf.pconfig, N)[1:2]
 
                 if jastrow_type == "e-den-den"
                     # calculate derivative

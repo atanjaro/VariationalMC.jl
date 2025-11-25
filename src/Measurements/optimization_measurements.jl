@@ -72,19 +72,20 @@ function measure_Δk!(
 ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
     # calculate determinantal parameter derivatives
     Δk_determinantal = get_Δk(
-        optimize::NamedTuple, 
-        determinantal_parameters::DeterminantalParameters, 
-        detwf::DeterminantalWavefunction, 
-        model_geometry::ModelGeometry, 
-        Np::Int
+        optimize, 
+        determinantal_parameters, 
+        detwf, 
+        model_geometry, 
+        Np
     ) 
 
     # calculate Jastrow parameter derivatives
     Δk_jastrow = get_Δk(
-        optimize::NamedTuple, 
-        jastrow_parameters::JastrowParameters,
-        detwf::DeterminantalWavefunction, 
-        pht::Bool
+        optimize, 
+        jastrow_parameters,
+        detwf, 
+        model_geometry,
+        pht
     ) 
 
     # combine all derivatives
@@ -133,27 +134,29 @@ function measure_Δk!(
 )::Nothing
     # calculate determinantal parameter derivatives
     Δk_determinantal = get_Δk(
-        optimize::NamedTuple, 
-        determinantal_parameters::DeterminantalParameters, 
-        jastrow_parameters::JastrowParameters,
-        detwf::DeterminantalWavefunction, 
-        model_geometry::ModelGeometry, 
-        Np::Int,
-        pht::Bool
+        optimize, 
+        determinantal_parameters, 
+        jastrow_parameters,
+        detwf, 
+        model_geometry, 
+        Np,
+        pht
     ) 
 
     # calculate Jastrow parameter derivatives
     Δk_jastrow_1 = get_Δk(
-        optimize::NamedTuple, 
-        jastrow_parameters_1::JastrowParameters,
-        detwf::DeterminantalWavefunction, 
-        pht::Bool
+        optimize, 
+        jastrow_parameters_1,
+        detwf, 
+        model_geometry,
+        pht
     ) 
     Δk_jastrow_2 = get_Δk(
-        optimize::NamedTuple, 
-        jastrow_parameters_2::JastrowParameters,
-        detwf::DeterminantalWavefunction, 
-        pht::Bool
+        optimize, 
+        jastrow_parameters_2,
+        detwf, 
+        model_geometry,
+        pht
     ) 
 
     # combine all derivatives
@@ -242,19 +245,20 @@ function measure_ΔkΔkp!(
 )::Nothing
     # calculate determinantal parameter derivatives
     Δk_determinantal = get_Δk(
-        optimize::NamedTuple, 
-        determinantal_parameters::DeterminantalParameters, 
-        detwf::DeterminantalWavefunction, 
-        model_geometry::ModelGeometry, 
-        Np::Int
+        optimize, 
+        determinantal_parameters, 
+        detwf, 
+        model_geometry, 
+        Np
     ) 
 
     # calculate Jastrow parameter derivatives
     Δk_jastrow = get_Δk(
-        optimize::NamedTuple, 
-        jastrow_parameters::JastrowParameters,
-        detwf::DeterminantalWavefunction, 
-        pht::Bool
+        optimize, 
+        jastrow_parameters,
+        detwf, 
+        model_geometry,
+        pht
     ) 
 
     # combine all derivatives
@@ -305,25 +309,27 @@ function measure_ΔkΔkp!(
 )::Nothing
     # calculate determinantal parameter derivatives
     Δk_determinantal = get_Δk(
-        optimize::NamedTuple, 
-        determinantal_parameters::DeterminantalParameters, 
-        detwf::DeterminantalWavefunction, 
-        model_geometry::ModelGeometry, 
-        Np::Int
+        optimize, 
+        determinantal_parameters, 
+        detwf, 
+        model_geometry, 
+        Np
     ) 
 
     # calculate Jastrow parameter derivatives
     Δk_jastrow_1 = get_Δk(
-        optimize::NamedTuple, 
-        jastrow_parameters_1::JastrowParameters,
-        detwf::DeterminantalWavefunction, 
-        pht::Bool
+        optimize, 
+        jastrow_parameters_1,
+        detwf, 
+        model_geometry,
+        pht
     )
     Δk_jastrow_2 = get_Δk(
-        optimize::NamedTuple, 
-        jastrow_parameters_2::JastrowParameters,
-        detwf::DeterminantalWavefunction, 
-        pht::Bool
+        optimize, 
+        jastrow_parameters_2,
+        detwf, 
+        model_geometry,
+        pht
     ) 
 
     # combine all derivatives
@@ -437,19 +443,20 @@ function measure_ΔkE!(
 )::Nothing
     # calculate determinantal parameter derivatives
     Δk_determinantal = get_Δk(
-        optimize::NamedTuple, 
-        determinantal_parameters::DeterminantalParameters, 
-        detwf::DeterminantalWavefunction, 
-        model_geometry::ModelGeometry, 
+        optimize, 
+        determinantal_parameters, 
+        detwf, 
+        model_geometry, 
         Np::Int
     ) 
 
     # calculate Jastrow parameter derivatives
     Δk_jastrow = get_Δk(
-        optimize::NamedTuple, 
-        jastrow_parameters::JastrowParameters,
-        detwf::DeterminantalWavefunction, 
-        pht::Bool
+        optimize, 
+        jastrow_parameters,
+        detwf,
+        model_geometry, 
+        pht
     ) 
 
     # combine all derivatives
@@ -521,25 +528,27 @@ function measure_ΔkE!(
 )::Nothing
     # calculate determinantal parameter derivatives
     Δk_determinantal = get_Δk(
-        optimize::NamedTuple, 
-        determinantal_parameters::DeterminantalParameters, 
-        detwf::DeterminantalWavefunction, 
-        model_geometry::ModelGeometry, 
-        Np::Int
+        optimize, 
+        determinantal_parameters, 
+        detwf, 
+        model_geometry, 
+        Np
     ) 
 
     # calculate Jastrow parameter derivatives
     Δk_jastrow_1 = get_Δk(
-        optimize::NamedTuple, 
-        jastrow_parameters_1::JastrowParameters,
-        detwf::DeterminantalWavefunction, 
-        pht::Bool
+        optimize, 
+        jastrow_parameters_1,
+        detwf, 
+        model_geometry,
+        pht
     ) 
     Δk_jastrow_2 = get_Δk(
-        optimize::NamedTuple, 
-        jastrow_parameters_2::JastrowParameters,
-        detwf::DeterminantalWavefunction, 
-        pht::Bool
+        optimize, 
+        jastrow_parameters_2,
+        detwf, 
+        model_geometry,
+        pht
     ) 
 
     # combine all derivatives

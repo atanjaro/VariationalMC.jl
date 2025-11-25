@@ -108,8 +108,8 @@ function get_fermionic_Tvec(
         # loop over 
         for (i,j) in jpar_map[irr_index][1]
             # get site occupations
-            num_up = get_onsite_fermion_occupation(j+1, detwf.pconfig)[1]
-            num_dn = get_onsite_fermion_occupation(j+1, detwf.pconfig)[2]
+            num_up = get_onsite_fermion_occupation(j+1, detwf.pconfig, N)[1]
+            num_dn = get_onsite_fermion_occupation(j+1, detwf.pconfig, N)[2]
 
             if jastrow_type == "e-den-den"
                 if pht

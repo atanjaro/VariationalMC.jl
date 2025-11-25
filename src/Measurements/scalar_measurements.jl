@@ -671,7 +671,7 @@ function get_local_hubbard_energy(
         
     hubbard_sum = 0.0
     for i in 1:N
-        occ_up, occ_dn, occ_e = get_onsite_fermion_occupation(i, detwf.pconfig)
+        occ_up, occ_dn, occ_e = get_onsite_fermion_occupation(i, detwf.pconfig, N)
         if pht
             hubbard_sum += occ_up .* (1 .- occ_dn)
         else
@@ -707,7 +707,7 @@ function get_double_occ(
 
     nup_ndn = 0.0
     for site in 1:N
-        occ_up, occ_dn, _ = get_onsite_fermion_occupation(site, detwf.pconfig)
+        occ_up, occ_dn, _ = get_onsite_fermion_occupation(site, detwf.pconfig, N)
         if pht
             nup_ndn += occ_up .* (1 .- occ_dn)
         else
@@ -738,7 +738,7 @@ function get_n(
     N = model_geometry.lattice.N
 
     for i in 1:N
-        local_occ = get_onsite_fermion_occupation(i, detwf.pconfig)[1] + 1 - get_onsite_fermion_occupation(i, detwf.pconfig)[2]
+        local_occ = get_onsite_fermion_occupation(i, detwf.pconfig, N)[1] + 1 - get_onsite_fermion_occupation(i, detwf.pconfig, N)[2]
         total_occ += local_occ
     end
 
@@ -766,7 +766,7 @@ function get_Sz(
     N = model_geometry.lattice.N
 
     for i in 1:N
-        local_Sz = 0.5 * (get_onsite_fermion_occupation(i, detwf.pconfig)[1] - get_onsite_fermion_occupation(i, detwf.pconfig)[2])
+        local_Sz = 0.5 * (get_onsite_fermion_occupation(i, detwf.pconfig, N)[1] - get_onsite_fermion_occupation(i, detwf.pconfig, N)[2])
         total_Sz += local_Sz
     end
 

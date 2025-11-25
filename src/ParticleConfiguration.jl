@@ -270,23 +270,26 @@ end
 @doc raw"""
 
     get_onsite_fermion_occupation( site::I, 
-                                   pconfig::AbstractVector{I} ) where {I<:Integer}
+                                   pconfig::AbstractVector{I},
+                                   N::I ) where {I<:Integer}
 
 Returns the number of spin-up and spin-down fermions occupying a real lattice site `i`.  
 
 - `site::I`: lattice site. 
 - `pconfig::AbstractVector{I}`: current particle configuration.
+- `N::I`: total number of sites.
 
 """
 function get_onsite_fermion_occupation(
     site::I, 
-    pconfig::Vector{I}
+    pconfig::Vector{I},
+    N::I
 ) where {I<:Integer}
     # count number of fermions
     num_up = pconfig[site] > 0 ? 1 : 0
 
     # count number of spin-down fermions
-    num_dn = pconfig[site + model_geometry.lattice.N] > 0 ? 1 : 0
+    num_dn = pconfig[site + N] > 0 ? 1 : 0
 
     # total number of fermions
     num_f = num_up + num_dn
