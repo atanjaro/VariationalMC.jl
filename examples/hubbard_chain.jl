@@ -240,9 +240,8 @@ function run_hubbard_chain_simulation(
             for equil in 1:N_equil
                 (acceptance_rate, detwf) = local_fermion_update!(
                     detwf, 
-                    Ne, 
+                    Np, 
                     model_geometry, 
-                    pht,
                     n_stab_W,
                     δW, 
                     rng
@@ -326,9 +325,8 @@ function run_hubbard_chain_simulation(
             for equil in 1:N_equil
                 (acceptance_rate, detwf) = local_fermion_update!(
                     detwf, 
-                    Ne, 
+                    Np, 
                     model_geometry, 
-                    pht,
                     n_stab_W,
                     δW, 
                     rng
