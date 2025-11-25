@@ -29,7 +29,7 @@ include("ParticleConfiguration.jl")
 export get_particle_numbers, get_particle_density
 
 include("DeterminantalWavefunction.jl")
-export DeterminantalWavefunction, get_determinantal_wavefunction
+export DeterminantalWavefunction, DeterminantalWavefunctionTABC, get_determinantal_wavefunction
 
 include("Greens.jl")
 
@@ -40,7 +40,7 @@ include("Markov.jl")
 export local_fermion_update!
 
 include("Optimizer.jl")
-export stochastic_reconfiguration!
+export optimize_parameters!
 
 include("SimulationInfo.jl")
 export SimulationInfo, initialize_datafolder, create_datafolder_prefix
