@@ -297,7 +297,9 @@ function build_variational_hamiltonian(
             optimize, 
             H_vpars, 
             V, 
+            model_geometry,
             dims,
+            bonds,
             N,
             pht
         )
@@ -329,7 +331,9 @@ function build_variational_hamiltonian(
                 H_vpars,
                 bonds,
                 V,
+                model_geometry,
                 dims,
+                bonds,
                 N,
                 pht
             )
@@ -359,8 +363,9 @@ function build_variational_hamiltonian(
                 optimize, 
                 H_vpars, 
                 V, 
-                bonds,
+                model_geometry,
                 dims,
+                bonds,
                 N,
                 pht
             )
@@ -390,8 +395,9 @@ function build_variational_hamiltonian(
                 optimize,
                 H_vpars,
                 V,
-                bonds,
+                model_geometry,
                 dims,
+                bonds,
                 N,
                 pht
             )
@@ -423,6 +429,7 @@ function build_variational_hamiltonian(
         optimize,
         H_vpars,
         V,
+        model_geometry,
         dims,
         N,
         pht
@@ -453,6 +460,7 @@ function build_variational_hamiltonian(
         optimize, 
         H_vpars, 
         V, 
+        model_geometry,
         dims,
         N, 
         pht
@@ -484,6 +492,7 @@ function build_variational_hamiltonian(
             optimize, 
             H_vpars, 
             V, 
+            model_geometry,
             dims,
             N, 
             pht
@@ -543,6 +552,7 @@ function build_variational_hamiltonian(
         optimize, 
         H_vpars, 
         V, 
+        model_geometry,
         dims,
         N,
         pht
@@ -574,6 +584,7 @@ function build_variational_hamiltonian(
             optimize, 
             H_vpars,
             V, 
+            model_geometry,
             dims,
             N, 
             pht
@@ -612,6 +623,8 @@ end
                            optimize::NamedTuple, 
                            H_vpars::Vector{Matrix{T}}, 
                            V::Vector{Matrix{T}}, 
+                           model_geometry::ModelGeometry,
+                           bonds::Vector{Vector{Bond{I}}},
                            dims::I,
                            N::I, 
                            pht::Bool ) where {S<:AbstractString, I<:Integer, T<:Number}
@@ -623,7 +636,9 @@ Adds a pairing term to the auxiliary Hamiltonian.
 - `optimize::NamedTuple`: field of optimization flags.
 - `H_vpars::Vector{Matrix{T}}`: vector of variational Hamiltonian matrices.
 - `V::Vector{Matrix{T}}`: vector of variational operators.
+- `model_geometry::ModelGeometry`: contains lattice and unit cell quantities.
 - `dims::I`: dimensions of the lattice. 
+- `bonds::Vector{Vector{Bond{I}}}`: lattice bonds.
 - `N::I`: number of sites in the lattice. 
 - `pht::Bool`: whether model is particle-hole transformed.
 
@@ -634,8 +649,9 @@ function add_pairing_symmetry!(
     optimize::NamedTuple,
     H_vpars::Vector{Matrix{T}},
     V::Vector{Matrix{T}},
-    bonds::Vector{Vector{Bond{I}}},
+    model_geometry::ModelGeometry,
     dims::I,
+    bonds::Vector{Vector{Bond{I}}},
     N::I,
     pht::Bool
 ) where {S<:AbstractString, I<:Integer, T<:Number}
@@ -878,6 +894,7 @@ end
                      optimize::NamedTuple, 
                      H_vpars::Vector{Matrix{T}}, 
                      V::Vector{Matrix{T}}, 
+                     model_geometry::ModelGeometry,
                      dims::I,
                      N::I, 
                      pht::Bool )::Nothing
@@ -889,6 +906,7 @@ Adds a spin ordering term to the auxiliary Hamiltonian.
 - `optimize::NamedTuple`: field of optimization flags.
 - `H_vpars::Vector{Any}`: vector of variational Hamiltonian matrices.
 - `V::Vector{Any}`: vector of variational operators.
+- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 - `dims::I`: dimensions of the lattice. 
 - `N::I`: number of sites in the lattice. 
 - `pht::Bool`: whether model if particle-hole transformed.
@@ -900,6 +918,7 @@ function add_spin_order!(
     optimize::NamedTuple,
     H_vpars::Vector{Matrix{T}},
     V::Vector{Matrix{T}},
+    model_geometry::ModelGeometry,
     dims::I,
     N::I,
     pht::Bool
@@ -1065,6 +1084,7 @@ end
                        optimize::NamedTuple, 
                        H_vpars::Vector{Matrix{T}}, 
                        V::Vector{Matrix{T}}, 
+                       model_geometry::ModelGeometry,
                        dims::I,
                        N::I, 
                        pht::Bool ) where {S<:AbstractString, I<:Integer, T<:Number}
@@ -1076,6 +1096,7 @@ Adds a charge ordering term to the auxiliary Hamiltonian.
 - `optimize::NamedTuple`: field of optimization flags.
 - `H_vpars::Vector{Matrix{T}}`: vector of variational Hamiltonian matrices.
 - `V::Vector{Matrix{T}}`: vector of variational operators.
+- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 - `dims::I`: dimensions of the lattice. 
 - `N::I`: number of sites in the lattice. 
 - `pht::Bool`: whether model if particle-hole transformed.
@@ -1087,6 +1108,7 @@ function add_charge_order!(
     optimize::NamedTuple,
     H_vpars::Vector{Matrix{T}},
     V::Vector{Matrix{T}},
+    model_geometry::ModelGeometry,
     dims::I,
     N::I,
     pht::Bool
