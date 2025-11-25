@@ -353,6 +353,7 @@ function run_hubbard_chain_simulation(
 
         # Write measurement for the current bin to file.
         write_measurements!(
+            "sim",
             bin, 
             opt_bin_size,
             measurement_container, 
