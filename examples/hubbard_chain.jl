@@ -341,7 +341,6 @@ function run_hubbard_chain_simulation(
                 measurement_container, 
                 detwf, 
                 tight_binding_model, 
-                determinantal_parameters, 
                 model_geometry, 
                 U,
                 Np, 
