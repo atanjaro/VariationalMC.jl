@@ -199,7 +199,7 @@ function process_optimization_measurements(
     N_bins::Union{I, Nothing}=nothing
     
 ) where {T<:AbstractString, I<:Integer}
-    opt_file = joinpath(datafolder, "optimization", "optimization_measurements.h5")
+    opt_file = joinpath(datafolder, "optimization", "opt_bin_measurements.h5")
     @assert isfile(opt_file) "HDF5 file not found: $opt_file"
 
     # helper function to convert filenames to ASCII
