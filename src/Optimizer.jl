@@ -56,6 +56,7 @@ function optimize_parameters!(
 
     # push back determinantal parameters
     update_parameters!(
+        measurement_container,
         new_vpars, 
         determinantal_parameters
     )
@@ -138,6 +139,7 @@ function optimize_parameters!(
 
     # push back determinantal_parameters
     update_parameters!(
+        measurement_container,
         new_vpars, 
         determinantal_parameters,
         jastrow_parameters
@@ -216,6 +218,7 @@ function optimize_parameters!(
 
     # push back determinantal_parameters
     update_parameters!(
+        measurement_container,
         new_vpars, 
         determinantal_parameters,
         jastrow_parameters_1,

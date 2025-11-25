@@ -20,10 +20,10 @@ function model_summary(
         # open file to write to
         open(fn, "w") do fout
             # write pht
-            @printf fout "Particle-hole transformed = %d\n\n" metadata["pht"]
+            @printf fout "pht = %s\n\n" lowercase(string(metadata["pht"]))
 
             # write dt
-            @printf fout "Optimization rate = %d\n\n" metadata["dt"]
+            @printf fout "Optimization rate = %.2f\n\n" metadata["dt"]
 
             # write N_equil
             @printf fout "Number of equilibration/thermalization steps = %d\n\n" metadata["N_equil"]
@@ -44,7 +44,7 @@ function model_summary(
             @printf fout "RNG seed = %d\n\n" metadata["seed"]
 
             # write total VMC time
-            @printf fout "Total VMC time = %d\n\n" metadata["vmc_time"]
+            @printf fout "Total VMC time = %.2f\n\n" metadata["vmc_time"]
 
             # write opt_flags
             show(fout, MIME("text/plain"), metadata["opt_flags"])

@@ -36,7 +36,7 @@ function run_hubbard_chain_simulation(
         # uniform charge density
         Δ_cdw = false,
         # density-density Jastrow 
-        density_J = true
+        density_J = false
     )
 
     # Specify whether the model will be particle-hole transformed.
@@ -68,7 +68,7 @@ function run_hubbard_chain_simulation(
     rng = Xoshiro(seed)
 
     # Set the optimization rate for the VMC simulation.
-    dt = 0.03     
+    dt = 0.1
 
     # Set the stabilization factor used in parameter optimization. 
     η = 1e-4    
@@ -77,17 +77,9 @@ function run_hubbard_chain_simulation(
     # matrix will be recomputed using the numerical stabilization procedure.
     n_stab_W = 50
 
-    # Set the frequency in Monte Carlo steps with which the Jastrow T vector will be
-    # recomputed using the numerical stabilization procedure.
-    n_stab_T = 50
-
     # Specify the maximum allowed error in the equal-time Green's function matrix that
     # is corrected by numerical stabilization.
     δW = 1e-3
-
-    # Specify the maximum allowed error in the Jastrow T vector that is corrected 
-    # by numerical stabilization.
-    δT = 1e-3
 
     # Calculate optimization bins size.
     # The bin size is the number of measurements that are averaged over each time data is written
@@ -102,20 +94,23 @@ function run_hubbard_chain_simulation(
     # Initialize a dictionary to store additional information about the simulation.
     # This is a sort of "notebook" for tracking extraneous parameters during the VMC simulation.
     metadata = Dict()
+    metadata["seed"] = seed
+    metadata["pht"] = pht
     metadata["N_equil"] = N_equil
-    metadata["N_opts"] = N_opt
+    metadata["N_opt"] = N_opt
     metadata["N_sim"] = N_sim
     metadata["N_opt_bins"] = N_opt_bins
     metadata["N_sim_bins"] = N_sim_bins
-    metadata["seed"] = seed
-    metadata["pht"] = true
     metadata["δW"] = δW
+    metadata["δT"] = δT
+    metadata["n_stab_W"] = n_stab_W
+    metadata["n_stab_T"] = n_stab_T
     metadata["dt"] = dt 
-    metadata["acceptance_rate"] = 0.0
     metadata["opt_flags"] = optimize 
+    metadata["acceptance_rate"] = 0.0
     metadata["opt_time"] = 0.0
     metadata["sim_time"] = 0.0
-    metadata["total_time"] = 0.0
+    metadata["vmc_time"] = 0.0
 
     #######################
     ### DEFINE THE MODEL ##
@@ -164,27 +159,6 @@ function run_hubbard_chain_simulation(
         bonds
     )
 
-    ##############################
-    ### INITIALIZE MEASUREMENTS ##
-    ##############################
-
-    # Initialize the container that measurements will be accumulated into.
-    measurement_container = initialize_measurement_container(
-        N_opt, 
-        opt_bin_size, 
-        N_sim, 
-        sim_bin_size,
-        determinantal_parameters,
-        jastrow_parameters,
-        model_geometry
-    )
-
-    # Initialize the sub-directories to which the various measurements will be written.
-    initialize_measurement_directories(
-        simulation_info, 
-        measurement_container
-    )
-
     ############################
     ### SET-UP VMC SIMULATION ##
     ############################
@@ -213,17 +187,29 @@ function run_hubbard_chain_simulation(
         pht
     )
 
-    # Initialize density-density Jastrow variational parameters.
-    density_J_parameters = JastrowParameters(
-        "e-den-den",
-        optimize, 
-        model_geometry,
-        rng
-    )
-
     # Initialize the (fermionic) particle configuration.
     # Will start with a random initial configuration unless provided a starting configuration.
     pconfig = Int[]
+
+    ##############################
+    ### INITIALIZE MEASUREMENTS ##
+    ##############################
+
+    # Initialize the container that measurements will be accumulated into.
+    measurement_container = initialize_measurement_container(
+        N_opt, 
+        opt_bin_size, 
+        N_sim, 
+        sim_bin_size,
+        determinantal_parameters,
+        model_geometry
+    )
+
+    # Initialize the sub-directories to which the various measurements will be written.
+    initialize_measurement_directories(
+        simulation_info, 
+        measurement_container
+    )
 
     ###########################
     ### OPTIMIZATION UPDATES ##
@@ -249,30 +235,18 @@ function run_hubbard_chain_simulation(
             pconfig
         )  
 
-        # Initialize density-density Jastrow factor.
-        density_J_factor = get_jastrow_factor(
-            density_J_parameters,
-            detwf,
-            model_geometry,
-            pht
-        )
-
         # Iterate over optimization bin length
         for n in 1:opt_bin_size
 
             # Iterate over equilibration/thermalization updates
-            for equil in N_equil
-                (acceptance_rate, detwf, density_J_factor) = local_fermion_update!(
+            for equil in 1:N_equil
+                (acceptance_rate, detwf) = local_fermion_update!(
                     detwf, 
-                    density_J_factor,
-                    density_J_parameters,
                     Ne, 
                     model_geometry, 
                     pht,
                     n_stab_W,
-                    n_stab_T,
                     δW, 
-                    δT,
                     rng
                 )
 
@@ -285,10 +259,10 @@ function run_hubbard_chain_simulation(
                 measurement_container, 
                 detwf, 
                 tight_binding_model, 
-                density_J_parameters,
-                density_J_factor,
                 determinantal_parameters, 
+                optimize,
                 model_geometry, 
+                U,
                 Np, 
                 pht
             )
@@ -301,7 +275,6 @@ function run_hubbard_chain_simulation(
         optimize_parameters!( 
             measurement_container,  
             determinantal_parameters, 
-            density_J_parameters,
             η, 
             dt, 
             opt_bin_size
@@ -309,15 +282,13 @@ function run_hubbard_chain_simulation(
 
         # Write measurement for the current bin to file.
         write_measurements!(
+            "opt",
             bin, 
             opt_bin_size,
             measurement_container, 
             simulation_info,
             write_parameters=true
         )
-
-        # TBA: Perform a check for parameter convergence
-        # If the convergence condition is satisfied, returns the first convergence bin.
     end
 
     # End time for optimization.
@@ -350,30 +321,18 @@ function run_hubbard_chain_simulation(
             pconfig
         )  
 
-        # Initialize density-density Jastrow factor.
-        density_J_factor = get_jastrow_factor(
-            density_J_parameters,
-            detwf,
-            model_geometry,
-            pht
-        )
-
         # Iterate over optimization bin length
         for n in 1:sim_bin_size
 
             # Iterate over equilibration/thermalization updates
-            for equil in N_equil
-                (acceptance_rate, detwf, density_J_factor) = local_fermion_update!(
+            for equil in 1:N_equil
+                (acceptance_rate, detwf) = local_fermion_update!(
                     detwf, 
-                    density_J_factor,
-                    density_J_parameters,
                     Ne, 
                     model_geometry, 
                     pht,
                     n_stab_W,
-                    n_stab_T,
                     δW, 
-                    δT,
                     rng
                 )
 
@@ -386,10 +345,9 @@ function run_hubbard_chain_simulation(
                 measurement_container, 
                 detwf, 
                 tight_binding_model, 
-                density_J_parameters,
-                density_J_factor,
                 determinantal_parameters, 
                 model_geometry, 
+                U,
                 Np, 
                 pht
             )
@@ -414,7 +372,20 @@ function run_hubbard_chain_simulation(
     metadata["sim_time"] += sim_end - sim_start
 
     # Record the total VMC time.
-    metadata["total_time"] += metadata["opt_time"] + metadata["sim_time"]
+    metadata["vmc_time"] += metadata["opt_time"] + metadata["sim_time"]
+
+    # Process all optimization and simulation measurements.
+    # Each observable will be written to CSV files for later processing.
+    process_measurements(
+        measurement_container, 
+        simulation_info, 
+        determinantal_parameters
+    )
+
+    # Write model summary to file.
+    model_summary(simulation_info, metadata)
+
+    return nothing
 end
 
 # Only execute if the script is run directly from the command line.

@@ -83,7 +83,7 @@ function run_hubbard_square_simulation(
     # Set the optimization rate for the VMC simulation.
     dt = 0.1
     
-    # Set the optional boost in the Jastrow optimization rate.
+    # (optional) Set the boost in the Jastrow optimization rate.
     dt_J = 1.0
 
     # Set the stabilization factor used in parameter optimization. 
@@ -131,6 +131,7 @@ function run_hubbard_square_simulation(
     metadata["n_stab_T"] = n_stab_T
     metadata["dt"] = dt 
     metadata["opt_flags"] = optimize 
+    metadata["acceptance_rate"] = 0.0
     metadata["opt_time"] = 0.0
     metadata["sim_time"] = 0.0
     metadata["vmc_time"] = 0.0
@@ -234,7 +235,6 @@ function run_hubbard_square_simulation(
     # Will start with a random initial configuration unless provided a starting configuration.
     pconfig = Int[]
 
-
     ##############################
     ### INITIALIZE MEASUREMENTS ##
     ##############################
@@ -292,7 +292,7 @@ function run_hubbard_square_simulation(
         for n in 1:opt_bin_size
 
             # Iterate over equilibration/thermalization updates
-            for equil in N_equil
+            for equil in 1:N_equil
                 (acceptance_rate, detwf, density_J_factor) = local_fermion_update!(
                     detwf, 
                     density_J_factor,
@@ -306,6 +306,9 @@ function run_hubbard_square_simulation(
                     δT,
                     rng
                 )
+
+                # Record acceptance rate.
+                metadata["acceptance_rate"] += acceptance_rate
             end
 
             # Make measurements, with results being recorded in the measurement container.
@@ -313,10 +316,12 @@ function run_hubbard_square_simulation(
                 measurement_container, 
                 detwf, 
                 tight_binding_model, 
+                determinantal_parameters, 
                 density_J_parameters,
                 density_J_factor,
-                determinantal_parameters, 
+                optimize,
                 model_geometry, 
+                U,
                 Np, 
                 pht
             )
@@ -389,7 +394,7 @@ function run_hubbard_square_simulation(
         for n in 1:sim_bin_size
 
             # Iterate over equilibration/thermalization updates
-            for equil in N_equil
+            for equil in 1:N_equil
                 (acceptance_rate, detwf, density_J_factor) = local_fermion_update!(
                     detwf, 
                     density_J_factor,
@@ -403,6 +408,9 @@ function run_hubbard_square_simulation(
                     δT,
                     rng
                 )
+
+                # Record acceptance rate.
+                metadata["acceptance_rate"] += acceptance_rate
             end
 
             # Make measurements, with results being recorded in the measurement container.
@@ -412,8 +420,8 @@ function run_hubbard_square_simulation(
                 tight_binding_model, 
                 density_J_parameters,
                 density_J_factor,
-                determinantal_parameters, 
                 model_geometry, 
+                U,
                 Np, 
                 pht
             )
@@ -426,7 +434,7 @@ function run_hubbard_square_simulation(
         write_measurements!(
             "sim",
             bin, 
-            opt_bin_size,
+            sim_bin_size,
             measurement_container, 
             simulation_info
         )
@@ -447,7 +455,7 @@ function run_hubbard_square_simulation(
         measurement_container, 
         simulation_info, 
         determinantal_parameters, 
-        jastrow_parameters
+        density_J_parameters
     )
 
     # Write model summary to file.

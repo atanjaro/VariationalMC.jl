@@ -464,16 +464,19 @@ end
 
 @doc raw"""
 
-    update_parameters!( new_vpars::AbstractVector, 
+    update_parameters!( measurement_container::NamedTuple,
+                        new_vpars::AbstractVector, 
                         determinantal_parameters::DeterminantalParameters{I} ) where {I<:Integer}
 
 Updates variational parameters after Stochastic Reconfiguration.
 
+- `measurement_container::NamedTuple`: container where measurements are stored.
 - `new_vpars::AbstractVector`: updated variational parameters.
 - `determinantal_parameters::DeterminantalParameters{I}`: current set of determinantal variational parameters.
 
 """
 function update_parameters!(
+    measurement_container::NamedTuple,
     new_vpars::AbstractVector,
     determinantal_parameters::DeterminantalParameters{I}
 ) where {I<:Integer}
@@ -533,18 +536,21 @@ end
 
 @doc raw"""
 
-    update_parameters!( new_vpars::AbstractVector, 
+    update_parameters!( measurement_container::NamedTuple,
+                        new_vpars::AbstractVector, 
                         determinantal_parameters::DeterminantalParameters{I}, 
                         jastrow_parameters::JastrowParameters{S, K, V, I} ) where {S<:AbstractString, K, V, I<:Integer}
 
 Updates variational parameters after Stochastic Reconfiguration.
 
+- `measurement_container::NamedTuple`: container where measurements are stored.
 - `new_vpars::AbstractVector`: updated variational parameters.
 - `determinantal_parameters::DeterminantalParameters{I}`: set of determinantal variational parameters.
 - `jastrow_parameters::JastrowParameters{S, K, V, I}`: set of Jastrow variational parameters.
 
 """
 function update_parameters!(
+    measurement_container::NamedTuple,
     new_vpars::AbstractVector, 
     determinantal_parameters::DeterminantalParameters{I},
     jastrow_parameters::JastrowParameters{S, K, V, I}
@@ -622,13 +628,15 @@ end
 
 @doc raw"""
 
-    update_parameters!( new_vpars::AbstractVector, 
+    update_parameters!( measurement_container::NamedTuple,
+                        new_vpars::AbstractVector, 
                         determinantal_parameters::DeterminantalParameters{I}, 
                         jastrow_parameters_1::JastrowParameters{S, K, V, I},
                         jastrow_parameters_2::JastrowParameters{S, K, V, I} ) where {S<:AbstractString, K, V, I<:Integer}
 
 Updates variational parameters after Stochastic Reconfiguration.
 
+- `measurement_container::NamedTuple`: container where measurements are stored.
 - `new_vpars::AbstractVector`: updated variational parameters.
 - `determinantal_parameters::DeterminantalParameters{I}`: current set of determinantal variational parameters.
 - `jastrow_parameters::JastrowParameters{S, K, V, I}`: first set of Jastrow variational parameters.
@@ -637,6 +645,7 @@ Updates variational parameters after Stochastic Reconfiguration.
 """
 # TODO: need to finish Jastrow updating method
 function update_parameters!(
+    measurement_container::NamedTuple,
     new_vpars::AbstractVector, 
     determinantal_parameters::DeterminantalParameters{I},
     jastrow_parameters_1::JastrowParameters{S, K, V, I},

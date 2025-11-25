@@ -4,6 +4,7 @@
                            detwf::DeterminantalWavefunction{T, Q, E, I}, 
                            tight_binding_model::TightBindingModel{E}, 
                            model_geometry::ModelGeometry,
+                           U::E,
                            Np::I,
                            pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
 
@@ -13,6 +14,7 @@ Measures the total local energy ``E_{\mathrm{loc}}`` for a Hubbard model and wri
 - `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
 - `tight_binding_model::TightBindingModel{E}`: parameters for a non-interacting tight-binding model. 
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
+- `U::E`: Hubbard repulsion.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether model is particle-hole transformed.
 
@@ -22,6 +24,7 @@ function measure_local_energy!(
     detwf::DeterminantalWavefunction{T, Q, E, I}, 
     tight_binding_model::TightBindingModel{E}, 
     model_geometry::ModelGeometry, 
+    U::E,
     Np::I, 
     pht::Bool
 ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
@@ -30,6 +33,7 @@ function measure_local_energy!(
         detwf, 
         tight_binding_model, 
         model_geometry, 
+        U,
         Np, 
         pht
     )
@@ -49,6 +53,7 @@ end
                            jastrow_parameters::JastrowParameters{S, K, V, I},
                            jastrow_factor::JastrowFactor{E}, 
                            model_geometry::ModelGeometry,
+                           U::E,
                            Np::I, 
                            pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
 
@@ -60,6 +65,7 @@ Measures the total local energy ``E_{\mathrm{loc}}`` for a Hubbard model and wri
 - `jastrow_parameters::JastrowParameters{S, K, V, I}`: current set of Jastrow variational parameters.
 - `jastrow_factor::JastrowFactor{E}`: current Jastrow factor. 
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
+- `U::E`: Hubbard repulsion.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether model is particle-hole transformed.
 
@@ -71,6 +77,7 @@ function measure_local_energy!(
     jastrow_parameters::JastrowParameters{S, K, V, I},
     jastrow_factor::JastrowFactor{E}, 
     model_geometry::ModelGeometry, 
+    U::E,
     Np::I, 
     pht::Bool
 ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
@@ -81,6 +88,7 @@ function measure_local_energy!(
         jastrow_parameters, 
         jastrow_factor, 
         model_geometry, 
+        U,
         Np, 
         pht
     )
@@ -102,6 +110,7 @@ end
                            jastrow_factor_1::JastrowFactor{E},
                            jastrow_factor_2::JastrowFactor{E}, 
                            model_geometry::ModelGeometry,
+                           U::E,
                            Np::I, 
                            pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
 
@@ -115,6 +124,7 @@ Measures the total local energy ``E_{\mathrm{loc}}`` for a Hubbard model and wri
 - `jastrow_factor_1::JastrowFactor{E}`: first Jastrow factor.
 - `jastrow_factor_2::JastrowFactor{E}`: second Jastrow factor. 
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
+- `U::E`: Hubbard repulsion.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether model is particle-hole transformed.
 
@@ -128,7 +138,8 @@ function measure_local_energy!(
     jastrow_factor_1::JastrowFactor{E},
     jastrow_factor_2::JastrowFactor{E}, 
     model_geometry::ModelGeometry, 
-    Ne::I, 
+    U::E,
+    Np::I, 
     pht::Bool
 ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
    # calculate the current local energy
@@ -140,7 +151,8 @@ function measure_local_energy!(
         jastrow_factor_1,
         jastrow_factor_2, 
         model_geometry, 
-        Ne, 
+        U,
+        Np, 
         pht
     )
 
