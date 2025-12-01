@@ -14,6 +14,17 @@ The development of this code was supported by the U.S. Department of Energy, Off
 
 ## Installation
 
+To install the [VariationalMC.jl](https://github.com/atanjaro/VariationalMC.jl),
+simply open the Julia REPL and run the commands
+```
+julia> ]
+pkg> add VariationalMC
+```
+or equivalently via `Pkg` do
+```
+julia> using Pkg; Pkg.add("VariationalMC")
+```
+
 ## Documentation
 
 - [`DEV`](https://atanjaro.github.io/VariationalMC.jl/dev/): Documentation associated with most recent commit to the main branch.
