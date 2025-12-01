@@ -75,7 +75,7 @@ In this initial part of the script, we will specify what parameters in the trial
     pht = false
 ````
 
-The datafolder is created by initializing an instances of the [`SimulationInfo`](@ref) type, and then calling the [`initialize_datafolder`](@ref) function.
+The datafolder is created by initializing an instances of the `SimulationInfo` type, and then calling the `initialize_datafolder` function.
 
 
 ````julia
@@ -156,7 +156,7 @@ distinguish simulations that use the same parameters and are only different in t
 A valid `sID` is any positive integer greater than zero, and is used when naming the data folder the simulation results will be written to.
 Specifically, the actual data folder created above will be `"$(filepath)/$(datafolder_prefix)-$(sID)"`.
 Note that if you set `sID = 0`, then it will instead be assigned smallest previously unused integer value. For instance, suppose the directory
-`"$(filepath)/$(datafolder_prefix)-1"` already exits. Then if you pass `sID = 0` to [`SimulationInfo`](@ref), then the simulation ID
+`"$(filepath)/$(datafolder_prefix)-1"` already exits. Then if you pass `sID = 0` to `SimulationInfo`, then the simulation ID
 `sID = 2` will be used instead, and a directory `"$(filepath)/$(datafolder_prefix)-2"` will be created.
 
 ## Initialize model
@@ -168,7 +168,7 @@ We define a the unit cell and size of our finite lattice using the [`UnitCell`](
 and [`Lattice`](https://smoqysuite.github.io/LatticeUtilities.jl/stable/api/#LatticeUtilities.Lattice) types, respectively.
 Lastly, we define various instances of the [`Bond`](https://smoqysuite.github.io/LatticeUtilities.jl/stable/api/#LatticeUtilities.Bond) type to represent the
 the nearest-neighbor and next-nearest-neighbor bonds.
-All of this information regarding the lattice geometry is then stored in an instance of the [`ModelGeometry`](@ref) type.
+All of this information regarding the lattice geometry is then stored in an instance of the `ModelGeometry` type.
 
 ````julia
     # Initialize an instance of the UnitCell type.
@@ -209,7 +209,7 @@ All of this information regarding the lattice geometry is then stored in an inst
 
 ## Initialize model parameters
 
-The next step is to initialize our model parameters, which includes calculating the particle density in the canonical ensemble. The [`get_particle_density`](@ref) method includes mutliple ways of specifying the particle information. Here, we have chosen to pass the number of spin-up and spin-down particles. The function then computes the corresponding total density, particle number, and electron number.
+The next step is to initialize our model parameters, which includes calculating the particle density in the canonical ensemble. The `get_particle_density` method includes mutliple ways of specifying the particle information. Here, we have chosen to pass the number of spin-up and spin-down particles. The function then computes the corresponding total density, particle number, and electron number.
 
 ````julia
     # Determine the total particle density in the canonical ensemble. 
@@ -245,7 +245,7 @@ The next step is to initialize our model parameters, which includes calculating 
 ````
 
 ## Initialize measurements
-Finally, we initialize the mesaurement container, which accumulates the sums of measurements made in a bin. The standard measurements are of the local energy `local_energy`, double occupancy `double_occ`, particle confiugurations `pconfig`, and variational parameters `parameters`. There is also the option to add additional observables to measure through the [`initialize_simulation_measurement!`](@ref) and [`initialize_correlation_measurement!`](@ref) methods. 
+Finally, we initialize the mesaurement container, which accumulates the sums of measurements made in a bin. The standard measurements are of the local energy `local_energy`, double occupancy `double_occ`, particle confiugurations `pconfig`, and variational parameters `parameters`. There is also the option to add additional observables to measure through the `initialize_simulation_measurement!`and `initialize_correlation_measurement!` methods. 
 
 ````julia
     # Initialize the container that measurements will be accumulated into.
@@ -259,8 +259,8 @@ Finally, we initialize the mesaurement container, which accumulates the sums of 
     )
 ````
 
-The [`initialize_measurement_directories`](@ref) can now be used used to initialize the various subdirectories in the data folder that the measurements will be written to.
-For more information, please refer to the [Simulation Output Overview](@ref) page.
+The `initialize_measurement_directories` can now be used used to initialize the various subdirectories in the data folder that the measurements will be written to.
+For more information, please refer to the Simulation Output Overview page.
 
 ````julia
     # Initialize the sub-directories to which the various measurements will be written.
@@ -271,7 +271,7 @@ For more information, please refer to the [Simulation Output Overview](@ref) pag
 ````
 
 ## Optimize the variational parameters
-Now that we have set-up the VMC simulation, we can begin optimizing the variational parameters. At the start of each bin, we initialize the variational wavefunction. On the first iteration, if no initial configuration is specified, a random one will be generated. In this example, we are neglecting the inclusion of the Jastrow correlation factor here for demonstration purposes but it can be included (see [Example 2](@ref)).
+Now that we have set-up the VMC simulation, we can begin optimizing the variational parameters. At the start of each bin, we initialize the variational wavefunction. On the first iteration, if no initial configuration is specified, a random one will be generated. In this example, we are neglecting the inclusion of the Jastrow correlation factor here for demonstration purposes but it can be included (see Example 2).
 
 ````julia
         # Initialize the determinantal wavefunction.
@@ -289,12 +289,12 @@ Now that we have set-up the VMC simulation, we can begin optimizing the variatio
         )  
 ````
 
-This next section of the code equilibrates/thermalizes the system before making measurements. Within the equilibration loop, the structure is fairly simple: the [`local_fermion_update!`](@ref) function is called to sweep over the particle configuration, attempting to update particle positions. Here, the number of updates performed before measurement is `N_equil` and `opt_bin_size` refers to the length of each bin from `N_opt_bins`.
+This next section of the code equilibrates/thermalizes the system before making measurements. Within the equilibration loop, the structure is fairly simple: the `local_fermion_update!` function is called to sweep over the particle configuration, attempting to update particle positions. Here, the number of updates performed before measurement is `N_equil` and `opt_bin_size` refers to the length of each bin from `N_opt_bins`.
 
-The quantities `n_stab_W` and `δW` are passed to the [`local_fermion_update!`](@ref) function and controls the stability of the equal-time Green's function matrix `W`. After `n_stab_W` fermionic updates, there is a deviation check performed and if it exceeds the threshold `δW`, then the Green's function is recomputed from scratch.
+The quantities `n_stab_W` and `δW` are passed to the `local_fermion_update!` function and controls the stability of the equal-time Green's function matrix `W`. After `n_stab_W` fermionic updates, there is a deviation check performed and if it exceeds the threshold `δW`, then the Green's function is recomputed from scratch.
 
 Finally, the number of measurements that are averaged over per bin is given by `opt_bin_size = N_opt ÷ N_opt_bins`.
-The bin-averaged measurements are written to file once `bin_size` measurements are accumulated using the [`write_measurements!`](@ref) function.
+The bin-averaged measurements are written to file once `bin_size` measurements are accumulated using the `write_measurements!` function.
 
 
 ````julia
@@ -364,7 +364,7 @@ The primary part of this step of the simulation is the optimization of the varia
 ````
 
 ## Simulate the system with optimized parameters
-In this next section, we continue to sample particle configurations using [`local_fermion_update!`](@ref) function but without the SR optimization. This is mainly done to ensure proper statistics in calculating observables like the local energy. 
+In this next section, we continue to sample particle configurations using `local_fermion_update!` function but without the SR optimization. This is mainly done to ensure proper statistics in calculating observables like the local energy. 
 
 
 ````julia
@@ -430,7 +430,7 @@ In this next section, we continue to sample particle configurations using [`loca
 ````
 
 ## Record simulation metadata
-Now that the optimization and simulation of the system are complete, we calculate the total time of the VMC simulation and the average final acceptance rate. Such information is saved to file using the [`model_summary`](@ref) function. 
+Now that the optimization and simulation of the system are complete, we calculate the total time of the VMC simulation and the average final acceptance rate. Such information is saved to file using the `model_summary` function. 
 
 ````julia
     # Record the total VMC time.
@@ -444,7 +444,7 @@ Now that the optimization and simulation of the system are complete, we calculat
 ````
 
 ## Post-processing
-During the simulation, all measurments are written to file in HDF5 format for speed and portability; however, for analyzing data, having CSV files are mush more convenient. Calling the [`process_measurements`](@ref) function accomoplishes this. It will then up to the user to determine final processing and statistics. It should be noted that the next version of the code will have a convergence detection module and plotting function. 
+During the simulation, all measurments are written to file in HDF5 format for speed and portability; however, for analyzing data, having CSV files are mush more convenient. Calling the `process_measurements` function accomoplishes this. It will then up to the user to determine final processing and statistics. It should be noted that the next version of the code will have a convergence detection module and plotting function. 
 
 ````julia
     # Process all optimization and simulation measurements.
