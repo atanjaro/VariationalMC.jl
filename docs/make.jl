@@ -13,7 +13,8 @@ makedocs(
     checkdocs = :none,    
     pages = [
         "Home" => "index.md",
-        "Usage" => "usage.md",
+        "Examples" => "examples.md",
+        "Simulation Output Overview" => "simulation_output.md",
         "API" => "api.md"
     ],
 )

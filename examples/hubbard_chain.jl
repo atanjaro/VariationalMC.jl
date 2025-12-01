@@ -157,9 +157,9 @@ function run_hubbard_chain_simulation(
         bonds
     )
 
-    ############################
-    ### SET-UP VMC SIMULATION ##
-    ############################
+    ##################################
+    ### INITIALIZE MODEL PARAMETERS ##
+    ##################################
 
     # Determine the total particle density in the canonical ensemble. 
     (density, Np, Ne, nup, ndn) = get_particle_density(nup, ndn, model_geometry, pht) 
@@ -355,7 +355,7 @@ function run_hubbard_chain_simulation(
         write_measurements!(
             "sim",
             bin, 
-            opt_bin_size,
+            sim_bin_size,
             measurement_container, 
             simulation_info
         )
