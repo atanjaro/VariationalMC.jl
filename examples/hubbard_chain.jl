@@ -203,6 +203,15 @@ function run_hubbard_chain_simulation(
         model_geometry
     )
 
+    # Add local Sz measurements.
+    initialize_simulation_measurement!(
+        "local",
+        "spin-z",
+        measurement_container,
+        model_geometry
+    )
+
+
     # Initialize the sub-directories to which the various measurements will be written.
     initialize_measurement_directories(
         simulation_info, 
@@ -370,12 +379,16 @@ function run_hubbard_chain_simulation(
     # Record the total VMC time.
     metadata["vmc_time"] += metadata["opt_time"] + metadata["sim_time"]
 
+    # Calculate the average local acceptance rate.
+    metadata["acceptance_rate"] /= (N_opt + N_sim)
+
     # Process all optimization and simulation measurements.
     # Each observable will be written to CSV files for later processing.
     process_measurements(
         measurement_container, 
         simulation_info, 
-        determinantal_parameters
+        determinantal_parameters,
+        model_geometry
     )
 
     # Write model summary to file.

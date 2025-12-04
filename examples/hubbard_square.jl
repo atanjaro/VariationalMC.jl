@@ -81,7 +81,7 @@ function run_hubbard_square_simulation(
     rng = Xoshiro(seed)
 
     # Set the optimization rate for the VMC simulation.
-    dt = 0.1
+    dt = 0.03
     
     # (optional) Set the boost in the Jastrow optimization rate.
     dt_J = 1.0
@@ -247,6 +247,13 @@ function run_hubbard_square_simulation(
         sim_bin_size,
         determinantal_parameters,
         density_J_parameters,
+        model_geometry
+    )
+
+    # Add density-density correlation measurements.
+    initialize_correlation_measurement!(
+        "density", 
+        measurement_container, 
         model_geometry
     )
 
@@ -449,13 +456,17 @@ function run_hubbard_square_simulation(
     # Record the total VMC time.
     metadata["vmc_time"] += metadata["opt_time"] + metadata["sim_time"]
 
+    # Calculate the average local acceptance rate.
+    metadata["acceptance_rate"] /= (N_opt + N_sim)
+
     # Process all optimization and simulation measurements.
     # Each observable will be written to CSV files for later processing.
     process_measurements(
         measurement_container, 
         simulation_info, 
         determinantal_parameters, 
-        density_J_parameters
+        density_J_parameters,
+        model_geometry
     )
 
     # Write model summary to file.

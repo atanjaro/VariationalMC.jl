@@ -107,9 +107,9 @@ function DeterminantalParameters(
         if pht
             det_pars = (
                 Δ_0 = 0.01,
-                Δ_spd = fill(0.01, N),
-                Δ_d = 0.01,
-                Δ_dpd = fill(0.01, N),
+                Δ_spd = fill(0.0, N),
+                Δ_d = 0.0,
+                Δ_dpd = fill(0.0, N),
                 q_p = fill(0.0, dims),
                 Δ_sx = 0.01,
                 Δ_sz = 0.01,

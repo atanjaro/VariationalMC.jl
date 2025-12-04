@@ -14,7 +14,7 @@ Measures the total local energy ``E_{\mathrm{loc}}`` for a Hubbard model and wri
 - `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
 - `tight_binding_model::TightBindingModel{E}`: parameters for a non-interacting tight-binding model. 
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `U::E`: Hubbard repulsion.
+- `U::E`: Hubbard interaction.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether model is particle-hole transformed.
 
@@ -65,7 +65,7 @@ Measures the total local energy ``E_{\mathrm{loc}}`` for a Hubbard model and wri
 - `jastrow_parameters::JastrowParameters{S, K, V, I}`: current set of Jastrow variational parameters.
 - `jastrow_factor::JastrowFactor{E}`: current Jastrow factor. 
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `U::E`: Hubbard repulsion.
+- `U::E`: Hubbard interaction.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether model is particle-hole transformed.
 
@@ -124,7 +124,7 @@ Measures the total local energy ``E_{\mathrm{loc}}`` for a Hubbard model and wri
 - `jastrow_factor_1::JastrowFactor{E}`: first Jastrow factor.
 - `jastrow_factor_2::JastrowFactor{E}`: second Jastrow factor. 
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `U::E`: Hubbard repulsion.
+- `U::E`: Hubbard interaction.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether model is particle-hole transformed.
 
@@ -202,24 +202,28 @@ end
 
     measure_n!( measurement_container::NamedTuple, 
                 detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                model_geometry::ModelGeometry ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+                model_geometry::ModelGeometry,
+                pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
 
 Measures the local particle density averaged over all sites ``\langle n\rangle``.
 
 - `measurement_container::NamedTuple`: container where measurements are stored.
 - `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
+- `pht::Bool`: whether model is particle-hole transformed.
 
 """
 function measure_n!(
     measurement_container::NamedTuple, 
     detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    model_geometry::ModelGeometry
+    model_geometry::ModelGeometry,
+    pht::Bool
 ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
     # calculate current density
     density_current = get_n(
         detwf, 
-        model_geometry
+        model_geometry,
+        pht
     )
 
     # add the current measurement to the accumulator
@@ -233,28 +237,32 @@ end
 
     measure_Sz!( measurement_container::NamedTuple, 
                 detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                model_geometry::ModelGeometry ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+                model_geometry::ModelGeometry,
+                pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
 
 Measures the local spin z-component over averaged all sites ``\langle S_z\rangle``.
 
 - `measurement_container::NamedTuple`: container where measurements are stored.
 - `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
+- `pht::Bool`: whether model is particle-hole transformed.
 
 """
 function measure_Sz!(
     measurement_container::NamedTuple, 
     detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    model_geometry::ModelGeometry
+    model_geometry::ModelGeometry,
+    pht::Bool
 ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
     # calculate current Sz
     Sz_current = get_Sz(
-        detwf::DeterminantalWavefunction{T, Q, E, I}, 
-        model_geometry::ModelGeometry
+        detwf, 
+        model_geometry,
+        pht
     )
 
     # add the current measurement to the accumulator
-    measurement_container.simulation_measurements["spin-z"] += Sz_current
+    measurement_container.simulation_measurements["local_spin-z"] += Sz_current
 
     return nothing
 end

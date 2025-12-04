@@ -329,7 +329,6 @@ function build_variational_hamiltonian(
                 determinantal_parameters,
                 optimize,
                 H_vpars,
-                bonds,
                 V,
                 model_geometry,
                 dims,
@@ -624,7 +623,7 @@ end
                            H_vpars::Vector{Matrix{T}}, 
                            V::Vector{Matrix{T}}, 
                            model_geometry::ModelGeometry,
-                           bonds::Vector{Vector{Bond{I}}},
+                           bonds,
                            dims::I,
                            N::I, 
                            pht::Bool ) where {S<:AbstractString, I<:Integer, T<:Number}
@@ -638,7 +637,7 @@ Adds a pairing term to the auxiliary Hamiltonian.
 - `V::Vector{Matrix{T}}`: vector of variational operators.
 - `model_geometry::ModelGeometry`: contains lattice and unit cell quantities.
 - `dims::I`: dimensions of the lattice. 
-- `bonds::Vector{Vector{Bond{I}}}`: lattice bonds.
+- `bonds`: lattice bonds.
 - `N::I`: number of sites in the lattice. 
 - `pht::Bool`: whether model is particle-hole transformed.
 
@@ -651,7 +650,7 @@ function add_pairing_symmetry!(
     V::Vector{Matrix{T}},
     model_geometry::ModelGeometry,
     dims::I,
-    bonds::Vector{Vector{Bond{I}}},
+    bonds,
     N::I,
     pht::Bool
 ) where {S<:AbstractString, I<:Integer, T<:Number}
@@ -1330,19 +1329,26 @@ end
 @doc raw"""
 
     is_openshell( ε::Vector{E},  
-                  Np::I ) where {E<:AbstractFloat, I<:Integer}
+                  Np::I,
+                  pht::Bool ) where {E<:AbstractFloat, I<:Integer}
 
 Checks whether a mean-field energy configuration is open shell.
 
 - `ε::Vector{E}`: vector of mean-field energies.
 - `Np::I`: total number of particles in the system.
+- `pht::Bool`: whether the model is particle-hole transformed.
 
 """
 function is_openshell(
     ε::Vector{E}, 
-    Np::I
+    Np::I,
+    pht::Bool
 ) where {E<:AbstractFloat, I<:Integer}
-    return ε[Np + 1] - ε[Np] < 1e-4 #1e-12
+    if pht
+        return ε[Np] - ε[Np - 1] < 1e-4 
+    else
+        return ε[Np + 1] - ε[Np] < 1e-4 
+    end 
 end
 
 

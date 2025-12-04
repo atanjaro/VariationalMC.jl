@@ -20,7 +20,7 @@ Also records the current particle configuration ``|x\rangle``.
 - `determinantal_parameters{I}::DeterminantalParameters{I}`: set of determinantal variational parameters.
 - `optimize::NamedTuple`:: tuple of optimization flags.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `U::E`: Hubbard repulsion.
+- `U::E`: Hubbard interaction.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether or not model is particle-hole transformed.
 
@@ -88,8 +88,37 @@ function make_measurements!(
     measure_n!(
         measurement_container, 
         detwf, 
-        model_geometry
+        model_geometry,
+        pht
     )
+
+    # measure average Sz (if added)
+    if haskey(measurement_container.simulation_measurements, "local_spin-z")
+        measure_Sz!(
+            measurement_container, 
+            detwf, 
+            model_geometry,
+            pht
+        ) 
+    end
+    
+    # measure correlations (if added)
+    if haskey(measurement_container.correlation_measurements, "density")
+        measure_density_correlation!(
+            measurement_container,
+            detwf,
+            model_geometry,
+            pht
+        )
+    end
+    if haskey(measurement_container.correlation_measurements, "spin")
+        measure_spin_correlation!(
+            measurement_container,
+            detwf,
+            model_geometry,
+            pht
+        )
+    end
 
     # record the current particle configuration
     measurement_container.simulation_measurements["pconfig"] = detwf.pconfig
@@ -124,7 +153,7 @@ Also records the current particle configuration ``|x\rangle``.
 - `jastrow_factor::JastrowFactor{E, I}`: current Jastrow factor. 
 - `optimize::NamedTuple`:: tuple of optimization flags.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `U::E`: Hubbard repulsion.
+- `U::E`: Hubbard interaction.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether or not model is particle-hole transformed.
 
@@ -202,8 +231,37 @@ function make_measurements!(
     measure_n!(
         measurement_container, 
         detwf, 
-        model_geometry
+        model_geometry,
+        pht
     )
+
+    # measure average Sz (if added)
+    if haskey(measurement_container.simulation_measurements, "local_spin-z")
+        measure_Sz!(
+            measurement_container, 
+            detwf, 
+            model_geometry,
+            pht
+        ) 
+    end
+    
+    # measure correlations (if added)
+    if haskey(measurement_container.correlation_measurements, "density")
+        measure_density_correlation!(
+            measurement_container,
+            detwf,
+            model_geometry,
+            pht
+        )
+    end
+    if haskey(measurement_container.correlation_measurements, "spin")
+        measure_spin_correlation!(
+            measurement_container,
+            detwf,
+            model_geometry,
+            pht
+        )
+    end
 
     # record the current particle configuration
     measurement_container.simulation_measurements["pconfig"] = detwf.pconfig
@@ -242,7 +300,7 @@ Also records the current particle configuration ``|x\rangle``.
 - `jastrow_factor_2::JastrowFactor{E, I}`: second Jastrow factor.
 - `optimize::NamedTuple`:: tuple of optimization flags. 
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `U::E`: Hubbard repulsion.
+- `U::E`: Hubbard interaction.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether or not model is particle-hole transformed.
 
@@ -328,8 +386,37 @@ function make_measurements!(
     measure_n!(
         measurement_container, 
         detwf, 
-        model_geometry
+        model_geometry,
+        pht
     )
+
+    # measure average Sz (if added)
+    if haskey(measurement_container.simulation_measurements, "local_spin-z")
+        measure_Sz!(
+            measurement_container, 
+            detwf, 
+            model_geometry,
+            pht
+        ) 
+    end
+    
+    # measure correlations (if added)
+    if haskey(measurement_container.correlation_measurements, "density")
+        measure_density_correlation!(
+            measurement_container,
+            detwf,
+            model_geometry,
+            pht
+        )
+    end
+    if haskey(measurement_container.correlation_measurements, "spin")
+        measure_spin_correlation!(
+            measurement_container,
+            detwf,
+            model_geometry,
+            pht
+        )
+    end
 
     # record the current particle configuration
     measurement_container.simulation_measurements["pconfig"] = detwf.pconfig
@@ -356,7 +443,7 @@ Also records the current particle configuration ``|x\rangle``.
 - `detwf::DeterminantalWavefunction{T, Q, E, I}`: current determinantal wavefunction.
 - `tight_binding_model::TightBindingModel{E}`: non-interacting tight-binding model. 
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `U::E`: Hubbard repulsion.
+- `U::E`: Hubbard interaction.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether or not model is particle-hole transformed.
 
@@ -393,8 +480,37 @@ function make_measurements!(
     measure_n!(
         measurement_container, 
         detwf, 
-        model_geometry
+        model_geometry,
+        pht
     )
+
+    # measure average Sz (if added)
+    if haskey(measurement_container.simulation_measurements, "local_spin-z")
+        measure_Sz!(
+            measurement_container, 
+            detwf, 
+            model_geometry,
+            pht
+        ) 
+    end
+    
+    # measure correlations (if added)
+    if haskey(measurement_container.correlation_measurements, "density")
+        measure_density_correlation!(
+            measurement_container,
+            detwf,
+            model_geometry,
+            pht
+        )
+    end
+    if haskey(measurement_container.correlation_measurements, "spin")
+        measure_spin_correlation!(
+            measurement_container,
+            detwf,
+            model_geometry,
+            pht
+        )
+    end
 
     # record the current particle configuration
     measurement_container.simulation_measurements["pconfig"] = detwf.pconfig
@@ -425,7 +541,7 @@ Also records the current particle configuration ``|x\rangle``.
 - `jastrow_parameters::JastrowParameters{S, K, V, I}`: current set of Jastrow variational parameters.
 - `jastrow_factor::JastrowFactor{E}`: current Jastrow factor. 
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `U::E`: Hubbard repulsion.
+- `U::E`: Hubbard interaction.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether or not model is particle-hole transformed.
 
@@ -465,8 +581,37 @@ function make_measurements!(measurement_container::NamedTuple,
     measure_n!(
         measurement_container, 
         detwf, 
-        model_geometry
+        model_geometry,
+        pht
     )
+
+    # measure average Sz (if added)
+    if haskey(measurement_container.simulation_measurements, "local_spin-z")
+        measure_Sz!(
+            measurement_container, 
+            detwf, 
+            model_geometry,
+            pht
+        ) 
+    end
+    
+    # measure correlations (if added)
+    if haskey(measurement_container.correlation_measurements, "density")
+        measure_density_correlation!(
+            measurement_container,
+            detwf,
+            model_geometry,
+            pht
+        )
+    end
+    if haskey(measurement_container.correlation_measurements, "spin")
+        measure_spin_correlation!(
+            measurement_container,
+            detwf,
+            model_geometry,
+            pht
+        )
+    end
 
     # record the current particle configuration
     measurement_container.simulation_measurements["pconfig"] = detwf.pconfig
@@ -501,7 +646,7 @@ Also records the current particle configuration ``|x\rangle``.
 - `jastrow_factor_1::JastrowFactor{E}`: first Jastrow factor.
 - `jastrow_factor_2::JastrowFactor{E}`: second Jastrow factor. 
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `U::E`: Hubbard repulsion.
+- `U::E`: Hubbard interaction.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether or not model is particle-hole transformed.
 
@@ -545,8 +690,37 @@ function make_measurements!(measurement_container::NamedTuple,
     measure_n!(
         measurement_container, 
         detwf, 
-        model_geometry
+        model_geometry,
+        pht
     )
+
+    # measure average Sz (if added)
+    if haskey(measurement_container.simulation_measurements, "local_spin-z")
+        measure_Sz!(
+            measurement_container, 
+            detwf, 
+            model_geometry,
+            pht
+        ) 
+    end
+    
+    # measure correlations (if added)
+    if haskey(measurement_container.correlation_measurements, "density")
+        measure_density_correlation!(
+            measurement_container,
+            detwf,
+            model_geometry,
+            pht
+        )
+    end
+    if haskey(measurement_container.correlation_measurements, "spin")
+        measure_spin_correlation!(
+            measurement_container,
+            detwf,
+            model_geometry,
+            pht
+        )
+    end
 
     # record the current particle configuration
     measurement_container.simulation_measurements["pconfig"] = detwf.pconfig

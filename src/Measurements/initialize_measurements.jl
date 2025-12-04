@@ -278,7 +278,7 @@ function initialize_correlation_measurement!(
     @assert correlation_type == "density" || correlation_type == "spin"
 
     # number of lattice sites
-    N = model_geometry.lattice.n
+    N = model_geometry.lattice.N
 
     # add to measurement container
     measurement_container.correlation_measurements[correlation_type] = zeros(N, N)

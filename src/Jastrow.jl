@@ -372,11 +372,13 @@ function update_fermionic_Tvec!(
         end
     end
 
-    if pht
-        jastrow_factor.Tvec_f += spin * Tvec_f_diff
-    else
-        jastrow_factor.Tvec_f += Tvec_f_diff
-    end
+    jastrow_factor.Tvec_f += Tvec_f_diff
+
+    # if pht
+    #     jastrow_factor.Tvec_f += spin * Tvec_f_diff   # there should not be an extra `spin` factor
+    # else
+    #     jastrow_factor.Tvec_f += Tvec_f_diff
+    # end
 
     if jastrow_factor.nq_updates_T >= n_stab_T
         @debug """

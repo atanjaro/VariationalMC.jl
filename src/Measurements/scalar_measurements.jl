@@ -12,7 +12,7 @@ Calculates the local variational energy ``E_{\mathrm{var}}`` per site for a Hubb
 - `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
 - `tight_binding_model::TightBindingModel{E}`: parameters for a non-interacting tight-binding model. 
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `U::E`: Hubbard repulsion.
+- `U::E`: Hubbard interaction.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether model is particle-hole transformed.
 
@@ -70,7 +70,7 @@ Calculates the local variational energy ``E_{\mathrm{var}}`` per site for a Hubb
 - `jastrow_parameters::JastrowParameters{S, K, V, I}`: current set of Jastrow variational parameters.
 - `jastrow_factor::JastrowFactor{E}`: current Jastrow factor.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `U::E`: Hubbard repulsion.
+- `U::E`: Hubbard interaction.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether model is particle-hole transformed.
 
@@ -131,7 +131,7 @@ Calculates the local variational energy ``E_{\mathrm{var}}`` per site for a Hubb
 - `jastrow_factor_1::JastrowFactor{E}`: first Jastrow factor.
 - `jastrow_factor_2::JastrowFactor{E}`: second Jastrow factor.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `U::E`: Hubbard repulsion.
+- `U::E`: Hubbard interaction.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether model is particle-hole transformed.
 
@@ -661,9 +661,9 @@ end
                               model_geometry::ModelGeometry, 
                               pht::Bool ) where {E<:AbstractFloat, T<:Number, Q, I<:Integer}
 
-Calculates the energy due to on-site Hubbard repulsion ``U``.  
+Calculates the energy due to on-site Hubbard interaction ``U``.  
 
-- `U::E`: Hubbard repulsion.
+- `U::E`: Hubbard interaction.
 - `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 - `pht::Bool`: whether model is particle-hole transformed.
@@ -718,9 +718,9 @@ function get_double_occ(
     for site in 1:N
         occ_up, occ_dn, _ = get_onsite_fermion_occupation(site, detwf.pconfig, N)
         if pht
-            nup_ndn += occ_up .* (1 .- occ_dn)
+            nup_ndn += occ_up * (1 - occ_dn)
         else
-            nup_ndn += occ_up .* occ_dn
+            nup_ndn += occ_up * occ_dn
         end
     end
     
@@ -731,23 +731,31 @@ end
 @doc raw"""
 
     get_n( detwf::DeterminantalWavefunction{T, Q, E, I}, 
-           model_geometry::ModelGeometry ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+           model_geometry::ModelGeometry,
+           pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
 
-Calculate the average local density ``n = \sum_{i} (n_{\boldsymbol{i},\uparrow} + n_{\boldsymbol{i},\downarrow})``.
+Calculate the average particle density ``n = \sum_{i} (n_{\boldsymbol{i},\uparrow} + n_{\boldsymbol{i},\downarrow})``.
 
 - `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
+- `pht::Bool`: whether model is particle-hole transformed.
 
 """
 function get_n(
     detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    model_geometry::ModelGeometry
+    model_geometry::ModelGeometry,
+    pht::Bool
 ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
     total_occ = 0.0
     N = model_geometry.lattice.N
 
     for i in 1:N
-        local_occ = get_onsite_fermion_occupation(i, detwf.pconfig, N)[1] + 1 - get_onsite_fermion_occupation(i, detwf.pconfig, N)[2]
+        occ_up, occ_dn, _ = get_onsite_fermion_occupation(i, detwf.pconfig, N)
+        if pht
+            local_occ = occ_up + (1 - occ_dn)
+        else
+            local_occ = occ_up + occ_dn
+        end
         total_occ += local_occ
     end
 
@@ -758,24 +766,32 @@ end
 @doc raw"""
 
     get_Sz( detwf::DeterminantalWavefunction{T, Q, E, I}, 
-           model_geometry::ModelGeometry ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+            model_geometry::ModelGeometry,
+            pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
 
 Calculate the average value of the operator 
 ``S_z = \frac{1}{2} \sum_{i} (n_{\boldsymbol{i},\uparrow} - n_{\boldsymbol{i},\downarrow})``.
 
 - `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
+- `pht::Bool`: whether model is particle-hole transformed.
 
-"""
+""" 
 function get_Sz(
     detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    model_geometry::ModelGeometry
+    model_geometry::ModelGeometry,
+    pht::Bool
 ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
     total_Sz = 0.0
     N = model_geometry.lattice.N
 
     for i in 1:N
-        local_Sz = 0.5 * (get_onsite_fermion_occupation(i, detwf.pconfig, N)[1] - get_onsite_fermion_occupation(i, detwf.pconfig, N)[2])
+        occ_up, occ_dn, _ = get_onsite_fermion_occupation(i, detwf.pconfig, N)
+        if pht
+            local_Sz = 0.5 * (occ_up + occ_dn - 1)
+        else
+            local_Sz = 0.5 * (occ_up - occ_dn)
+        end
         total_Sz += local_Sz
     end
 

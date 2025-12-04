@@ -49,7 +49,7 @@ include("write_summary_files.jl")
 export model_summary, parameter_summary
 
 include("Measurements/initialize_measurements.jl")
-export initialize_measurement_container, initialize_measurement_directories
+export initialize_measurement_container, initialize_measurement_directories, initialize_simulation_measurement!, initialize_correlation_measurement!
 
 include("Measurements/make_measurements.jl")
 export make_measurements!

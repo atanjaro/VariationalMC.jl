@@ -2,25 +2,32 @@
 
     process_measurements( measurement_container::NamedTuple,
                           simulation_info::SimulationInfo,
-                          determinantal_parameters::DeterminantalParameters )
+                          determinantal_parameters::DeterminantalParameters,
+                          model_geometry::ModelGeometry )
 
 Processes all simulation and optimization measurements by organinzing them into CSV files.
 
 - `measurement_container::NamedTuple`: contains measurement quantities.
 - `simulation_info::SimulationInfo`: contains all simulation info.
 - `determinantal_parameters::DeterminantalParameters`: set of determinantal variational parameters.
+- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities. 
 
 """
 function process_measurements(
     measurement_container, 
     simulation_info::SimulationInfo,
-    determinantal_parameters::DeterminantalParameters
+    determinantal_parameters::DeterminantalParameters,
+    model_geometry::ModelGeometry
 )
     (; datafolder, pID) = simulation_info
     (; N_opt, N_sim) = measurement_container
 
     # merge `opt` and `sim` bins
     merge_bin_measurements!(datafolder * "/simulation/")
+    if haskey(measurement_container.correlation_measurements, "density") || haskey(measurement_container.correlation_measurements, "spin")
+        merge_bin_measurements!(datafolder * "/correlation/")
+    end
+
 
     # process all scalar measurements
     process_scalar_measurements(
@@ -40,11 +47,34 @@ function process_measurements(
         "pconfig"
     )
 
+    if haskey(measurement_container.simulation_measurements, "local_spin-z")
+        process_scalar_measurements(
+            datafolder, 
+            "local_spin-z"
+        )
+    end
+
    # process optimization measurements
     process_optimization_measurements(
         datafolder, 
         determinantal_parameters
     )
+
+    if haskey(measurement_container.correlation_measurements, "density")
+        process_correlation_measurements(
+            datafolder, 
+            "density", 
+            model_geometry
+        )
+    end
+
+    if haskey(measurement_container.correlation_measurements, "spin")
+        process_correlation_measurements(
+            datafolder, 
+            "spin", 
+            model_geometry
+        )
+    end
 
    return nothing
 end
@@ -55,7 +85,8 @@ end
     process_measurements( measurement_container::NamedTuple,
                           simulation_info::SimulationInfo,
                           determinantal_parameters::DeterminantalParameters,
-                          jastrow_parameters::JastrowParameters )
+                          jastrow_parameters::JastrowParameters,
+                          model_geometry::ModelGeometry )
 
 Processes all simulation and optimization measurements by organinzing them into CSV files.
 
@@ -63,19 +94,24 @@ Processes all simulation and optimization measurements by organinzing them into 
 - `simulation_info::SimulationInfo`: contains all simulation info.
 - `determinantal_parameters::DeterminantalParameters`: set of determinantal variational parameters.
 - `jastrow_parameters::JastrowParameters`: set of Jastrow parameters.
+- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities. 
 
 """
 function process_measurements(
     measurement_container, 
     simulation_info::SimulationInfo,
     determinantal_parameters::DeterminantalParameters,
-    jastrow_parameters::JastrowParameters
+    jastrow_parameters::JastrowParameters,
+    model_geometry::ModelGeometry
 )
     (; datafolder, pID) = simulation_info
     (; N_opt, N_sim) = measurement_container
 
     # merge `opt` and `sim` bins
     merge_bin_measurements!(datafolder * "/simulation/")
+    if haskey(measurement_container.correlation_measurements, "density") || haskey(measurement_container.correlation_measurements, "spin")
+        merge_bin_measurements!(datafolder * "/correlation/")
+    end
 
     # process all scalar measurements
     process_scalar_measurements(
@@ -95,6 +131,13 @@ function process_measurements(
         "pconfig"
     )
 
+    if haskey(measurement_container.simulation_measurements, "local_spin-z")
+        process_scalar_measurements(
+            datafolder, 
+            "local_spin-z"
+        )
+    end
+
    # process optimization measurements
     process_optimization_measurements(
         datafolder, 
@@ -102,7 +145,23 @@ function process_measurements(
         jastrow_parameters
     )
 
-   return nothing
+    if haskey(measurement_container.correlation_measurements, "density")
+        process_correlation_measurements(
+            datafolder, 
+            "density", 
+            model_geometry
+        )
+    end
+
+    if haskey(measurement_container.correlation_measurements, "spin")
+        process_correlation_measurements(
+            datafolder, 
+            "spin", 
+            model_geometry
+        )
+    end
+
+    return nothing
 end
 
 
@@ -115,7 +174,7 @@ end
 Write binned simulation measurements to CSV.
 
 - `datafolder::T`: path to folder where simulation files are written.
-- `measurement::T`: `local_energy`, `double_occ`, `global_density`, or `pconfig`.
+- `measurement::T`: `local_energy`, `double_occ`, `global_density`, `pconfig`, or `local_spin-z`.
 - `N_bins::Union{I, Nothing}=nothing`: (optional) total number of bins.
 
 """
@@ -128,7 +187,7 @@ function process_scalar_measurements(
     @assert isfile(sim_file) "HDF5 file not found: $sim_file"
     # sim_file = joinpath(datafolder, "simulation", "simulation_measurements.h5")
     
-    allowed = Set(["local_energy", "double_occ", "global_density", "pconfig"])
+    allowed = Set(["local_energy", "double_occ", "global_density", "pconfig", "local_spin-z"])
     results = Vector{Any}()
 
     h5open(sim_file, "r") do f
@@ -676,69 +735,168 @@ end
 
 @doc raw"""
 
-    process_correlation_measurements()
+    process_correlation_measurements( datafolder::T,
+                                      correlation_type::T,
+                                      model_geometry::ModelGeometry ) where {T<:AbstractString}
 
-For either density-density or spin-spin correlation data, calculates the static structure factor.
+For either density-density or spin-spin correlation data, calculates the static structure factor 
+``N(\mathbf{q}) = \langle \hat{n}_{-\mathbf{q}\hat{n}_{\mathbf{q}}\rangle`` or 
+``S(\mathbf{q}) = \langle \hat{S}_{-\mathbf{q}\hat{S}_{\mathbf{q}}\rangle``, respectively.
+
+`datafolder::T`: path to folder where simulation files are written.
+`correlation_type::T`: either "density" or "spin".
+`model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 
 """
-function process_correlation_measurements(correlation_type::String, model_geometry::ModelGeometry)
-    # calculate all momentum points that will used in the FT
-    q_points = calc_k_points(model_geometry.unit_cell, model_geometry.lattice)
+function process_correlation_measurements(
+    datafolder::AbstractString,
+    correlation_type::String,
+    model_geometry
+)
+    unit_cell = model_geometry.unit_cell
+    lattice = model_geometry.lattice
+    N = model_geometry.lattice.N
 
-    if correlation_type == "density"
-        # read in the site-dependent density data 
+    # compute q-points used in FT
+    q_points = calc_k_points(unit_cell, lattice)
+    nq = length(q_points)
 
-    elseif correlation_type == "spin"
-        # read in the site-dependent spin data
+    corr_file = joinpath(datafolder, "correlation", "bin_measurements.h5")
+    @assert isfile(corr_file) "HDF5 file not found: $corr_file"
 
+    function parse_bin_number(name::AbstractString)::Int
+        if (m = match(r"bin-(\d+)", name)) !== nothing
+            return parse(Int, m.captures[1])
+        end
+        try
+            return parse(Int, split(name, r"[-_]") |> last)
+        catch err
+            return 0
+        end
     end
 
-    # calculate_structure_factor()
+    rows = Vector{Vector{Float64}}()
+    binnums = Int[]
 
-    # write structure factor info to file
+    h5open(corr_file, "r") do fh
+        grp_path = "/" * correlation_type
+        if !haskey(fh, grp_path)
+            @warn "Group $grp_path not found in $corr_file"
+            return nothing
+        end
+        grp = fh[grp_path]
+
+        # iterate bins (keys(grp) yields group names like "bin-0", "bin-1", ...)
+        for bin_group in keys(grp)
+            dset = grp[bin_group]
+            # read dataset — expect a matrix; try to coerce to Matrix{Float64}
+            raw = read(dset)
+            corr = try
+                Array{Float64}(raw)
+            catch err
+                # try reshaping if raw is a vector representing a square matrix
+                nd = ndims(raw)
+                if nd == 1
+                    len = length(raw)
+                    s = Int(round(sqrt(len)))
+                    if s * s == len
+                        corr_mat = reshape(collect(raw), s, s)
+                        Array{Float64}(corr_mat)
+                    else
+                        rethrow(err)
+                    end
+                else
+                    rethrow(err)
+                end
+            end
+
+            # ensure corr is a 2D matrix
+            if ndims(corr) != 2
+                @warn "Dataset for $bin_group does not produce a 2D matrix; skipping"
+                continue
+            end
+
+            # calculate structure factor vector
+            Sq = calculate_structure_factor(corr, q_points, N, unit_cell, lattice)
+
+            # parse bin number robustly
+            binnum = parse_bin_number(String(bin_group))
+
+            push!(binnums, binnum)
+            push!(rows, vcat(Float64(binnum), Sq))  # first column is bin number
+        end
+    end
+
+    if isempty(rows)
+        @warn "No bins processed under /$correlation_type in $corr_file"
+        return nothing
+    end
+
+    # Build dataframe: first column "bin", then q columns
+    colnames = ["bin"]
+    for i in 1:nq
+        push!(colnames, "q$(i)")
+    end
+
+    # transpose rows -> columns for DataFrame constructor
+    mat = reduce(hcat, rows)'   # rows is Vector{Vector}, produce matrix rows×cols then transpose
+    df = DataFrame(mat, Symbol.(colnames))
+
+    # sort by bin number
+    sort!(df, :bin)
+
+    # write CSV
+    out_csv = joinpath(datafolder, "correlation", "$(correlation_type)_static_structure_factor_stats.csv")
+    CSV.write(out_csv, df)
+
+    return nothing
 end
 
 
 @doc raw"""
 
-    calculate_structure_factor()
+    calculate_structure_factor( corr::Matrix{T},
+                                q_points::Matrix{SVector{2, Float64}},
+                                N::I,
+                                unit_cell::UnitCell,
+                                lattice::Lattice ) where {T<:AbstractFloat, I<:Integer}
 
 Calculates the static structure factor from either density-density or spin-spin correlations.
 
+`corr::Matrix{T}`: correlation data.
+`q_points::Matrix{SVector{2, Float64}}`: set of momentum points.
+`N::I`: number of lattice sites.
+`unit_cell::UnitCell`: unit cell.
+`lattice::Lattice`: lattice.
+
 """
-function calculate_structure_factor(correlation_type::String, model_geometry::ModelGeometry)
-    # datafolder PATH
-    # correlation/density OR correlation/spin-z
-
-    # check that there are indeed the required correlation measurements
-
-    # collect all q-points for the lattice
-    uc = model_geometry.unit_cell
-    lat = model_geometry.lattice
-    q_points = calc_k_points(uc, lat)
-
-    # read-in the correlation measurements
-
-    # store them in a matrix
-
-    # open csv file where final results will be written
+function calculate_structure_factor(
+    corr::Matrix{T},
+    q_points::Matrix{SVector{2, Float64}},
+    N::I,
+    unit_cell::UnitCell,
+    lattice::Lattice
+) where {T<:AbstractFloat, I<:Integer}
+    Sq = AbstractFloat[]
 
     # calculate onsite part of the sum
-    N = lat.N
-    onsite = diag(nn_corr)/N       # OR onsite = diag(ss_corr)/lat.N for spin-spin
+    onsite = sum(diag(corr))/N       
 
+    # calculate sum for each momentum point
     for q in q_points
         sum = 0.0
-        for l in 1:N
-            for k in (l+1):N
-                # if include_r(l, k)      # this is a consideration for if we have a bilayer model
-                # end
-                r_diff = r(1,k) .- r(1,l)
-                sum += cos(dot(q, r_diff)) * nn_corr[l, k]
+        for i in 1:N
+            for j in (i+1):N
+                Δl = sites_to_displacement(i, j, unit_cell, lattice)
+                Δr = displacement_to_vec(Δl, unit_cell.n, unit_cell.n, unit_cell)
+                sum += cos(dot(q, Δr)) * corr[i, j]
             end
         end
-        Nq = 2.0 / N * sum + onsite     # or Sq
+        sq = (2.0 / N) * sum + onsite     
+        push!(Sq, sq)
     end
+
+    return Sq
 end
 
 

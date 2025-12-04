@@ -149,7 +149,7 @@ function get_determinantal_wavefunction(
     # diagonalize Hamiltonian
     (ε, U_aux) = diagonalize!(H)
 
-    if is_openshell(ε, Np)
+    if is_openshell(ε, Np, pht) 
         # @debug """
         # DeterminantalWavefunction::build_determinantal_wavefunction() : 
         # WARNING! Open shell detected!
@@ -335,7 +335,7 @@ function get_determinantal_wavefunction(
         push!(ε_θ, ε)
         push!(U_θ, U_aux)
 
-        if is_openshell(ε, Np)
+        if is_openshell(ε, Np, pht)
             # @debug """
             # DeterminantalWavefunction::build_determinantal_wavefunction() : 
             # WARNING! Open shell detected!
