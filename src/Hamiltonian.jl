@@ -926,14 +926,12 @@ function add_spin_order!(
 
     # Precompute mapping from spindex -> site index and site coordinates (one call each)
     idxs = Vector{Int}(undef, twoN)
-    # store coordinates as a small tuple (ix, iy) or (ix,)
     if dims == 1
-        locs = Vector{Int}(undef, twoN)  # store ix only
+        locs = Vector{Int}(undef, twoN)
         for s in 1:twoN
             idx = get_index_from_spindex(s, model_geometry)
             idxs[s] = idx
             loc = site_to_loc(idx, model_geometry.unit_cell, model_geometry.lattice)
-            # site_to_loc(...)[1][1] in your original code — capture single integer
             locs[s] = loc[1][1]
         end
     else
@@ -942,7 +940,6 @@ function add_spin_order!(
             idx = get_index_from_spindex(s, model_geometry)
             idxs[s] = idx
             loc = site_to_loc(idx, model_geometry.unit_cell, model_geometry.lattice)
-            # capture (ix, iy)
             locs[s] = (loc[1][1], loc[1][2])
         end
     end
@@ -950,39 +947,19 @@ function add_spin_order!(
     if order == "spin-z"
         # Use scalars / element types from the parameter to allocate minimal objects
         Δ_sz = determinantal_parameters.det_pars.Δ_sz
-        # mask vector as small int type to reduce memory (will be promoted when multiplied by Δ_sz)
+        # small-int mask
         afm_vec = ones(Int8, twoN)
 
         if pht
-            # stagger using precomputed locs; compute parity with isodd for speed
-            if dims == 1
-                for s in 1:twoN
-                    ix = locs[s]  # Int
-                    afm_vec[s] = isodd(ix) ? -1 : 1
-                end
-            else
-                for s in 1:twoN
-                    (ix, iy) = locs[s]
-                    afm_vec[s] = isodd(ix + iy) ? -1 : 1
-                end
-            end
-
-            # push Δ * Diagonal(afm_vec) directly (no intermediate dense zero matrix)
-            V_afm = LinearAlgebra.Diagonal(afm_vec)           # this is cheap (stores diag only)
-            push!(H_vpars, Δ_sz * V_afm)                      # scaled Diagonal pushed
-            if optimize.Δ_sz
-                push!(V, V_afm)
-            end
-        else
-            # create center-symmetric vec for spin sectors: flip sign in second half
+            # prepare negated second half
             afm_vec_neg = similar(afm_vec)
-            # fill first half with 1/-1 based on parity then second half = - first half
+            # set first half and second half with sign flip in-place
             if dims == 1
                 for s in 1:N
                     ix = locs[s]
                     v = isodd(ix) ? -1 : 1
                     afm_vec_neg[s] = v
-                    afm_vec_neg[s + N] = -v  # flip sign for spin-down sector
+                    afm_vec_neg[s + N] = -v
                 end
             else
                 for s in 1:N
@@ -993,13 +970,31 @@ function add_spin_order!(
                 end
             end
 
-            V_afm_neg = LinearAlgebra.Diagonal(afm_vec_neg)
-            push!(H_vpars, Δ_sz * V_afm_neg)
+            V_afm = LinearAlgebra.Diagonal(afm_vec_neg)
+            push!(H_vpars, Δ_sz * V_afm)
             if optimize.Δ_sz
-                push!(V, V_afm_neg)
+                push!(V, V_afm)
+            end
+        else
+            # non-pht: parity only
+            if dims == 1
+                for s in 1:twoN
+                    ix = locs[s]
+                    afm_vec[s] = isodd(ix) ? -1 : 1
+                end
+            else
+                for s in 1:twoN
+                    (ix, iy) = locs[s]
+                    afm_vec[s] = isodd(ix + iy) ? -1 : 1
+                end
+            end
+
+            V_afm = LinearAlgebra.Diagonal(afm_vec)
+            push!(H_vpars, Δ_sz * V_afm)
+            if optimize.Δ_sz
+                push!(V, V_afm)
             end
         end
-
     elseif order == "spin-x"
         Δ_sx = determinantal_parameters.det_pars.Δ_sx
         # choose matrix element type according to Δ_sx
@@ -1116,12 +1111,14 @@ function add_charge_order!(
 
     # Precompute mapping from spindex -> site index and site coordinates (one call each)
     idxs = Vector{Int}(undef, twoN)
+    # store coordinates as a small tuple (ix, iy) or (ix,)
     if dims == 1
-        locs = Vector{Int}(undef, twoN)
+        locs = Vector{Int}(undef, twoN)  # store ix only
         for s in 1:twoN
             idx = get_index_from_spindex(s, model_geometry)
             idxs[s] = idx
             loc = site_to_loc(idx, model_geometry.unit_cell, model_geometry.lattice)
+            # site_to_loc(...)[1][1] in your original code — capture single integer
             locs[s] = loc[1][1]
         end
     else
@@ -1130,25 +1127,47 @@ function add_charge_order!(
             idx = get_index_from_spindex(s, model_geometry)
             idxs[s] = idx
             loc = site_to_loc(idx, model_geometry.unit_cell, model_geometry.lattice)
+            # capture (ix, iy)
             locs[s] = (loc[1][1], loc[1][2])
         end
     end
 
     if order == "density wave"
+        # Use scalars / element types from the parameter to allocate minimal objects
         Δ_cdw = determinantal_parameters.det_pars.Δ_cdw
-        # small-int mask
+        # mask vector as small int type to reduce memory (will be promoted when multiplied by Δ_cdw)
         cdw_vec = ones(Int8, twoN)
 
         if pht
-            # prepare negated second half
+            # stagger using precomputed locs; compute parity with isodd for speed
+            if dims == 1
+                for s in 1:twoN
+                    ix = locs[s]  # Int
+                    cdw_vec[s] = isodd(ix) ? -1 : 1
+                end
+            else
+                for s in 1:twoN
+                    (ix, iy) = locs[s]
+                    cdw_vec[s] = isodd(ix + iy) ? -1 : 1
+                end
+            end
+
+            # push Δ * Diagonal(cdw_vec) directly (no intermediate dense zero matrix)
+            V_cdw = LinearAlgebra.Diagonal(cdw_vec)           # this is cheap (stores diag only)
+            push!(H_vpars, Δ_cdw * V_cdw)                      # scaled Diagonal pushed
+            if optimize.Δ_cdw
+                push!(V, V_cdw)
+            end
+        else
+            # create center-symmetric vec for spin sectors: flip sign in second half
             cdw_vec_neg = similar(cdw_vec)
-            # set first half and second half with sign flip in-place
+            # fill first half with 1/-1 based on parity then second half = - first half
             if dims == 1
                 for s in 1:N
                     ix = locs[s]
                     v = isodd(ix) ? -1 : 1
                     cdw_vec_neg[s] = v
-                    cdw_vec_neg[s + N] = -v
+                    cdw_vec_neg[s + N] = -v  # flip sign for spin-down sector
                 end
             else
                 for s in 1:N
@@ -1159,32 +1178,12 @@ function add_charge_order!(
                 end
             end
 
-            V_cdw = LinearAlgebra.Diagonal(cdw_vec_neg)
-            push!(H_vpars, Δ_cdw * V_cdw)
+            V_cdw_neg = LinearAlgebra.Diagonal(cdw_vec_neg)
+            push!(H_vpars, Δ_cdw * V_cdw_neg)
             if optimize.Δ_cdw
-                push!(V, V_cdw)
-            end
-        else
-            # non-pht: parity only
-            if dims == 1
-                for s in 1:twoN
-                    ix = locs[s]
-                    cdw_vec[s] = isodd(ix) ? -1 : 1
-                end
-            else
-                for s in 1:twoN
-                    (ix, iy) = locs[s]
-                    cdw_vec[s] = isodd(ix + iy) ? -1 : 1
-                end
-            end
-
-            V_cdw = LinearAlgebra.Diagonal(cdw_vec)
-            push!(H_vpars, Δ_cdw * V_cdw)
-            if optimize.Δ_cdw
-                push!(V, V_cdw)
+                push!(V, V_cdw_neg)
             end
         end
-
     elseif order == "site-dependent"
         L = model_geometry.lattice.L
         Δ_csd = determinantal_parameters.det_pars.Δ_csd

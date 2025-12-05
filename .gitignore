@@ -17,3 +17,4 @@ test/plotting.jl
 examples/hubbard_square_test.jl
 examples/plotting.jl
 examples/hubbard_square_test_no_jastrow.jl
+examples/hubbard_square_mpi.jl

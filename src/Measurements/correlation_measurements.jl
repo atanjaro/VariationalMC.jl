@@ -76,7 +76,7 @@ Calculates the local density ``n_{\boldsymbol{i}}`` on each lattice site.
 
 - `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `pht::Bool`: whether model is particle-hole transform.
+- `pht::Bool`: whether model is particle-hole transformed.
 
 """
 function get_site_dependent_n(
@@ -107,17 +107,20 @@ end
 @doc raw"""
 
     get_site_dependent_s( detwf::DeterminantalParameters{T, Q, E, I}
-                          model_geometry::ModelGeometry )
+                          model_geometry::ModelGeometry,
+                          pht::Bool )
 
 Calculates the local spin ``S_{\boldsymbol{i}}`` on each lattice site.
 
 - `detwf::DeterminantalParameters{T, Q, E, I}`: current variational wavefunction.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
+- `pht::Bool`: whether model is particle-hole transformed.
 
 """
 function get_site_dependent_s(
     detwf::DeterminantalWavefunction{T, Q, E, I},
-    model_geometry::ModelGeometry
+    model_geometry::ModelGeometry,
+    pht::Bool
 ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
     # number of lattice sites
     N = model_geometry.lattice.N
