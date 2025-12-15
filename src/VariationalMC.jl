@@ -9,13 +9,15 @@ using CSV
 using HDF5
 using TOML
 using JLD2
-
 using Profile
 using Revise
 using DelimitedFiles
 using DataFrames
 using DataStructures
+using MPI
 
+# # get and set package version number as global constant
+# const VARIATIONALMC_VERSION = PkgVersion.@Version 0
 
 include("ModelGeometry.jl")
 export ModelGeometry
@@ -43,10 +45,10 @@ include("Optimizer.jl")
 export optimize_parameters!
 
 include("SimulationInfo.jl")
-export SimulationInfo, initialize_datafolder, create_datafolder_prefix
+export SimulationInfo, save_simulation_info, initialize_datafolder, create_datafolder_prefix 
 
-include("write_summary_files.jl")
-export model_summary, parameter_summary
+include("model_summary.jl")
+export model_summary
 
 include("Measurements/initialize_measurements.jl")
 export initialize_measurement_container, initialize_measurement_directories, initialize_simulation_measurement!, initialize_correlation_measurement!
@@ -67,5 +69,18 @@ export write_measurements!
 
 include("Measurements/process_measurements.jl")
 export process_measurements
+
+############################
+## PACKAGE INITIALIZATION ##
+############################
+
+# set number of threads for BLAS to 1.
+# we assume for now the default OpenBLAS that ships with Julia is used.
+# this behavior will in general need to be changed if we want to use other BLAS/LAPACK libraries.
+# function __init__()
+
+#     BLAS.set_num_threads(1)
+#     return nothing
+# end
 
 end

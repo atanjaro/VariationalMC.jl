@@ -20,36 +20,41 @@ function process_measurements(
     model_geometry::ModelGeometry
 )
     (; datafolder, pID) = simulation_info
-    (; N_opt, N_sim) = measurement_container
+    # (; N_opt, N_sim) = measurement_container
 
     # merge `opt` and `sim` bins
-    merge_bin_measurements!(datafolder * "/simulation/")
+    merge_bin_measurements!(datafolder * "/simulation/", pID)
     if haskey(measurement_container.correlation_measurements, "density") || haskey(measurement_container.correlation_measurements, "spin")
-        merge_bin_measurements!(datafolder * "/correlation/")
+        merge_bin_measurements!(datafolder * "/correlation/", pID)
     end
 
 
     # process all scalar measurements
     process_scalar_measurements(
         datafolder, 
+        pID,
         "local_energy"
     )
     process_scalar_measurements(
         datafolder, 
+        pID,
         "double_occ"
     )
     process_scalar_measurements(
         datafolder, 
+        PID,
         "global_density"
     )
     process_scalar_measurements(
         datafolder, 
+        pID,
         "pconfig"
     )
 
     if haskey(measurement_container.simulation_measurements, "local_spin-z")
         process_scalar_measurements(
             datafolder, 
+            pID,
             "local_spin-z"
         )
     end
@@ -57,12 +62,14 @@ function process_measurements(
    # process optimization measurements
     process_optimization_measurements(
         datafolder, 
+        pID,
         determinantal_parameters
     )
 
     if haskey(measurement_container.correlation_measurements, "density")
         process_correlation_measurements(
             datafolder, 
+            pID,
             "density", 
             model_geometry
         )
@@ -71,6 +78,7 @@ function process_measurements(
     if haskey(measurement_container.correlation_measurements, "spin")
         process_correlation_measurements(
             datafolder, 
+            pID,
             "spin", 
             model_geometry
         )
@@ -105,35 +113,40 @@ function process_measurements(
     model_geometry::ModelGeometry
 )
     (; datafolder, pID) = simulation_info
-    (; N_opt, N_sim) = measurement_container
+    # (; N_opt, N_sim) = measurement_container
 
     # merge `opt` and `sim` bins
-    merge_bin_measurements!(datafolder * "/simulation/")
+    merge_bin_measurements!(datafolder * "/simulation/", pID)
     if haskey(measurement_container.correlation_measurements, "density") || haskey(measurement_container.correlation_measurements, "spin")
-        merge_bin_measurements!(datafolder * "/correlation/")
+        merge_bin_measurements!(datafolder * "/correlation/", pID)
     end
 
     # process all scalar measurements
     process_scalar_measurements(
         datafolder, 
+        pID,
         "local_energy"
     )
     process_scalar_measurements(
-        datafolder, 
+        datafolder,
+        pID, 
         "double_occ"
     )
     process_scalar_measurements(
-        datafolder, 
+        datafolder,
+        pID, 
         "global_density"
     )
     process_scalar_measurements(
-        datafolder, 
+        datafolder,
+        pID, 
         "pconfig"
     )
 
     if haskey(measurement_container.simulation_measurements, "local_spin-z")
         process_scalar_measurements(
-            datafolder, 
+            datafolder,
+            pID, 
             "local_spin-z"
         )
     end
@@ -141,6 +154,7 @@ function process_measurements(
    # process optimization measurements
     process_optimization_measurements(
         datafolder, 
+        pID,
         determinantal_parameters,
         jastrow_parameters
     )
@@ -148,6 +162,7 @@ function process_measurements(
     if haskey(measurement_container.correlation_measurements, "density")
         process_correlation_measurements(
             datafolder, 
+            pID,
             "density", 
             model_geometry
         )
@@ -156,6 +171,7 @@ function process_measurements(
     if haskey(measurement_container.correlation_measurements, "spin")
         process_correlation_measurements(
             datafolder, 
+            pID,
             "spin", 
             model_geometry
         )
@@ -168,22 +184,25 @@ end
 @doc raw"""
 
     process_scalar_measurements( datafolder::T,
+                                 pID::I,
                                  measurement::T;
                                  N_bins::Union{I, Nothing}=nothing) where {T<:AbstractString, I<:Integer}
 
 Write binned simulation measurements to CSV.
 
 - `datafolder::T`: path to folder where simulation files are written.
+- `pID::I`: processor ID/MPI rank
 - `measurement::T`: `local_energy`, `double_occ`, `global_density`, `pconfig`, or `local_spin-z`.
 - `N_bins::Union{I, Nothing}=nothing`: (optional) total number of bins.
 
 """
 function process_scalar_measurements(
     datafolder::T,
+    pID::I,
     measurement::T,
     N_bins::Union{I, Nothing}=nothing
 ) where {T<:AbstractString, I<:Integer}
-    sim_file = joinpath(datafolder, "simulation" ,"bin_measurements.h5")
+    sim_file = joinpath(datafolder, "simulation" ,"bin_measurements_rank-$(pID).h5")
     @assert isfile(sim_file) "HDF5 file not found: $sim_file"
     # sim_file = joinpath(datafolder, "simulation", "simulation_measurements.h5")
     
@@ -231,7 +250,7 @@ function process_scalar_measurements(
         df = DataFrame(BIN = bins, MEAN_R = mean_r)
     end
 
-    output_csv = joinpath(datafolder, "simulation", measurement*"_stats.csv")
+    output_csv = joinpath(datafolder, "simulation", measurement*"_stats_rank-$(pID).csv")
 
     CSV.write(output_csv, df)
 
@@ -242,23 +261,26 @@ end
 @doc raw"""
 
     process_optimization_measurements( datafolder::T,
+                                       pID::I,
                                        determinantal_parameters::DeterminantalParameters;
                                        N_bins::Union{I, Nothing}=nothing ) where {T<:AbstractString, I<:Integer}
 
 Writes binned optimization measurements to CSV.
 
 - `datafolder::T`: path to folder where simulation files are written.
+- `pID::I`: processor ID/MPI rank
 - `determinantal_parameters::DeterminantalParameters`: set of determinantal variational parameters.
 - `N_bins::Union{I, Nothing}=nothing`: (optional) total number of bins.
 
 """
 function process_optimization_measurements(
     datafolder::T,
+    pID::I,
     determinantal_parameters::DeterminantalParameters;
     N_bins::Union{I, Nothing}=nothing
     
 ) where {T<:AbstractString, I<:Integer}
-    opt_file = joinpath(datafolder, "optimization", "opt_bin_measurements.h5")
+    opt_file = joinpath(datafolder, "optimization", "opt_bin_measurements_rank-$(pID).h5")
     @assert isfile(opt_file) "HDF5 file not found: $opt_file"
 
     # helper function to convert filenames to ASCII
@@ -342,7 +364,7 @@ function process_optimization_measurements(
 
     for pname in param_names
         converted = convert_name(String(pname))
-        outcsv = joinpath(outdir, "parameter_$(converted)_stats.csv")
+        outcsv = joinpath(outdir, "parameter_$(converted)_stats_rank-$(pID).csv")
 
         template_val = current_det_pars[pname]
         if template_val isa AbstractVector
@@ -442,6 +464,7 @@ end
 @doc raw"""
 
     process_optimization_measurements( datafolder::T,
+                                       pID::I,
                                        determinantal_parameters::DeterminantalParameters,
                                        jastrow_parameters::JastrowParameters;
                                        N_bins::Union{I, Nothing}=nothing ) where {T<:AbstractString, I<:Integer}
@@ -449,6 +472,7 @@ end
 Writes binned optimization measurements to CSV.
 
 - `datafolder::T`: path to folder where simulation files are written.
+- `pID::I`: processor ID/MPI rank
 - `determinantal_parameters::DeterminantalParameters`: set of determinantal variational parameters.
 - `jastrow_parameters::JastrowParameters`: set of Jastrow parameters.
 - `N_bins::Union{I, Nothing}=nothing`: (optional) total number of bins.
@@ -456,11 +480,12 @@ Writes binned optimization measurements to CSV.
 """
 function process_optimization_measurements(
     datafolder::T,
+    pID::I,
     determinantal_parameters::DeterminantalParameters,
     jastrow_parameters::JastrowParameters;
     N_bins::Union{I, Nothing}=nothing
 ) where {T<:AbstractString, I<:Integer}
-    opt_file = joinpath(datafolder, "optimization", "opt_bin_measurements.h5")
+    opt_file = joinpath(datafolder, "optimization", "opt_bin_measurements_rank-$(pID).h5")
     @assert isfile(opt_file) "HDF5 file not found: $opt_file"
 
     # helper function to convert filenames to ASCII
@@ -590,7 +615,7 @@ function process_optimization_measurements(
     # write determinantal parameters
     for pname in param_names
         converted = convert_name(String(pname))
-        outcsv = joinpath(outdir, "parameter_$(converted)_stats.csv")
+        outcsv = joinpath(outdir, "parameter_$(converted)_stats_rank-$(pID).csv")
 
         template_val = current_det_pars[pname]
         if template_val isa AbstractVector
@@ -689,7 +714,7 @@ function process_optimization_measurements(
     catch
         "jastrow"
     end
-    jfilename = joinpath(outdir, "$(jtype)_jastrow_parameters.csv")
+    jfilename = joinpath(outdir, "$(jtype)_jastrow_parameters_rank-$(pID).csv")
 
     if n_jpars > 0
         jcolnames = [Symbol("MEAN_V_$(k)") for k in 1:n_jpars]
@@ -736,23 +761,26 @@ end
 @doc raw"""
 
     process_correlation_measurements( datafolder::T,
+                                      pID::I
                                       correlation_type::T,
-                                      model_geometry::ModelGeometry ) where {T<:AbstractString}
+                                      model_geometry::ModelGeometry ) where {T<:AbstractString, I<:Integer}
 
 For either density-density or spin-spin correlation data, calculates the static structure factor 
 ``N(\mathbf{q}) = \langle \hat{n}_{-\mathbf{q}\hat{n}_{\mathbf{q}}\rangle`` or 
 ``S(\mathbf{q}) = \langle \hat{S}_{-\mathbf{q}\hat{S}_{\mathbf{q}}\rangle``, respectively.
 
 `datafolder::T`: path to folder where simulation files are written.
+`pID::I`: processor ID/MPI rank
 `correlation_type::T`: either "density" or "spin".
 `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 
 """
 function process_correlation_measurements(
-    datafolder::AbstractString,
-    correlation_type::String,
-    model_geometry
-)
+    datafolder::T,
+    pID::I,
+    correlation_type::T,
+    model_geometry::ModelGeometry
+) where {T<:AbstractString, I<:Integer}
     unit_cell = model_geometry.unit_cell
     lattice = model_geometry.lattice
     N = model_geometry.lattice.N
@@ -761,7 +789,7 @@ function process_correlation_measurements(
     q_points = calc_k_points(unit_cell, lattice)
     nq = length(q_points)
 
-    corr_file = joinpath(datafolder, "correlation", "bin_measurements.h5")
+    corr_file = joinpath(datafolder, "correlation", "bin_measurements_rank-$(pID).h5")
     @assert isfile(corr_file) "HDF5 file not found: $corr_file"
 
     function parse_bin_number(name::AbstractString)::Int
@@ -846,7 +874,7 @@ function process_correlation_measurements(
     sort!(df, :bin)
 
     # write CSV
-    out_csv = joinpath(datafolder, "correlation", "$(correlation_type)_static_structure_factor_stats.csv")
+    out_csv = joinpath(datafolder, "correlation", "$(correlation_type)_static_structure_factor_stats_rank-$(pID).csv")
     CSV.write(out_csv, df)
 
     return nothing
@@ -902,10 +930,8 @@ end
 
 """
 
-    merge_bin_measurements!( datafolder::AbstractString;
-                             opt_name::AbstractString="opt_bin_measurements.h5",
-                             sim_name::AbstractString="sim_bin_measurements.h5",
-                             out_name::AbstractString="bin_measurements.h5",
+    merge_bin_measurements!( datafolder::AbstractString,
+                             pID::Int;
                              clear_src::Bool=false )
 
 Merge the HDF5 files `opt_name` and `sim_name` (located inside `datafolder`)
@@ -915,19 +941,19 @@ Bins from the sim file are offset by the maximum bin index found in the opt file
 so the result has contiguous, non-overlapping `bin-%d` subgroup names.
 
 - `datafolder::AbstractString`: path to data files.
-- `opt_name::AbstractString="opt_bin_measurements.h5"`: name of opt_bin file.
-- `sim_name::AbstractString="sim_bin_measurements.h5"`: name of sim_bin file.
-- `out_name::AbstractString="bin_measurements.h5"`: output file name.
+- `pID::Int`: processor ID/MPI rank
 - `clear_src::Bool=false`: optionallyy clear source bin files after merger.
 
 """
 function merge_bin_measurements!(
-    datafolder::AbstractString;
-    opt_name::AbstractString="opt_bin_measurements.h5",
-    sim_name::AbstractString="sim_bin_measurements.h5",
-    out_name::AbstractString="bin_measurements.h5",
+    datafolder::AbstractString,
+    pID::Int;
     clear_src::Bool=false
 )
+    opt_name = "opt_bin_measurements_rank-$(pID).h5"
+    sim_name = "sim_bin_measurements_rank-$(pID).h5"
+    out_name = "bin_measurements_rank-$(pID).h5"
+
     opt_file = joinpath(datafolder, opt_name)
     sim_file = joinpath(datafolder, sim_name)
     out_file = joinpath(datafolder, out_name)

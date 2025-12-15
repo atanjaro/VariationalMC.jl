@@ -59,7 +59,7 @@ function write_measurements!(
     corr_dir = joinpath(datafolder, "correlation")
     mkpath(corr_dir)
 
-    step_filename = step * "_bin_measurements.h5"
+    step_filename = step * "_bin_measurements_rank-$(pID).h5"
     sim_file  = joinpath(sim_dir,  step_filename)
     opt_file = joinpath(opt_dir, step_filename)
     corr_file = joinpath(corr_dir, step_filename)

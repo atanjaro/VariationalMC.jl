@@ -951,15 +951,15 @@ function add_spin_order!(
         afm_vec = ones(Int8, twoN)
 
         if pht
-            # prepare negated second half
+            # create center-symmetric vec for spin sectors: flip sign in second half
             afm_vec_neg = similar(afm_vec)
-            # set first half and second half with sign flip in-place
+            # fill first half with 1/-1 based on parity then second half = - first half
             if dims == 1
                 for s in 1:N
                     ix = locs[s]
                     v = isodd(ix) ? -1 : 1
                     afm_vec_neg[s] = v
-                    afm_vec_neg[s + N] = -v
+                    afm_vec_neg[s + N] = -v  # flip sign for spin-down sector
                 end
             else
                 for s in 1:N
@@ -970,10 +970,10 @@ function add_spin_order!(
                 end
             end
 
-            V_afm = LinearAlgebra.Diagonal(afm_vec_neg)
-            push!(H_vpars, Δ_sz * V_afm)
+            V_afm_neg = LinearAlgebra.Diagonal(afm_vec_neg)
+            push!(H_vpars, Δ_sz * V_afm_neg)
             if optimize.Δ_sz
-                push!(V, V_afm)
+                push!(V, V_afm_neg)
             end
         else
             # non-pht: parity only
@@ -1142,7 +1142,7 @@ function add_charge_order!(
             # stagger using precomputed locs; compute parity with isodd for speed
             if dims == 1
                 for s in 1:twoN
-                    ix = locs[s]  # Int
+                    ix = locs[s]
                     cdw_vec[s] = isodd(ix) ? -1 : 1
                 end
             else
@@ -1152,9 +1152,8 @@ function add_charge_order!(
                 end
             end
 
-            # push Δ * Diagonal(cdw_vec) directly (no intermediate dense zero matrix)
-            V_cdw = LinearAlgebra.Diagonal(cdw_vec)           # this is cheap (stores diag only)
-            push!(H_vpars, Δ_cdw * V_cdw)                      # scaled Diagonal pushed
+            V_cdw = LinearAlgebra.Diagonal(cdw_vec)
+            push!(H_vpars, Δ_cdw * V_cdw)
             if optimize.Δ_cdw
                 push!(V, V_cdw)
             end

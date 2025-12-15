@@ -10,10 +10,13 @@ simulation or resumed a previous simulation.
 - `datafolder_prefix::S`: prefix of the data directory name.
 - `datafolder_name::S`: data directory name.
 - `datafolder::S`: data directory including filepath.
-- `pID::I`: processor ID number.
+- `pID::I`: processor ID number/MPI rank.
 - `sID::I`: simulation ID number.
-- `resuming::Bool`: whether a previous simulation is being resumed.
-
+- `resuming::Bool`: whether a previous simulation is being resumed (`true`) or starting a new one (`false`).
+- `variationalmc_version::VersionNumber`: Version of [VariationalMC.jl](https://github.com/atanjaro/VariationalMC.jl) used in simulation.
+    # version of package (= VARIATIONALMC_VERSION)
+    variationalmc_version::VersionNumber
+    
 """
 mutable struct SimulationInfo{S<:AbstractString, I<:Int}
 
@@ -29,7 +32,7 @@ mutable struct SimulationInfo{S<:AbstractString, I<:Int}
     # data directory including filepath
     datafolder::S
 
-    # process ID number (for MPI)
+    # process ID number/MPI rank
     pID::I
 
     # simulation ID number
@@ -47,7 +50,7 @@ end
                     sID::I = 0, 
                     pID::I = 0 ) where {S<:AbstractString, I<:Integer}
 
-Creates an instance of the SimulationInfo type.
+Initialize and return an instance of the SimulationInfo type.
 
 """
 function SimulationInfo(; 
@@ -70,7 +73,7 @@ function SimulationInfo(;
 
     resuming = isdir(datafolder)
 
-    return SimulationInfo(filepath, datafolder_prefix, datafolder_name, datafolder, pID, sID, resuming)
+    return SimulationInfo(filepath, datafolder_prefix, datafolder_name, datafolder, pID, sID, resuming) #VARIATIONALMC_VERSION
 end
 
 
@@ -81,6 +84,7 @@ function Base.show(io::IO, ::MIME"text/plain", sim_info::SimulationInfo)
     @printf io "name  = \"%s\"\n" sim_info.datafolder_prefix
     @printf io "sID   = %d\n" sim_info.sID
     @printf io "pID   = %d\n" sim_info.pID
+    # @printf io "variationalmc_version = \"%s\"\n" sim_info.variationalmc_version
     @printf io "julia_version     = \"%s\"" VERSION
 
     return nothing
@@ -90,23 +94,23 @@ end
 @doc raw"""
 
     save_simulation_info( sim_info::SimulationInfo, 
-                          additional_info = nothing )
+                          metadata::Dict{Any, Any} = nothing )
 
 Save the contents `sim_info` to a TOML file, and add an optional additional table to the
-output file based on the contents of a dictionary `additional_info`.
+output file based on the contents of a dictionary `metadata`.
 
 """
 function save_simulation_info(
     sim_info::SimulationInfo, 
-    additional_info = nothing
+    metadata::Dict{Any, Any} = nothing
 )
     (; datafolder, pID, sID) = sim_info
-    fn = @sprintf "simulation_info_pID%d_sID%d.toml" pID sID
+    fn = @sprintf "simulation_info_sID-%d_rank-%d.toml" sID pID
     open(joinpath(datafolder, fn), "w") do fout
         show(fout, "text/plain", sim_info)
-        if !isnothing(additional_info)
+        if !isnothing(metadata)
             @printf fout "\n\n"
-            TOML.print(fout, Dict("additional_info" => additional_info), sorted = true)
+            TOML.print(fout, Dict("metadata" => metadata), sorted = true)
         end
     end
 
@@ -116,11 +120,36 @@ end
 
 @doc raw"""
 
+    initialize_datafolder( comm::MPI.Comm, 
+                           sim_info::SimulationInfo )
+
     initialize_datafolder( sim_info::SimulationInfo )
 
 Initalize `sim_info.datafolder` directory if it does not already exist.
-
+If `comm::MPI.Comm` is passed as the first argument, this this function will synchronize
+all the MPI processes, ensuring that none proceed beyond this function call until
+the data folder that results will be written to is successfully initialized.
 """
+function initialize_datafolder(comm::MPI.Comm, sim_info::SimulationInfo)
+
+    (; pID, datafolder, resuming) = sim_info
+
+    # synchrnize MPI walkers
+    MPI.Barrier(comm)
+
+    # if main process and starting new simulation (not resuming an existing simulation)
+    if iszero(pID) && !resuming
+
+        # make data folder directory
+        mkdir(datafolder)
+    end
+
+    # synchrnize MPI walkers
+    MPI.Barrier(comm)
+
+    return nothing
+end
+
 function initialize_datafolder(
     sim_info::SimulationInfo
 )

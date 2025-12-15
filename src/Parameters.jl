@@ -45,6 +45,20 @@ struct TightBindingModel{E<:AbstractFloat}
     t₂::E
 end
 
+# show struct info as TOML formatted string
+function Base.show(io::IO, ::MIME"text/plain", tbm::TightBindingModel) 
+
+    @printf io "[TightBindingModel]\n\n"
+    @printf io "[[TightBindingModel.t₀]]\n\n"
+    @printf io "t_0       = %.2f\n\n" tbm.t₀
+     @printf io "[[TightBindingModel.t₁]]\n\n"
+    @printf io "t_1       = %.2f\n\n" tbm.t₁
+     @printf io "[[TightBindingModel.t₂]]\n\n"
+    @printf io "t_2       = %.2f\n\n" tbm.t₂
+
+    return nothing
+end
+
 
 @doc raw"""
 

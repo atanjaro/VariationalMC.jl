@@ -325,23 +325,71 @@ function initialize_simulation_measurement!(
 end
 
 
+@doc raw"""
+
+    initialize_measurement_directories(;
+        simulation_info::SimulationInfo,
+        measurement_container::NamedTuple
+    )
+
+    initialize_measurement_directories(
+            comm::MPI.Comm;
+            simulation_info::SimulationInfo,
+            measurement_container::NamedTuple
+    )
+
+    initialize_measurement_directories(
+        simulation_info::SimulationInfo,
+        measurement_container::NamedTuple
+    )
+
+    initialize_measurement_directories(
+            comm::MPI.Comm,
+            simulation_info::SimulationInfo,
+            measurement_container::NamedTuple
+    )
+
+Initialize the measurement directories for simulation. If using MPI and a `comm::MPI.Comm` object is passed
+as the first argument, then none of the MPI processes will proceed beyond this function call until the measurement
+directories have been initialized.
+
 """
+function initialize_measurement_directories(
+        comm::MPI.Comm;
+        simulation_info::SimulationInfo,
+        measurement_container::NamedTuple
+)
 
-    initialize_measurement_directories( simulation_info::SimulationInfo, 
-                                        measurement_container::NamedTuple )
+    initialize_measurement_directories(simulation_info, measurement_container)
+    MPI.Barrier(comm)
+    return nothing
+end
 
-Creates file directories and for storing measurements. 
+function initialize_measurement_directories(
+        comm::MPI.Comm,
+        simulation_info::SimulationInfo,
+        measurement_container::NamedTuple
+)
 
-- `simulation_info::SimulationInfo`: contains datafolder information.
-- `measurement_container::NamedTuple`: container where measurements are contained.
+    initialize_measurement_directories(simulation_info, measurement_container)
+    MPI.Barrier(comm)
+    return nothing
+end
 
-"""
+function initialize_measurement_directories(;
+    simulation_info::SimulationInfo,
+    measurement_container::NamedTuple
+)
+    initialize_measurement_directories(simulation_info, measurement_container)
+    return nothing
+end
+
 function initialize_measurement_directories(
     simulation_info::SimulationInfo, 
     measurement_container::NamedTuple
 )
     (; datafolder, resuming, pID) = simulation_info
-    (; optimization_measurements, simulation_measurements, correlation_measurements) = measurement_container
+    (; correlation_measurements) = measurement_container
 
     # only initialize folders if pID = 0
     if iszero(pID) && !resuming

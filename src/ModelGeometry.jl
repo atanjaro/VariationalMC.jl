@@ -21,6 +21,49 @@ struct ModelGeometry{T, B<:AbstractVector{<:AbstractVector{T}}}
     bond::B
 end
 
+# print struct info in TOML format
+function Base.show(io::IO, ::MIME"text/plain", model_geometry::ModelGeometry{D,T}) where {D, T}
+
+    (; unit_cell, lattice, bond) = model_geometry
+    
+    @printf io "[Geometry]\n\n"
+    @printf io "dimensions = %d\n\n" size(unit_cell.lattice_vecs, 1)
+    @printf io "[Geometry.UnitCell]\n\n"
+    @printf io "orbitals = %d\n\n" unit_cell.n
+    @printf io "[Geometry.UnitCell.LatticeVectors]\n\n"
+    for d in 1:size(unit_cell.lattice_vecs, 1)
+        a = @view unit_cell.lattice_vecs[:,d]
+        @printf io "a_%d = %s\n" d string(round.(a, digits=6)) 
+    end
+    @printf io "\n"
+    @printf io "[Geometry.UnitCell.ReciprocalVectors]\n\n"
+    for d in 1:size(unit_cell.lattice_vecs, 1)
+        b = @view unit_cell.reciprocal_vecs[:,d]
+        @printf io "b_%d = %s\n" d string(round.(b, digits=6)) 
+    end
+    @printf io "\n"
+    for i in 1:unit_cell.n
+        r = unit_cell.basis_vecs[i]
+        @printf io "[[Geometry.UnitCell.BasisVectors]]\n\n"
+        @printf io "ORBITAL_ID = %d\n" i
+        @printf io "r          = %s\n\n" string(round.(r, digits=6))
+    end
+    @printf io "\n"
+    @printf io "[Geometry.Lattice]\n\n"
+    @printf io "L        = %s\n" string(lattice.L)
+    @printf io "periodic = [%s]\n\n" join(lattice.periodic, ", ")
+    for (gidx, group) in enumerate(bond)               # group is Vector{Bond{D}}
+        for (j, b) in enumerate(group)                 # b is a Bond{D}
+            @printf io "[[Geometry.Bond]]\n\n"
+            @printf io "BOND_GROUP   = %d\n" gidx
+            @printf io "orbitals     = [%d, %d]\n" b.orbitals[1] b.orbitals[2]
+            @printf io "displacement = %s\n\n" string(b.displacement)
+        end
+    end
+
+    return nothing
+end
+
 
 @doc raw"""
 

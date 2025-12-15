@@ -3,6 +3,9 @@ using LinearAlgebra
 using Random
 using Printf
 
+# Import MPI
+using MPI
+
 using LatticeUtilities
 using VariationalMC 
 
@@ -12,12 +15,12 @@ using VariationalMC
 # We define a top-level function for running the VMC simulation.
 # Note that the arguments of this function correspond to the command line
 # arguments used to run this script.
-function run_hubbard_chain_simulation(;
+function run_hubbard_square_simulation(
+    comm::MPI.Comm;         # MPI communicator.
     sID,                    # Simulation ID.
     L,                      # System size.
     U,                      # Hubbard interaction.
-    nup,                    # number of spin-up electrons.
-    ndn,                    # number of spin-down electrons.
+    density,                # Electron density.
     pht,                    # Whether model is particle-hole transformed. 
     N_equil,                # Number of equilibration/thermalization updates.
     N_opt,                  # Number of optimization steps.
@@ -25,31 +28,51 @@ function run_hubbard_chain_simulation(;
     N_sim,                  # Number of simulation steps.
     N_sim_bins,             # Number of times bin-averaged measurements are written to file during simulation step.
     dt = 0.03,              # Optimization rate.
+    dt_J = 1.0,             # Optional boost in the Jastrow optimization rate.
     η = 1e-4,               # Optimization stablity factor.
     n_stab_W = 50,          # Green's function stabilization frequency.
-    δW = 1e-3,              # Maximum allowed error in the Green's function.          
+    δW = 1e-3,              # Maximum allowed error in the Green's function. 
+    n_stab_T = 50,          # Jastrow factor stabilization frequency.
+    δT = 1e-3,              # Maximum allowed error in the Jastrow factor.           
     seed = abs(rand(Int)),  # Seed for random number generator.
     filepath="."            # Filepath to where data folder will be created.
 )
     # Select which parameters in the variational wavefunction will be optimized.
     optimize = (
+        # local s-wave pairing
+        Δ_0 = false,
+        # site-dependent s-wave pairing  
+        Δ_spd = false,
+        # local d-wave pairing
+        Δ_d = false,
+        # site-dependent d-wave pairing 
+        Δ_dpd = false,          
+        # pairing momentum
+        q_p = false,
         # spin-x (in-plane magnetization)
         Δ_sx = false,
         # spin-z (out-of-plane magnetization)
         Δ_sz = true,
+        # site-dependent spin density
+        Δ_ssd = false,
         # (BCS) chemical potential
         μ = false,
-        # uniform charge density
+        # uniform charge density 
         Δ_cdw = false,
+        # site-dependent charge density
+        Δ_csd = false,
         # density-density Jastrow 
-        density_J = false
+        density_J = true,
     )
 
     # Construct the foldername the data will be written.
-    df_prefix = @sprintf("hubbard_chain_U%.2f_nup%.2f_ndn%.2f_L%d_opt", U, nup, ndn, L)
+    df_prefix = @sprintf("hubbard_square_U%.2f_density%.2f_Lx%d_Ly%d_opt", U, density, L, L)
 
     # Append optimized parameter names to the foldername.
     datafolder_prefix = create_datafolder_prefix(optimize, df_prefix)
+
+    # Get the MPI comm rank, which fixes the processor ID (pID).
+    pID = MPI.Comm_rank(comm)
 
     # Initialize an instance of the SimulationInfo type.
     # This type tracks of where the data is written, as well as 
@@ -57,16 +80,17 @@ function run_hubbard_chain_simulation(;
     simulation_info = SimulationInfo(
         filepath = filepath, 
         datafolder_prefix = datafolder_prefix,
-        sID = sID
+        sID = sID,
+        pID = pID
     )
 
     # Initialize the directory the data will be written.
-    initialize_datafolder(simulation_info)
+    initialize_datafolder(comm, simulation_info)
 
     # Initialize a random number generator that will be used throughout the simulation.
     # We seed this function with a randomly sampled number for the
     # global random number generator.
-    rng = Xoshiro(seed)
+    rng = Xoshiro(seed) 
 
     # Calculate optimization bins size.
     # The bin size is the number of measurements that are averaged over each time data is written
@@ -82,16 +106,11 @@ function run_hubbard_chain_simulation(;
     # This is a sort of "notebook" for tracking extraneous parameters during the VMC simulation.
     metadata = Dict()
     metadata["seed"] = seed
-    metadata["pht"] = pht
     metadata["N_equil"] = N_equil
     metadata["N_opt"] = N_opt
     metadata["N_sim"] = N_sim
     metadata["N_opt_bins"] = N_opt_bins
     metadata["N_sim_bins"] = N_sim_bins
-    metadata["δW"] = δW
-    metadata["n_stab_W"] = n_stab_W
-    metadata["dt"] = dt 
-    metadata["opt_flags"] = optimize 
     metadata["acceptance_rate"] = 0.0
     metadata["opt_time"] = 0.0
     metadata["sim_time"] = 0.0
@@ -104,8 +123,8 @@ function run_hubbard_chain_simulation(;
     # Initialize an instance of the UnitCell type.
     # This struct defines the unit cell.
     unit_cell = UnitCell(
-        lattice_vecs = [[1.0]],
-        basis_vecs   = [[0.0]]
+        lattice_vecs = [[1.0, 0.0], [0.0, 1.0]],
+        basis_vecs   = [[0.0, 0.0]]
     )
 
     # Initialize an instance of the Lattice type.
@@ -113,25 +132,37 @@ function run_hubbard_chain_simulation(;
     # Note that the current version of LatticeUtilities requires 
     # periodic boundary conditions be used.
     lattice = Lattice(
-        [L], 
-        [true]
+        [L, L], 
+        [true, true]
     )
 
-    # Define the nearest neighbor bonds.
+    # Define the nearest neighbor x-bond for a square lattice.
     bond_x = Bond(
         orbitals = (1,1), 
-        displacement = [1]
+        displacement = [1,0]
     )
 
-    # Define next-nearest neighbor bonds.
-    bond_xp = Bond(
+    # Define the nearest neighbor y-bond for a square lattice.
+    bond_y = Bond(
         orbitals = (1,1), 
-        displacement = [2]
+        displacement = [0,1]
+    )
+
+    # Define the next-nearest neighbor bonds for a square lattice.
+    bond_xy = Bond(
+        orbitals = (1,1), 
+        displacement = [1,1]
+    )
+
+    # Define the next-nearest neighbor bonds for a square lattice.
+    bond_yx = Bond(
+        orbitals = (1,1), 
+        displacement = [1,-1]
     )
 
     # Collect all bond definitions into a single vector.
     # Note that this has the structure [[nearest],[next-nearest]].
-    bonds = [[bond_x], [bond_xp]]
+    bonds = [[bond_x, bond_y], [bond_xy, bond_yx]]
 
     # Initialize an instance of the ModelGeometry type.
     # This type helps keep track of all the relevant features of the lattice
@@ -144,12 +175,12 @@ function run_hubbard_chain_simulation(;
         bonds
     )
 
-    ##################################
-    ### INITIALIZE MODEL PARAMETERS ##
-    ##################################
+    ############################
+    ### SET-UP VMC SIMULATION ##
+    ############################
 
     # Determine the total particle density in the canonical ensemble. 
-    (density, Np, Ne, nup, ndn) = get_particle_density(nup, ndn, model_geometry, pht) 
+    (density, Np, Ne, nup, ndn) = get_particle_density(density, model_geometry, pht) 
 
     # Define the nearest neighbor hopping amplitude, setting the energy scale of the system. 
     t = 1.0
@@ -172,10 +203,19 @@ function run_hubbard_chain_simulation(;
         pht
     )
 
+    # Initialize density-density Jastrow variational parameters.
+    density_J_parameters = JastrowParameters(
+        "e-den-den",
+        optimize, 
+        model_geometry,
+        rng
+    )
+
     # Write model summary TOML file specifying the Hamiltonian that will be simulated.
     model_summary(
         simulation_info, 
         determinantal_parameters, 
+        density_J_parameters, 
         pht, 
         model_geometry, 
         tight_binding_model, 
@@ -197,17 +237,16 @@ function run_hubbard_chain_simulation(;
         N_sim, 
         sim_bin_size,
         determinantal_parameters,
+        density_J_parameters,
         model_geometry
     )
 
-    # Add local Sz measurements.
-    initialize_simulation_measurement!(
-        "local",
-        "spin-z",
-        measurement_container,
+    # Add density-density correlation measurements.
+    initialize_correlation_measurement!(
+        "density", 
+        measurement_container, 
         model_geometry
     )
-
 
     # Initialize the sub-directories to which the various measurements will be written.
     initialize_measurement_directories(
@@ -219,7 +258,7 @@ function run_hubbard_chain_simulation(;
     ### OPTIMIZATION UPDATES ##
     ###########################
 
-    # Start time for optimization.
+    # Record start time for optimization.
     opt_start = time()
 
     # Iterate over optimization bins.
@@ -239,17 +278,30 @@ function run_hubbard_chain_simulation(;
             pconfig
         )  
 
+        # Initialize density-density Jastrow factor.
+        density_J_factor = get_jastrow_factor(
+            density_J_parameters,
+            detwf,
+            model_geometry,
+            pht
+        )
+
         # Iterate over optimization bin length
         for n in 1:opt_bin_size
 
             # Iterate over equilibration/thermalization updates
             for equil in 1:N_equil
-                (acceptance_rate, detwf) = local_fermion_update!(
+                (acceptance_rate, detwf, density_J_factor) = local_fermion_update!(
                     detwf, 
+                    density_J_factor,
+                    density_J_parameters,
                     Np, 
                     model_geometry, 
+                    pht,
                     n_stab_W,
+                    n_stab_T,
                     δW, 
+                    δT,
                     rng
                 )
 
@@ -263,6 +315,8 @@ function run_hubbard_chain_simulation(;
                 detwf, 
                 tight_binding_model, 
                 determinantal_parameters, 
+                density_J_parameters,
+                density_J_factor,
                 optimize,
                 model_geometry, 
                 U,
@@ -278,8 +332,10 @@ function run_hubbard_chain_simulation(;
         optimize_parameters!( 
             measurement_container,  
             determinantal_parameters, 
+            density_J_parameters,
             η, 
             dt, 
+            dt_J,
             opt_bin_size
         )  
 
@@ -294,7 +350,7 @@ function run_hubbard_chain_simulation(;
         )
     end
 
-    # End time for optimization.
+    # Record end time for optimization.
     opt_end = time()
 
     # Record the total time for optimization.
@@ -304,7 +360,7 @@ function run_hubbard_chain_simulation(;
     ### SIMULATION UPDATES ##
     #########################
 
-    # Start time for simulation.
+    # Record start time for simulation.
     sim_start = time()
 
     # Iterate over simulation bins.
@@ -324,17 +380,30 @@ function run_hubbard_chain_simulation(;
             pconfig
         )  
 
+        # Initialize density-density Jastrow factor.
+        density_J_factor = get_jastrow_factor(
+            density_J_parameters,
+            detwf,
+            model_geometry,
+            pht
+        )
+
         # Iterate over optimization bin length
         for n in 1:sim_bin_size
 
             # Iterate over equilibration/thermalization updates
             for equil in 1:N_equil
-                (acceptance_rate, detwf) = local_fermion_update!(
+                (acceptance_rate, detwf, density_J_factor) = local_fermion_update!(
                     detwf, 
+                    density_J_factor,
+                    density_J_parameters,
                     Np, 
                     model_geometry, 
+                    pht,
                     n_stab_W,
+                    n_stab_T,
                     δW, 
+                    δT,
                     rng
                 )
 
@@ -347,6 +416,8 @@ function run_hubbard_chain_simulation(;
                 measurement_container, 
                 detwf, 
                 tight_binding_model, 
+                density_J_parameters,
+                density_J_factor,
                 model_geometry, 
                 U,
                 Np, 
@@ -367,7 +438,7 @@ function run_hubbard_chain_simulation(;
         )
     end
 
-    # End time for simulation.
+    # Record end time for simulation.
     sim_end = time()
 
     # Record the total simulation time.
@@ -382,32 +453,47 @@ function run_hubbard_chain_simulation(;
     # Write simulation summary TOML file.
     save_simulation_info(simulation_info, metadata)
 
+    # Synchronize all MPI processes.
+    MPI.Barrier(MPI.COMM_WORLD)
+
     # Process all optimization and simulation measurements.
-    # Each observable will be written to CSV files for later processing.
+    # Each observable will be written to CSV files for analysis.
     process_measurements(
         measurement_container, 
         simulation_info, 
-        determinantal_parameters,
+        determinantal_parameters, 
+        density_J_parameters,
         model_geometry
     )
-    
+
     return nothing
-end 
+end
 
 # Only execute if the script is run directly from the command line.
 if abspath(PROGRAM_FILE) == @__FILE__
+    # Initialize MPI.
+    MPI.Init()
+
+    # Initialize the MPI communicator.
+    comm = MPI.COMM_WORLD
 
     # Run the simulation.
-    run_hubbard_chain_simulation(;
-        sID         = parse(Int,     ARGS[1]), 
-        L           = parse(Int,     ARGS[2]), 
-        U           = parse(Float64, ARGS[3]), 
-        density     = parse(Float64, ARGS[4]), 
-        pht         = parse(Bool,    ARGS[5]),
-        N_equil     = parse(Int,     ARGS[6]), 
-        N_opt       = parse(Int,     ARGS[7]), 
-        N_opt_bins  = parse(Int,     ARGS[8]), 
-        N_sim       = parse(Int,     ARGS[9]), 
-        N_sim_bins  = parse(Int,     ARGS[10])
+    run_hubbard_square_simulation(
+        comm; 
+        sID        = parse(Int,     ARGS[1]), 
+        L          = parse(Int,     ARGS[2]), 
+        U          = parse(Float64, ARGS[3]),
+        density    = parse(Float64, ARGS[4]),
+        pht        = parse(Bool,    ARGS[5]),
+        N_equil    = parse(Int,     ARGS[6]), 
+        N_opt      = parse(Int,     ARGS[7]), 
+        N_opt_bins = parse(Int,     ARGS[8]), 
+        N_sim      = parse(Int,     ARGS[9]),
+        N_sim_bins = parse(Int,     ARGS[10])
     )
+
+    # Finalize MPI.
+    MPI.Finalize()
 end
+ 
+

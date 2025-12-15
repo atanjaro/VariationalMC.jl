@@ -11,5 +11,5 @@
     N_opt_bins = 2
     N_sim = 2
     N_sim_bins = 2
-    @test isnothing(run_hubbard_chain_simulation(sID, L, U, nup, ndn, N_equil, N_opt, N_opt_bins, N_sim, N_sim_bins, filepath = tempdir()))
+    @test isnothing(run_hubbard_chain_simulation(sID, L, U, nup, ndn, pht, N_equil, N_opt, N_opt_bins, N_sim, N_sim_bins, filepath = tempdir()))
 end

@@ -12,17 +12,26 @@ using VariationalMC
 # We define a top-level function for running the VMC simulation.
 # Note that the arguments of this function correspond to the command line
 # arguments used to run this script.
-function run_hubbard_square_simulation(
-    sID, 
-    L,
-    U,
-    density,
-    N_equil,
-    N_opt,
-    N_opt_bins,
-    N_sim,
-    N_sim_bins; 
-    filepath="."
+function run_hubbard_square_simulation(;
+    sID,                    # Simulation ID.
+    L,                      # System size.
+    U,                      # Hubbard interaction.
+    density,                # Electron density.
+    pht,                    # Whether model is particle-hole transformed. 
+    N_equil,                # Number of equilibration/thermalization updates.
+    N_opt,                  # Number of optimization steps.
+    N_opt_bins,             # Number of times bin-averaged measurements are written to file during optimization step.
+    N_sim,                  # Number of simulation steps.
+    N_sim_bins,             # Number of times bin-averaged measurements are written to file during simulation step.
+    dt = 0.03,              # Optimization rate.
+    dt_J = 1.0,             # Optional boost in the Jastrow optimization rate.
+    η = 1e-4,               # Optimization stablity factor.
+    n_stab_W = 50,          # Green's function stabilization frequency.
+    δW = 1e-3,              # Maximum allowed error in the Green's function. 
+    n_stab_T = 50,          # Jastrow factor stabilization frequency.
+    δT = 1e-3,              # Maximum allowed error in the Jastrow factor.           
+    seed = abs(rand(Int)),  # Seed for random number generator.
+    filepath="."            # Filepath to where data folder will be created.
 )
     # Select which parameters in the variational wavefunction will be optimized.
     optimize = (
@@ -52,10 +61,6 @@ function run_hubbard_square_simulation(
         density_J = true,
     )
 
-    # Specify whether the model will be particle-hole transformed.
-    # Note that this is required if adding pair fields to the wavefunction.
-    pht = false
-
     # Construct the foldername the data will be written.
     df_prefix = @sprintf("hubbard_square_U%.2f_density%.2f_Lx%d_Ly%d_opt", U, density, L, L)
 
@@ -77,33 +82,7 @@ function run_hubbard_square_simulation(
     # Initialize a random number generator that will be used throughout the simulation.
     # We seed this function with a randomly sampled number for the
     # global random number generator.
-    seed = abs(rand(Int))
     rng = Xoshiro(seed)
-
-    # Set the optimization rate for the VMC simulation.
-    dt = 0.03
-    
-    # (optional) Set the boost in the Jastrow optimization rate.
-    dt_J = 1.0
-
-    # Set the stabilization factor used in parameter optimization. 
-    η = 1e-4    
-
-    # Set the frequency in Monte Carlo steps with which the equal-time Green's function
-    # matrix will be recomputed using the numerical stabilization procedure.
-    n_stab_W = 50
-
-    # Set the frequency in Monte Carlo steps with which the Jastrow T vector will be
-    # recomputed using the numerical stabilization procedure.
-    n_stab_T = 50
-
-    # Specify the maximum allowed error in the equal-time Green's function matrix that
-    # is corrected by numerical stabilization.
-    δW = 1e-3
-
-    # Specify the maximum allowed error in the Jastrow T vector that is corrected 
-    # by numerical stabilization.
-    δT = 1e-3
 
     # Calculate optimization bins size.
     # The bin size is the number of measurements that are averaged over each time data is written
@@ -118,8 +97,6 @@ function run_hubbard_square_simulation(
     # Initialize a dictionary to store additional information about the simulation.
     # This is a sort of "notebook" for tracking extraneous parameters during the VMC simulation.
     metadata = Dict()
-    metadata["seed"] = seed
-    metadata["pht"] = pht
     metadata["N_equil"] = N_equil
     metadata["N_opt"] = N_opt
     metadata["N_sim"] = N_sim
@@ -130,7 +107,6 @@ function run_hubbard_square_simulation(
     metadata["n_stab_W"] = n_stab_W
     metadata["n_stab_T"] = n_stab_T
     metadata["dt"] = dt 
-    metadata["opt_flags"] = optimize 
     metadata["acceptance_rate"] = 0.0
     metadata["opt_time"] = 0.0
     metadata["sim_time"] = 0.0
@@ -229,6 +205,17 @@ function run_hubbard_square_simulation(
         optimize, 
         model_geometry,
         rng
+    )
+
+    # Write model summary TOML file specifying the Hamiltonian that will be simulated.
+    model_summary(
+        simulation_info, 
+        determinantal_parameters, 
+        density_J_parameters, 
+        pht, 
+        model_geometry, 
+        tight_binding_model, 
+        U
     )
 
     # Initialize the (fermionic) particle configuration.
@@ -459,6 +446,9 @@ function run_hubbard_square_simulation(
     # Calculate the average local acceptance rate.
     metadata["acceptance_rate"] /= (N_opt + N_sim)
 
+    # Write simulation summary TOML file.
+    save_simulation_info(simulation_info, metadata)
+
     # Process all optimization and simulation measurements.
     # Each observable will be written to CSV files for later processing.
     process_measurements(
@@ -468,27 +458,25 @@ function run_hubbard_square_simulation(
         density_J_parameters,
         model_geometry
     )
-
-    # Write model summary to file.
-    model_summary(simulation_info, metadata)
-
+    
     return nothing
 end
 
 # Only execute if the script is run directly from the command line.
 if abspath(PROGRAM_FILE) == @__FILE__
 
-    # Read in the command line arguments.
-    sID = parse(Int, ARGS[1])           # simulation ID
-    L = parse(Int, ARGS[2])
-    U = parse(Float64, ARGS[3])
-    density = parse(Int, ARGS[4])
-    N_equil = parse(Int, ARGS[5])
-    N_opt = parse(Int, ARGS[6])
-    N_opt_bins = parse(Int, ARGS[7])
-    N_sim = parse(Int, ARGS[8])
-    N_sim_bins = parse(Int, ARGS[9])
-
     # Run the simulation.
-    run_hubbard_square_simulation(sID, L, U, density, N_equil, N_opt, N_opt_bins, N_sim, N_sim_bins)
+    run_hubbard_square_simulation(;
+        sID         = parse(Int,     ARGS[1]), 
+        L           = parse(Int,     ARGS[2]), 
+        U           = parse(Float64, ARGS[3]), 
+        density     = parse(Float64, ARGS[4]), 
+        pht         = parse(Bool,    ARGS[5]),
+        N_equil     = parse(Int,     ARGS[6]), 
+        N_opt       = parse(Int,     ARGS[7]), 
+        N_opt_bins  = parse(Int,     ARGS[8]), 
+        N_sim       = parse(Int,     ARGS[9]), 
+        N_sim_bins  = parse(Int,     ARGS[10])
+    )
 end
+
