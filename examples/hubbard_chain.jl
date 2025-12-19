@@ -81,8 +81,6 @@ function run_hubbard_chain_simulation(;
     # Initialize a dictionary to store additional information about the simulation.
     # This is a sort of "notebook" for tracking extraneous parameters during the VMC simulation.
     metadata = Dict()
-    metadata["seed"] = seed
-    metadata["pht"] = pht
     metadata["N_equil"] = N_equil
     metadata["N_opt"] = N_opt
     metadata["N_sim"] = N_sim
@@ -91,7 +89,6 @@ function run_hubbard_chain_simulation(;
     metadata["δW"] = δW
     metadata["n_stab_W"] = n_stab_W
     metadata["dt"] = dt 
-    metadata["opt_flags"] = optimize 
     metadata["acceptance_rate"] = 0.0
     metadata["opt_time"] = 0.0
     metadata["sim_time"] = 0.0
