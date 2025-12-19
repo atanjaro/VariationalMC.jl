@@ -399,12 +399,13 @@ if abspath(PROGRAM_FILE) == @__FILE__
         sID         = parse(Int,     ARGS[1]), 
         L           = parse(Int,     ARGS[2]), 
         U           = parse(Float64, ARGS[3]), 
-        density     = parse(Float64, ARGS[4]), 
-        pht         = parse(Bool,    ARGS[5]),
-        N_equil     = parse(Int,     ARGS[6]), 
-        N_opt       = parse(Int,     ARGS[7]), 
-        N_opt_bins  = parse(Int,     ARGS[8]), 
-        N_sim       = parse(Int,     ARGS[9]), 
-        N_sim_bins  = parse(Int,     ARGS[10])
+        nup         = parse(Float64, ARGS[4]), 
+        ndn         = parse(Float64, ARGS[5]),
+        pht         = parse(Bool,    ARGS[6]),
+        N_equil     = parse(Int,     ARGS[7]), 
+        N_opt       = parse(Int,     ARGS[8]), 
+        N_opt_bins  = parse(Int,     ARGS[9]), 
+        N_sim       = parse(Int,     ARGS[10]), 
+        N_sim_bins  = parse(Int,     ARGS[11])
     )
 end

@@ -38,18 +38,25 @@ The main body of the simulation is wrapped in a top-level function named `run_hu
 
 ````julia
 # We define a top-level function for running the VMC simulation.
-function run_hubbard_chain_simulation(
-    sID,            # Simulation ID.
-    L,              # System size.
-    U,              # Hubbard interaction.
-    nup,            # Number of spin-up electrons.
-    ndn,            # Number of spin-down electrons.
-    N_equil,        # Number of equilibration/thermalization steps.
-    N_opt,          # Number of optimization steps.
-    N_opt_bins,     # Number of optimization bins.
-    N_sim,          # Number of simulation steps.
-    N_sim_bins;     # Number of simulation bins.
-    filepath="."    # Filepath to where the datafolder will be created.
+function run_hubbard_chain_simulation(;
+    # KEYWORD ARGUMENTS
+    sID,                    # Simulation ID.
+    L,                      # System size.
+    U,                      # Hubbard interaction.
+    nup,                    # number of spin-up electrons.
+    ndn,                    # number of spin-down electrons.
+    pht,                    # Whether model is particle-hole transformed. 
+    N_equil,                # Number of equilibration/thermalization updates.
+    N_opt,                  # Number of optimization steps.
+    N_opt_bins,             # Number of times bin-averaged measurements are written to file during optimization step.
+    N_sim,                  # Number of simulation steps.
+    N_sim_bins,             # Number of times bin-averaged measurements are written to file during simulation step.
+    dt = 0.03,              # Optimization rate.
+    η = 1e-4,               # Optimization stablity factor.
+    n_stab_W = 50,          # Green's function stabilization frequency.
+    δW = 1e-3,              # Maximum allowed error in the Green's function.          
+    seed = abs(rand(Int)),  # Seed for random number generator.
+    filepath="."            # Filepath to where data folder will be created.
 )
 ````
 
@@ -70,12 +77,9 @@ In this initial part of the script, we will specify what parameters in the trial
         # Density-density Jastrow factor
         density_J = false
     )
-
-    # Specify whether the model will be particle-hole transformed.
-    pht = false
 ````
 
-The datafolder is created by initializing an instances of the `SimulationInfo` type, and then calling the `initialize_datafolder` function.
+The datafolder is created by initializing an instances of the `SimulationInfo` type, and then calling the `initialize_datafolder` function. Iin addition, we initialize the random number generator that will be used throughout the simulation. 
 
 
 ````julia
@@ -94,26 +98,9 @@ The datafolder is created by initializing an instances of the `SimulationInfo` t
 
     # Initialize the directory the data will be written.
     initialize_datafolder(simulation_info)
-````
 
-Next, we specify the parameters which control the VMC simulation. Specifically, we seed the random number generator, set the rate of optimization, and set thresholds for numerical stability. In practice, may `dt` need to be changed depending upon the quality of the convergence.
-
-````julia
     # Initialize a random number generator that will be used throughout the simulation.
-    seed = abs(rand(Int))
     rng = Xoshiro(seed)
-
-    # Set the optimization rate for the VMC simulation.
-    dt = 0.1
-
-    # Set the stabilization factor used in parameter optimization. 
-    η = 1e-4    
-
-    # Set the frequency in Monte Carlo steps with which the equal-time Green's function matrix will be recomputed using the numerical stabilization procedure.
-    n_stab_W = 50
-
-    # Specify the maximum allowed error in the equal-time Green's function matrix that is corrected by numerical stabilization.
-    δW = 1e-3
 ````
 
 In addition, we can calculate the length of each bin by dividing the number of iterations/steps by the number of bins. The bin size is the number of measurements that are averaged over each time data is written during either the optimization or simulation steps.
@@ -134,8 +121,6 @@ The important metadata within the simulation will be recorded in the `metadata` 
 ````julia
     # Record simulation metadata.
     metadata = Dict()
-    metadata["seed"] = seed
-    metadata["pht"] = pht
     metadata["N_equil"] = N_equil
     metadata["N_opt"] = N_opt
     metadata["N_sim"] = N_sim
@@ -144,7 +129,6 @@ The important metadata within the simulation will be recorded in the `metadata` 
     metadata["δW"] = δW
     metadata["n_stab_W"] = n_stab_W
     metadata["dt"] = dt 
-    metadata["opt_flags"] = optimize 
     metadata["acceptance_rate"] = 0.0
     metadata["opt_time"] = 0.0
     metadata["sim_time"] = 0.0
@@ -216,7 +200,7 @@ The next step is to initialize our model parameters, which includes calculating 
     (density, Np, Ne, nup, ndn) = get_particle_density(nup, ndn, model_geometry, pht) 
 ````
 
-We then specify parameters for our tight binding model and initializes all of the parameters that are in the determinantal part of the trial wavefunction. We can also set an initial particle configuration, if we have one. If an empty array is provided instead, a random configuration will be given at the start of the simulation. 
+We then specify parameters for our tight binding model and initializes all of the parameters that are in the determinantal part of the trial wavefunction. The `model_summary` function is used to write a `model_summary.toml` file, completely specifying the Hamiltonian that will be simulated. Lastly, we can also set an initial particle configuration, if we have one. If an empty array is provided instead, a random configuration will be given at the start of the simulation. 
 
 ````julia
     # Define the nearest neighbor hopping amplitude, setting the energy scale of the system. 
@@ -240,6 +224,16 @@ We then specify parameters for our tight binding model and initializes all of th
         pht
     )
 
+    # Write model summary TOML file specifying the Hamiltonian that will be simulated.
+    model_summary(
+        simulation_info, 
+        determinantal_parameters, 
+        pht, 
+        model_geometry, 
+        tight_binding_model, 
+        U
+    )
+
     # Initialize the (fermionic) particle configuration.
     pconfig = Int[]
 ````
@@ -259,10 +253,18 @@ Finally, we initialize the mesaurement container, which accumulates the sums of 
     )
 ````
 
-The `initialize_measurement_directories` can now be used used to initialize the various subdirectories in the data folder that the measurements will be written to.
-For more information, please refer to the Simulation Output Overview page.
+Here, we have added measurements of the z-component of the spin ``S_z``. After this, the `initialize_measurement_directories` can now be used used to initialize the various subdirectories in the data folder that the measurements will be written to.
+For more information, please refer to the Simulation Output Overview page. 
 
 ````julia
+    # Add local Sz measurements.
+    initialize_simulation_measurement!(
+        "local",
+        "spin-z",
+        measurement_container,
+        model_geometry
+    )
+
     # Initialize the sub-directories to which the various measurements will be written.
     initialize_measurement_directories(
         simulation_info, 
@@ -430,7 +432,7 @@ In this next section, we continue to sample particle configurations using `local
 ````
 
 ## Record simulation metadata
-Now that the optimization and simulation of the system are complete, we calculate the total time of the VMC simulation and the average final acceptance rate. Such information is saved to file using the `model_summary` function. 
+Now that the optimization and simulation of the system are complete, we calculate the total time of the VMC simulation and the average final acceptance rate. Such information is saved to file using the `save_simulation_info` function. 
 
 ````julia
     # Record the total VMC time.
@@ -439,8 +441,8 @@ Now that the optimization and simulation of the system are complete, we calculat
     # Normalize acceptance rate.
     metadata["acceptance_rate"] /=  (N_opt + N_sim)
 
-    # Write model summary to file.
-    model_summary(simulation_info, metadata)
+    # Write simulation summary TOML file.
+    save_simulation_info(simulation_info, metadata)
 ````
 
 ## Post-processing
@@ -467,26 +469,26 @@ also reading in additional command line arguments.
 # Only execute if the script is run directly from the command line.
 if abspath(PROGRAM_FILE) == @__FILE__
 
-    # Read in the command line arguments.
-    sID = parse(Int, ARGS[1])           # simulation ID
-    L = parse(Int, ARGS[2])
-    U = parse(Float64, ARGS[3])
-    nup = parse(Int, ARGS[4])
-    ndn = parse(Int, ARGS[5])
-    N_equil = parse(Int, ARGS[6])
-    N_opt = parse(Int, ARGS[7])
-    N_opt_bins = parse(Int, ARGS[8])
-    N_sim = parse(Int, ARGS[9])
-    N_sim_bins = parse(Int, ARGS[10])
-
     # Run the simulation.
-    run_hubbard_chain_simulation(sID, L, U, nup, ndn, N_equil, N_opt, N_opt_bins, N_sim, N_sim_bins)
+    run_hubbard_chain_simulation(;
+        sID         = parse(Int,     ARGS[1]), 
+        L           = parse(Int,     ARGS[2]), 
+        U           = parse(Float64, ARGS[3]), 
+        nup         = parse(Float64, ARGS[4]), 
+        ndn         = parse(Float64, ARGS[5]),
+        pht         = parse(Bool,    ARGS[6]),
+        N_equil     = parse(Int,     ARGS[7]), 
+        N_opt       = parse(Int,     ARGS[8]), 
+        N_opt_bins  = parse(Int,     ARGS[9]), 
+        N_sim       = parse(Int,     ARGS[10]), 
+        N_sim_bins  = parse(Int,     ARGS[11])
+    )
 end
 ````
 
 For instance, the command
 ```
-> julia hubbard_chain.jl 1 4 2.0 2 2 200 3000 100 6000 100
+> julia hubbard_chain.jl 1 4 2.0 2 2 false 200 3000 100 6000 100
 ```
 runs a VMC simulation of a ``N = 4`` half-filled 1D Hubbard model with interaction strength ``U = 2.0``.
 In the VMC simulation, ``200`` sweeps through the lattice are be performed to thermalize the system, with ``3000`` optimization steps and ``6000`` simulation steps. During the simulation, bin-averaged measurements are written to file ``100`` times, with each bin of data containing the average of ``3,000/100 = 30`` sequential optimization measurements and ``6,000/100 = 60`` simulation measurements.
@@ -530,18 +532,27 @@ The main body of the simulation is wrapped in a top-level function named `run_hu
 
 ````julia
 # We define a top-level function for running the VMC simulation.
-function run_hubbard_square_simulation(
-    sID,            # Simulation ID.
-    L,              # System size.
-    U,              # Hubbard interaction.
-    nup,            # Number of spin-up electrons.
-    ndn,            # Number of spin-down electrons.
-    N_equil,        # Number of equilibration/thermalization steps.
-    N_opt,          # Number of optimization steps.
-    N_opt_bins,     # Number of optimization bins.
-    N_sim,          # Number of simulation steps.
-    N_sim_bins;     # Number of simulation bins.
-    filepath="."    # Filepath to where the datafolder will be created.
+function run_hubbard_square_simulation(;
+    # KEYWORD ARGUMENTS
+    sID,                    # Simulation ID.
+    L,                      # System size.
+    U,                      # Hubbard interaction.
+    density,                # Electron density.
+    pht,                    # Whether model is particle-hole transformed. 
+    N_equil,                # Number of equilibration/thermalization updates.
+    N_opt,                  # Number of optimization steps.
+    N_opt_bins,             # Number of times bin-averaged measurements are written to file during optimization step.
+    N_sim,                  # Number of simulation steps.
+    N_sim_bins,             # Number of times bin-averaged measurements are written to file during simulation step.
+    dt = 0.03,              # Optimization rate.
+    dt_J = 1.0,             # Optional boost in the Jastrow optimization rate.
+    η = 1e-4,               # Optimization stablity factor.
+    n_stab_W = 50,          # Green's function stabilization frequency.
+    δW = 1e-3,              # Maximum allowed error in the Green's function. 
+    n_stab_T = 50,          # Jastrow factor stabilization frequency.
+    δT = 1e-3,              # Maximum allowed error in the Jastrow factor.           
+    seed = abs(rand(Int)),  # Seed for random number generator.
+    filepath="."            # Filepath to where data folder will be created.
 )
 ````
 
@@ -576,12 +587,9 @@ In this initial part of the script, we will specify what parameters in the trial
         # density-density Jastrow 
         density_J = true,
     )
-
-    # Specify whether the model will be particle-hole transformed.
-    pht = false
 ````
 
-The datafolder is created by initializing an instances of the `SimulationInfo` type, and then calling the `initialize_datafolder` function.
+The datafolder is created by initializing an instances of the `SimulationInfo` type, and then calling the `initialize_datafolder` function. We also initialize the random number generator that will be used throughout the simulation. 
 
 
 ````julia
@@ -600,39 +608,9 @@ The datafolder is created by initializing an instances of the `SimulationInfo` t
 
     # Initialize the directory the data will be written.
     initialize_datafolder(simulation_info)
-````
 
-Next, we specify the parameters which control the VMC simulation. Specifically, we seed the random number generator, set the rate of optimization, and set thresholds for numerical stability. In practice, may `dt` and/or `dt_J` need to be changed depending upon the quality of the convergence.
-
-````julia
     # Initialize a random number generator that will be used throughout the simulation.
-    seed = abs(rand(Int))
     rng = Xoshiro(seed)
-
-    # Set the optimization rate for the VMC simulation.
-    dt = 0.03
-    
-    # (optional) Set the boost in the Jastrow optimization rate.
-    dt_J = 1.0
-
-    # Set the stabilization factor used in parameter optimization. 
-    η = 1e-4    
-
-    # Set the frequency in Monte Carlo steps with which the equal-time Green's function
-    # matrix will be recomputed using the numerical stabilization procedure.
-    n_stab_W = 50
-
-    # Set the frequency in Monte Carlo steps with which the Jastrow T vector will be
-    # recomputed using the numerical stabilization procedure.
-    n_stab_T = 50
-
-    # Specify the maximum allowed error in the equal-time Green's function matrix that
-    # is corrected by numerical stabilization.
-    δW = 1e-3
-
-    # Specify the maximum allowed error in the Jastrow T vector that is corrected 
-    # by numerical stabilization.
-    δT = 1e-3
 ````
 
 In addition, we can calculate the length of each bin by dividing the number of iterations/steps by the number of bins. The bin size is the number of measurements that are averaged over each time data is written during either the optimization or simulation steps.
@@ -653,8 +631,6 @@ The important metadata within the simulation will be recorded in the `metadata` 
 ````julia
     # Record simulation metadata.
     metadata = Dict()
-    metadata["seed"] = seed
-    metadata["pht"] = pht
     metadata["N_equil"] = N_equil
     metadata["N_opt"] = N_opt
     metadata["N_sim"] = N_sim
@@ -665,7 +641,6 @@ The important metadata within the simulation will be recorded in the `metadata` 
     metadata["n_stab_W"] = n_stab_W
     metadata["n_stab_T"] = n_stab_T
     metadata["dt"] = dt 
-    metadata["opt_flags"] = optimize 
     metadata["acceptance_rate"] = 0.0
     metadata["opt_time"] = 0.0
     metadata["sim_time"] = 0.0
@@ -749,7 +724,7 @@ The next step is to initialize our model parameters, which includes calculating 
     (density, Np, Ne, nup, ndn) = get_particle_density(density, model_geometry, pht) 
 ````
 
-We then specify parameters for our tight binding model and initializes all of the parameters that are in the determinantal part of the trial wavefunction. Parameters for the density-desnity Jastrow factor are initialized seperately. We can also set an initial particle configuration, if we have one. If an empty array is provided instead, a random configuration will be given at the start of the simulation. 
+We then specify parameters for our tight binding model and initializes all of the parameters that are in the determinantal part of the trial wavefunction. Parameters for the density-desnity Jastrow factor are initialized seperately. The `model_summary` function is used to write a `model_summary.toml` file, completely specifying the Hamiltonian that will be simulated. Lastly, we can also set an initial particle configuration, if we have one. If an empty array is provided instead, a random configuration will be given at the start of the simulation. 
 
 ````julia
     # Define the nearest neighbor hopping amplitude, setting the energy scale of the system. 
@@ -779,6 +754,17 @@ We then specify parameters for our tight binding model and initializes all of th
         optimize, 
         model_geometry,
         rng
+    )
+
+    # Write model summary TOML file specifying the Hamiltonian that will be simulated.
+    model_summary(
+        simulation_info, 
+        determinantal_parameters, 
+        density_J_parameters, 
+        pht, 
+        model_geometry, 
+        tight_binding_model, 
+        U
     )
 
     # Initialize the (fermionic) particle configuration.
@@ -1010,7 +996,7 @@ In this next section, we continue to sample particle configurations using `local
 ````
 
 ## Record simulation metadata
-Now that the optimization and simulation of the system are complete, we calculate the total time of the VMC simulation and the average final acceptance rate. Such information is saved to file using the `model_summary` function. 
+Now that the optimization and simulation of the system are complete, we calculate the total time of the VMC simulation and the average final acceptance rate. Such information is saved to file using the `msave_simulation_info` function. 
 
 ````julia
     # Record the total VMC time.
@@ -1019,8 +1005,8 @@ Now that the optimization and simulation of the system are complete, we calculat
     # Normalize acceptance rate.
     metadata["acceptance_rate"] /=  (N_opt + N_sim)
 
-    # Write model summary to file.
-    model_summary(simulation_info, metadata)
+    # Write simulation summary TOML file.
+    save_simulation_info(simulation_info, metadata)
 ````
 
 ## Post-processing
@@ -1048,20 +1034,21 @@ also reading in additional command line arguments.
 # Only execute if the script is run directly from the command line.
 if abspath(PROGRAM_FILE) == @__FILE__
 
-    # Read in the command line arguments.
-    sID = parse(Int, ARGS[1])           # simulation ID
-    L = parse(Int, ARGS[2])
-    U = parse(Float64, ARGS[3])
-    density = parse(Int, ARGS[4])
-    N_equil = parse(Int, ARGS[5])
-    N_opt = parse(Int, ARGS[6])
-    N_opt_bins = parse(Int, ARGS[7])
-    N_sim = parse(Int, ARGS[8])
-    N_sim_bins = parse(Int, ARGS[9])
-
     # Run the simulation.
-    run_hubbard_square_simulation(sID, L, U, density, N_equil, N_opt, N_opt_bins, N_sim, N_sim_bins)
+    run_hubbard_square_simulation(;
+        sID         = parse(Int,     ARGS[1]), 
+        L           = parse(Int,     ARGS[2]), 
+        U           = parse(Float64, ARGS[3]), 
+        density     = parse(Float64, ARGS[4]), 
+        pht         = parse(Bool,    ARGS[5]),
+        N_equil     = parse(Int,     ARGS[6]), 
+        N_opt       = parse(Int,     ARGS[7]), 
+        N_opt_bins  = parse(Int,     ARGS[8]), 
+        N_sim       = parse(Int,     ARGS[9]), 
+        N_sim_bins  = parse(Int,     ARGS[10])
+    )
 end
+
 ````
 
 For instance, the command
@@ -1070,3 +1057,122 @@ For instance, the command
 ```
 runs a VMC simulation of a ``N = 4 \times 4`` quarter-filled 2D Hubbard model with interaction strength ``U = 2.0``.
 In the VMC simulation, ``1000`` sweeps through the lattice are be performed to thermalize the system, with ``3000`` optimization steps and ``6000`` simulation steps. During the simulation, bin-averaged measurements are written to file ``100`` times, with each bin of data containing the average of ``3,000/100 = 30`` sequential optimization measurements and ``6,000/100 = 60`` simulation measurements.
+
+
+# 3) Hubbard model on a square lattice with MPI Parallelization
+
+Download this example as a [Julia script](https://github.com/atanjaro/VariationalMC.jl/blob/cc49763acfbd71c9dae5340603e4dc5f96d76e5e/examples/hubbard_square_mpi.jl).
+
+This example will build on the previous 2) Hubbard model on a square lattice (withh Jastrow factor) example, demonstrating how to add parallelization with MPI using the [MPI.jl](https://github.com/JuliaParallel/MPI.jl) package. By this we mean that each MPI process will act as independent walker, running it's own independent VMC simulation.
+
+## Import packages
+We now need to import the [MPI.jl](https://github.com/JuliaParallel/MPI.jl) package as well. 
+
+````julia
+using LinearAlgebra
+using Random
+using Printf
+
+# Import MPI
+using MPI
+
+using LatticeUtilities
+using VariationalMC 
+````
+
+## Specify simulation parameters
+
+Here we have introduced the comm argument to the run_simulation function, which is a type exported by the [MPI.jl](https://github.com/JuliaParallel/MPI.jl) package to facilitate communication and synchronization between the different MPI processes.
+
+````julia
+# We define a top-level function for running the VMC simulation.
+function run_hubbard_square_simulation(
+    comm::MPI.Comm;         # MPI communicator.
+    # KEYWORD ARGUMENTS
+    sID,                    # Simulation ID.
+    L,                      # System size.
+    U,                      # Hubbard interaction.
+    density,                # Electron density.
+    pht,                    # Whether model is particle-hole transformed. 
+    N_equil,                # Number of equilibration/thermalization updates.
+    N_opt,                  # Number of optimization steps.
+    N_opt_bins,             # Number of times bin-averaged measurements are written to file during optimization step.
+    N_sim,                  # Number of simulation steps.
+    N_sim_bins,             # Number of times bin-averaged measurements are written to file during simulation step.
+    dt = 0.03,              # Optimization rate.
+    dt_J = 1.0,             # Optional boost in the Jastrow optimization rate.
+    η = 1e-4,               # Optimization stablity factor.
+    n_stab_W = 50,          # Green's function stabilization frequency.
+    δW = 1e-3,              # Maximum allowed error in the Green's function. 
+    n_stab_T = 50,          # Jastrow factor stabilization frequency.
+    δT = 1e-3,              # Maximum allowed error in the Jastrow factor.           
+    seed = abs(rand(Int)),  # Seed for random number generator.
+    filepath="."            # Filepath to where data folder will be created.
+)
+````
+
+## Initialize simulation
+
+While choosing which variational parameters to optimize is the same as before, Now when initializing the `SimulationInfo` type, we also need to include the MPI process ID `pID`, which can be retrieved using the `MPI.Comm_rank` function.
+
+We also the initialize_datafolder function such that it takes the comm as the first argument. This ensures that all the MPI processes remained synchronized, and none try proceeding beyond this point until the data folder has been initialized.
+
+````julia
+    # Construct the foldername the data will be written.
+    df_prefix = @sprintf("hubbard_square_U%.2f_density%.2f_Lx%d_Ly%d_opt", U, density, L, L)
+
+    # Append optimized parameter names to the foldername.
+    datafolder_prefix = create_datafolder_prefix(optimize, df_prefix)
+
+    # Get the MPI comm rank, which fixes the processor ID (pID).
+    pID = MPI.Comm_rank(comm)
+
+    # Initialize an instance of the SimulationInfo type.
+    # This type tracks of where the data is written, as well as 
+    # which version of Julia and VariationalMC are used in the script. 
+    simulation_info = SimulationInfo(
+        filepath = filepath, 
+        datafolder_prefix = datafolder_prefix,
+        sID = sID,
+        pID = pID
+    )
+
+    # Initialize the directory the data will be written.
+    initialize_datafolder(comm, simulation_info)
+````
+
+There are no changes to the simulation script in terms of initializing the simulation metadata, model, model parameters, and measurements. There are also no changes in performing the optimization and simulation steps. Please refer to Example 2 for details. 
+
+## Execute script
+Here we first need to initialize MPI using the `MPI.Init` command. Then, we need to make sure to pass the `comm = MPI.COMM_WORLD` to the run_simulation function. At the very end of simulation it is good practice to run the `MPI.Finalize()` function even though it is typically not strictly required.
+
+Only excute if the script is run directly from the command line.
+
+````julia
+# Only execute if the script is run directly from the command line.
+if abspath(PROGRAM_FILE) == @__FILE__
+    # Initialize MPI.
+    MPI.Init()
+
+    # Initialize the MPI communicator.
+    comm = MPI.COMM_WORLD
+
+    # Run the simulation.
+    run_hubbard_square_simulation(
+        comm; 
+        sID        = parse(Int,     ARGS[1]), 
+        L          = parse(Int,     ARGS[2]), 
+        U          = parse(Float64, ARGS[3]),
+        density    = parse(Float64, ARGS[4]),
+        pht        = parse(Bool,    ARGS[5]),
+        N_equil    = parse(Int,     ARGS[6]), 
+        N_opt      = parse(Int,     ARGS[7]), 
+        N_opt_bins = parse(Int,     ARGS[8]), 
+        N_sim      = parse(Int,     ARGS[9]),
+        N_sim_bins = parse(Int,     ARGS[10])
+    )
+
+    # Finalize MPI.
+    MPI.Finalize()
+end
+````
