@@ -5,6 +5,7 @@
     L = 4
     U = 4.0
     density = 1.0
+    pht = false
     N_equil = 2
     N_opt = 2
     N_opt_bins= 2

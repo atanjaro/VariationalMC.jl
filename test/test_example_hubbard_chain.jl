@@ -6,6 +6,7 @@
     U = 2.0
     nup = 2
     ndn = 2
+    pht = false
     N_equil = 2
     N_opt = 2
     N_opt_bins = 2
