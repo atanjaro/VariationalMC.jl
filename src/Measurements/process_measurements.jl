@@ -42,7 +42,7 @@ function process_measurements(
     )
     process_scalar_measurements(
         datafolder, 
-        PID,
+        pID,
         "global_density"
     )
     process_scalar_measurements(
