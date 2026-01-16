@@ -184,6 +184,7 @@ function optimize_parameters!(
     jastrow_parameters_2::JastrowParameters{T, K, V, I}, 
     η::E, 
     dt::E, 
+    dt_J::E,
     opt_bin_size::I
 ) where {I<:Integer, T<:AbstractString, K, V, E<:AbstractFloat}
     @debug """
@@ -206,8 +207,13 @@ function optimize_parameters!(
     # solve for variation in the parameters
     δvpars = (S + η * LinearAlgebra.I(size(S,1))) \ f  
 
-    # new varitaional parameters
+    # new variational parameters
     new_vpars = reduce(vcat, [x isa AbstractVector ? x : [x] for x in measurement_container.optimization_measurements["parameters"]])
+
+    # apply Jastrow convergence boost
+    new_vpars[determinantal_parameters.num_det_pars+1:end] *= dt_J
+
+    # update parameters
     new_vpars += dt * δvpars 
 
     @debug """

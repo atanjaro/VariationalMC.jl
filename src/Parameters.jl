@@ -120,43 +120,48 @@ function DeterminantalParameters(
     if dims > 1
         if pht
             det_pars = (
-                Δ_0 = 0.01,
-                Δ_spd = fill(0.0, N),
-                Δ_d = 0.0,
-                Δ_dpd = fill(0.0, N),
-                q_p = fill(0.0, dims),
-                Δ_sx = 0.01,
-                Δ_sz = 0.01,
-                Δ_ssd = fill(0.01, Lx),
+                Δ_0 = 0.001,
+                Δ_slo = fill(0.001, N),
+                Δ_sff = fill(0.001, N),
+                # Δ_spd = fill(0.001, N),
+                # q_ps = fill(0.0, dims), ====> move externally 
+                Δ_d = 0.001,
+                # Δ_dpd = fill(0.001, N),
+                Δ_dlo = fill(0.001, N),
+                Δ_dff = fill(0.001, N),
+                # q_pd = fill(0.0, dims), ====> move externally 
+                Δ_sx = 0.001,
+                Δ_sz = 0.001,
+                Δ_ssd = fill(0.001, Lx),
                 μ = get_tb_chem_pot(Ne, tight_binding_model, model_geometry),
-                Δ_cdw = 0.01,
-                Δ_csd = fill(0.01, Lx)
+                Δ_cdw = 0.001,
+                Δ_csd = fill(0.001, Lx)
             )
         else
             det_pars = (
-                Δ_sx = 0.01,
-                Δ_sz = 0.01,
-                Δ_ssd = fill(0.01, Lx),
+                Δ_sx = 0.001,
+                Δ_sz = 0.001,
+                Δ_ssd = fill(0.001, Lx),
                 μ = get_tb_chem_pot(Ne, tight_binding_model, model_geometry),
-                Δ_cdw = 0.01,
-                Δ_csd = fill(0.01, Lx),
+                Δ_cdw = 0.001,
+                Δ_csd = fill(0.001, Lx),
             )
         end
     else
         if pht 
             det_pars = (
-                Δ_0 = 0.01, 
-                Δ_sx = 0.01,
-                Δ_sz = 0.01,
+                Δ_0 = 0.001, 
+                Δ_sx = 0.001,
+                Δ_sz = 0.001,
                 μ = get_tb_chem_pot(Ne, tight_binding_model, model_geometry),
-                Δ_cdw = 0.01,
+                Δ_cdw = 0.001,
             )
         else
             det_pars = (
-                Δ_sx = 0.01,
-                Δ_sz = 0.01,
+                Δ_sx = 0.001,
+                Δ_sz = 0.001,
                 μ = get_tb_chem_pot(Ne, tight_binding_model, model_geometry),
-                Δ_cdw = 0.01,
+                Δ_cdw = 0.001,
             )
         end
     end
@@ -220,7 +225,6 @@ function DeterminantalParameters(
                 Δ_spd = vpar_dict[:spd],
                 Δ_d = vpar_dict[:pairingd], 
                 Δ_dpd = vpar_dict[:dpd],
-                q_p = vpar_dict[:q_p],
                 Δ_sx = vpar_dict[:sx],
                 Δ_sz = vpar_dict[:sz],
                 Δ_ssd = vpar_dict[:ssd],
@@ -466,10 +470,10 @@ function collect_parameters(
 
     # Jastrow parameters
     keys_sorted_1 = sort(collect(keys(jastrow_parameters_1.jpar_map)))
-    jpars_1 = [jastrow_parameters_1.jpar_map[k][2] for k in keys_sorted_1[1:end-1]]
+    jpars_1 = [jastrow_parameters_1.jpar_map[k][2] for k in keys_sorted_1]
 
     keys_sorted_2 = sort(collect(keys(jastrow_parameters_2.jpar_map)))
-    jpars_2 = [jastrow_parameters_2.jpar_map[k][2] for k in keys_sorted_2[1:end-1]]
+    jpars_2 = [jastrow_parameters_2.jpar_map[k][2] for k in keys_sorted_2]
 
     return vcat(det_pars, jpars_1, jpars_2)
 end
@@ -531,10 +535,10 @@ function update_parameters!(
         end
     end
 
-    # ensure we've consumed exactly all entries of new_vpars
-    if pos - 1 != length(new_vpars)
-        throw(ArgumentError("Length mismatch: consumed $(pos - 1) elements but new_vpars has length $(length(new_vpars))."))
-    end
+    # this check is no longer needed
+    # if pos - 1 != length(new_vpars)
+    #     throw(ArgumentError("Length mismatch: consumed $(pos - 1) elements but new_vpars has length $(length(new_vpars))."))
+    # end
 
     # build NamedTuple with the same field names in the same order
     recon_det_pars = NamedTuple{param_names}(Tuple(reconstructed_vals))
@@ -580,10 +584,9 @@ function update_parameters!(
     new_jpars = new_vpars[end-num_jpars+1:end]
     
     # update determinantal parameters
-    # tuple of parameter names (Symbols) in the same order as current_pars
     param_names = Tuple(keys(current_det_pars))
 
-    # Prepare to collect reconstructed parameter *values*
+    # prepare to collect reconstructed parameter values
     reconstructed_vals = Vector{Any}(undef, length(param_names))
     pos = 1
 
@@ -614,15 +617,15 @@ function update_parameters!(
         end
     end
 
-    # ensure we've consumed exactly all entries of new_vpars
-    if pos - 1 != length(new_det_pars)
-        throw(ArgumentError("Length mismatch: consumed $(pos - 1) elements but new_det_pars has length $(length(new_det_pars))."))
-    end
+    # # this check is no longer needed
+    # if pos - 1 != length(new_det_pars)
+    #     throw(ArgumentError("Length mismatch: consumed $(pos - 1) elements but new_det_pars has length $(length(new_det_pars))."))
+    # end
 
     # build NamedTuple with the same field names in the same order
     recon_det_pars = NamedTuple{param_names}(Tuple(reconstructed_vals))
 
-    # update determinantal_parameters
+    # push back to determinantal_parameters
     determinantal_parameters.det_pars = recon_det_pars
 
     # update Jastrow parameters
@@ -657,7 +660,6 @@ Updates variational parameters after Stochastic Reconfiguration.
 - `jastrow_parameters::JastrowParameters{S, K, V, I}`: second set of Jastrow variational parameters.
 
 """
-# TODO: need to finish Jastrow updating method
 function update_parameters!(
     measurement_container::NamedTuple,
     new_vpars::AbstractVector, 
@@ -671,33 +673,69 @@ function update_parameters!(
     current_jpar_map_2 = jastrow_parameters_2.jpar_map
 
     # seperate the new determinantal and Jastrow parameters
-    num_jpars_1 = jastrow_parameters_1.num_jpar_opts
-    num_jpars_2 = jastrow_parameters_2.num_jpar_opts
+    num_jpars_1 = jastrow_parameters_1.num_jpars
+    num_jpars_2 = jastrow_parameters_2.num_jpars
     num_jpars = num_jpars_1 + num_jpars_2
 
     new_det_pars = new_vpars[1:end-num_jpars]
     new_jpars = new_vpars[end-num_jpars+1:end]
 
-    @assert length(new_vpars) != length(current_det_pars) + num_jpars
-    
     # update determinantal parameters
-    param_names = keys(current_det_pars)
-    new_det_pars = NamedTuple{Tuple(param_names)}(Tuple(new_vpars))
-    determinantal_parameters.det_pars = new_det_pars
+    param_names = Tuple(keys(current_det_pars))
+
+    # prepare to collect reconstructed parameter values
+    reconstructed_vals = Vector{Any}(undef, length(param_names))
+    pos = 1
+
+    for (i, pname) in enumerate(param_names)
+        old_val = current_det_pars[pname]
+
+        if old_val isa AbstractVector
+            n = length(old_val)
+            # bounds-check
+            if pos + n - 1 > length(new_det_pars)
+                throw(ArgumentError("new_vpars too short for parameter $(pname): need $n elements starting at $pos"))
+            end
+            slice = new_det_pars[pos:pos + n - 1]
+
+            # create a vector of the same shape/type as the old one when reasonable.
+            # If old_val is a plain Vector, collect(slice) is fine.
+            # For other custom vector types this may still produce a plain Vector; adapt if needed.
+            reconstructed_vals[i] = collect(slice)
+
+            pos += n
+        else
+            # scalar parameter
+            if pos > length(new_det_pars)
+                throw(ArgumentError("new_det_pars too short for parameter $(pname) (expecting a scalar at position $pos)"))
+            end
+            reconstructed_vals[i] = new_det_pars[pos]
+            pos += 1
+        end
+    end
+
+    # # this check is no longer needed
+    # if pos - 1 != length(new_det_pars)
+    #     throw(ArgumentError("Length mismatch: consumed $(pos - 1) elements but new_det_pars has length $(length(new_det_pars))."))
+    # end
+
+    # build NamedTuple with the same field names in the same order
+    recon_det_pars = NamedTuple{param_names}(Tuple(reconstructed_vals))
+
+    # push back to determinantal_parameters
+    determinantal_parameters.det_pars = recon_det_pars
 
     # update Jastrow parameters
-    irr_indices_1 = collect(keys(current_jpar_map_1))
+    irr_indices = collect(keys(current_jpar_map_1))         # irreducible indices are lattice dependent
     for i in 1:num_jpars_1
         indices, _ = current_jpar_map_1[irr_indices[i]]
     
-        current_jpar_map_1[irr_indices[i]] = (indices, new_jpars[i])
+        current_jpar_map_1[irr_indices[i]] = (indices, new_jpars[1:num_jpars_1][i])
     end
-
-    irr_indices_2 = collect(keys(current_jpar_map_2))
     for i in 1:num_jpars_2
         indices, _ = current_jpar_map_2[irr_indices[i]]
     
-        current_jpar_map_2[irr_indices[i]] = (indices, new_jpars[i])
+        current_jpar_map_2[irr_indices[i]] = (indices, new_jpars[num_jpars_1+1:end][i])
     end
 
     # update the measurement container

@@ -41,14 +41,16 @@ function run_hubbard_square_simulation(
     optimize = (
         # local s-wave pairing
         Δ_0 = false,
-        # site-dependent s-wave pairing  
-        Δ_spd = false,
+        # site-dependent s-wave pairing (Larkin-Ovchinnikov-type)
+        Δ_slo = false,
+        # site-dependent s-wave pairing (Fulde-Ferrell-type)
+        Δ_sff = false,
         # local d-wave pairing
         Δ_d = false,
-        # site-dependent d-wave pairing 
-        Δ_dpd = false,          
-        # pairing momentum
-        q_p = false,
+        # site-dependent d-wave pairing (Larkin-Ovchinnikov-type)
+        Δ_dlo = false,
+        # site-dependent d-wave pairing (Fulde-Ferrell-type)
+        Δ_dff = false,     
         # spin-x (in-plane magnetization)
         Δ_sx = false,
         # spin-z (out-of-plane magnetization)
@@ -62,11 +64,11 @@ function run_hubbard_square_simulation(
         # site-dependent charge density
         Δ_csd = false,
         # density-density Jastrow 
-        density_J = true,
+        density_J = true
     )
 
     # Construct the foldername the data will be written.
-    df_prefix = @sprintf("hubbard_square_U%.2f_density%.2f_Lx%d_Ly%d_opt", U, density, L, L)
+    df_prefix = @sprintf("hubbard_square_U%.2f_density%.3f_Lx%d_Ly%d_opt", U, density, L, L)
 
     # Append optimized parameter names to the foldername.
     datafolder_prefix = create_datafolder_prefix(optimize, df_prefix)
@@ -448,7 +450,7 @@ function run_hubbard_square_simulation(
     metadata["vmc_time"] += metadata["opt_time"] + metadata["sim_time"]
 
     # Calculate the average local acceptance rate.
-    metadata["acceptance_rate"] /= (N_opt + N_sim)
+    metadata["acceptance_rate"] /= ((N_opt + N_sim) * N_equil)
 
     # Write simulation summary TOML file.
     save_simulation_info(simulation_info, metadata)

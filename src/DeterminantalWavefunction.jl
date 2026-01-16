@@ -104,7 +104,8 @@ end
                                     model_geometry::ModelGeometry, 
                                     rng::AbstractRNG, 
                                     pht::Bool,
-                                    pconfig::Vector{I} = Int[] ) where {E<:AbstractFloat, I<:Integer}
+                                    pconfig::Vector{I} = Int[];
+                                    q_p::AbstractVector{T} = [0.0, 0.0] ) where {E<:AbstractFloat, I<:Integer, T<:Number}
 
 Constructs a variational wavefunction ``|\Phi_0\rangle`` based on parameters given by the tight-binding model 
 and determinantal parameter and returns an instance of the `DeterminantalWavefunction` type. If no initial 
@@ -120,6 +121,7 @@ particle configuration is specified, a random configuration will be generated.
 - `rng::AbstractRNG`: random number generator. 
 - `pht::Bool`: whether model is particle-hole transformed.
 - `pconfig::Vector{I} = Int[]`: optional initial particle configuration.
+- `q_p::AbstractVector{T} = [0.0, 0.0]`: pairing momentum for density wave pairing.
 
 """
 function get_determinantal_wavefunction(
@@ -132,7 +134,8 @@ function get_determinantal_wavefunction(
     model_geometry::ModelGeometry, 
     rng::AbstractRNG, 
     pht::Bool,
-    pconfig::Vector{I} = Int[]
+    pconfig::Vector{I} = Int[];
+    q_p = [0.0, 0.0]
 ) where {E<:AbstractFloat, I<:Integer}
     # number of lattice sites
     N = model_geometry.lattice.N 
@@ -143,32 +146,35 @@ function get_determinantal_wavefunction(
         determinantal_parameters, 
         optimize, 
         model_geometry, 
-        pht
+        pht;
+        q_p = q_p
     )
 
     # diagonalize Hamiltonian
     (ε, U_aux) = diagonalize!(H)
 
+    # check for open shell for debugging
+    @debug """
     if is_openshell(ε, Np, pht) 
-        # @debug """
-        # DeterminantalWavefunction::build_determinantal_wavefunction() : 
-        # WARNING! Open shell detected!
-        # """
         println("DeterminantalWavefunction::build_determinantal_wavefunction() :")
         println("WARNING: Open shell is detected!")
     else
-        @debug """
-        DeterminantalWavefunction::build_determinantal_wavefunction() : 
-        Closed shell is detected! Forming shell..."""
+        println("DeterminantalWavefunction::build_determinantal_wavefunction() :")
+        println("Closed shell is detected! Forming shell...")
     end
+    """
+
+    # define mask for perturbation theory
+    ptmask = zeros(eltype(ε), 2*N, 2*N)
 
     # initialize variational parameter matrices
     A = get_variational_matrices(
+        ptmask,
         V, 
         U_aux, 
         ε, 
         Np,
-        model_geometry
+        N
     )
 
     # get M matrix
@@ -336,12 +342,12 @@ function get_determinantal_wavefunction(
         push!(U_θ, U_aux)
 
         if is_openshell(ε, Np, pht)
-            # @debug """
-            # DeterminantalWavefunction::build_determinantal_wavefunction() : 
-            # WARNING! Open shell detected!
-            # """
-            println("DeterminantalWavefunction::build_determinantal_wavefunction() :")
-            println("WARNING! Open shell is detected in state $(n)!")
+            @debug """
+            DeterminantalWavefunction::build_determinantal_wavefunction() : 
+            WARNING! Open shell detected!
+            """
+            # println("DeterminantalWavefunction::build_determinantal_wavefunction() :")
+            # println("WARNING! Open shell is detected in state $(n)!")
         else
             @debug """
             DeterminantalWavefunction::build_determinantal_wavefunction() : 

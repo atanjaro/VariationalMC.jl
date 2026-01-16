@@ -3,6 +3,7 @@ module VariationalMC
 using LatticeUtilities
 using Random
 using LinearAlgebra
+using SparseArrays
 using OrderedCollections
 using Printf
 using CSV

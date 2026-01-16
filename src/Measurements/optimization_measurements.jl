@@ -145,12 +145,10 @@ function measure_Δk!(
     Δk_determinantal = get_Δk(
         optimize, 
         determinantal_parameters, 
-        jastrow_parameters,
         detwf, 
         model_geometry, 
-        Np,
-        pht
-    ) 
+        Np
+    )  
 
     # calculate Jastrow parameter derivatives
     Δk_jastrow_1 = get_Δk(

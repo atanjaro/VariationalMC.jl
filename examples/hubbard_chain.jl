@@ -24,29 +24,34 @@ function run_hubbard_chain_simulation(;
     N_opt_bins,             # Number of times bin-averaged measurements are written to file during optimization step.
     N_sim,                  # Number of simulation steps.
     N_sim_bins,             # Number of times bin-averaged measurements are written to file during simulation step.
-    dt = 0.03,              # Optimization rate.
+    dt = 0.1,               # Optimization rate.
+    dt_J = 1.0,             # Optional boost in the Jastrow optimization rate.
     η = 1e-4,               # Optimization stablity factor.
     n_stab_W = 50,          # Green's function stabilization frequency.
-    δW = 1e-3,              # Maximum allowed error in the Green's function.          
+    δW = 1e-3,              # Maximum allowed error in the Green's function.   
+    n_stab_T = 50,          # Jastrow factor stabilization frequency.
+    δT = 1e-3,              # Maximum allowed error in the Jastrow factor.         
     seed = abs(rand(Int)),  # Seed for random number generator.
     filepath="."            # Filepath to where data folder will be created.
 )
     # Select which parameters in the variational wavefunction will be optimized.
     optimize = (
+        # local s-wave pairing
+        Δ_0 = true,
         # spin-x (in-plane magnetization)
         Δ_sx = false,
         # spin-z (out-of-plane magnetization)
-        Δ_sz = true,
+        Δ_sz = false,
         # (BCS) chemical potential
-        μ = false,
+        μ = true,
         # uniform charge density
         Δ_cdw = false,
         # density-density Jastrow 
-        density_J = false
+        density_J = true
     )
 
     # Construct the foldername the data will be written.
-    df_prefix = @sprintf("hubbard_chain_U%.2f_nup%.2f_ndn%.2f_L%d_opt", U, nup, ndn, L)
+    df_prefix = @sprintf("hubbard_chain_U%.2f_nup%d_ndn%d_L%d_opt", U, nup, ndn, L)
 
     # Append optimized parameter names to the foldername.
     datafolder_prefix = create_datafolder_prefix(optimize, df_prefix)
@@ -87,7 +92,9 @@ function run_hubbard_chain_simulation(;
     metadata["N_opt_bins"] = N_opt_bins
     metadata["N_sim_bins"] = N_sim_bins
     metadata["δW"] = δW
+    metadata["δT"] = δT
     metadata["n_stab_W"] = n_stab_W
+    metadata["n_stab_T"] = n_stab_T
     metadata["dt"] = dt 
     metadata["acceptance_rate"] = 0.0
     metadata["opt_time"] = 0.0
@@ -169,15 +176,25 @@ function run_hubbard_chain_simulation(;
         pht
     )
 
+    # Initialize density-density Jastrow variational parameters.
+    density_J_parameters = JastrowParameters(
+        "e-den-den",
+        optimize, 
+        model_geometry,
+        rng
+    )
+
     # Write model summary TOML file specifying the Hamiltonian that will be simulated.
     model_summary(
         simulation_info, 
         determinantal_parameters, 
+        density_J_parameters, 
         pht, 
         model_geometry, 
         tight_binding_model, 
         U
     )
+
 
     # Initialize the (fermionic) particle configuration.
     # Will start with a random initial configuration unless provided a starting configuration.
@@ -194,6 +211,7 @@ function run_hubbard_chain_simulation(;
         N_sim, 
         sim_bin_size,
         determinantal_parameters,
+        density_J_parameters,
         model_geometry
     )
 
@@ -236,17 +254,30 @@ function run_hubbard_chain_simulation(;
             pconfig
         )  
 
+        # Initialize density-density Jastrow factor.
+        density_J_factor = get_jastrow_factor(
+            density_J_parameters,
+            detwf,
+            model_geometry,
+            pht
+        )
+
         # Iterate over optimization bin length
         for n in 1:opt_bin_size
 
             # Iterate over equilibration/thermalization updates
             for equil in 1:N_equil
-                (acceptance_rate, detwf) = local_fermion_update!(
+                (acceptance_rate, detwf, density_J_factor) = local_fermion_update!(
                     detwf, 
+                    density_J_factor,
+                    density_J_parameters,
                     Np, 
                     model_geometry, 
+                    pht,
                     n_stab_W,
+                    n_stab_T,
                     δW, 
+                    δT,
                     rng
                 )
 
@@ -260,6 +291,8 @@ function run_hubbard_chain_simulation(;
                 detwf, 
                 tight_binding_model, 
                 determinantal_parameters, 
+                density_J_parameters,
+                density_J_factor,
                 optimize,
                 model_geometry, 
                 U,
@@ -275,8 +308,10 @@ function run_hubbard_chain_simulation(;
         optimize_parameters!( 
             measurement_container,  
             determinantal_parameters, 
+            density_J_parameters,
             η, 
             dt, 
+            dt_J,
             opt_bin_size
         )  
 
@@ -321,17 +356,30 @@ function run_hubbard_chain_simulation(;
             pconfig
         )  
 
+        # Initialize density-density Jastrow factor.
+        density_J_factor = get_jastrow_factor(
+            density_J_parameters,
+            detwf,
+            model_geometry,
+            pht
+        )
+
         # Iterate over optimization bin length
         for n in 1:sim_bin_size
 
             # Iterate over equilibration/thermalization updates
             for equil in 1:N_equil
-                (acceptance_rate, detwf) = local_fermion_update!(
+                (acceptance_rate, detwf, density_J_factor) = local_fermion_update!(
                     detwf, 
+                    density_J_factor,
+                    density_J_parameters,
                     Np, 
                     model_geometry, 
+                    pht,
                     n_stab_W,
+                    n_stab_T,
                     δW, 
+                    δT,
                     rng
                 )
 
@@ -344,6 +392,8 @@ function run_hubbard_chain_simulation(;
                 measurement_container, 
                 detwf, 
                 tight_binding_model, 
+                density_J_parameters,
+                density_J_factor,
                 model_geometry, 
                 U,
                 Np, 
@@ -384,7 +434,8 @@ function run_hubbard_chain_simulation(;
     process_measurements(
         measurement_container, 
         simulation_info, 
-        determinantal_parameters,
+        determinantal_parameters, 
+        density_J_parameters,
         model_geometry
     )
     
@@ -399,8 +450,8 @@ if abspath(PROGRAM_FILE) == @__FILE__
         sID         = parse(Int,     ARGS[1]), 
         L           = parse(Int,     ARGS[2]), 
         U           = parse(Float64, ARGS[3]), 
-        nup         = parse(Float64, ARGS[4]), 
-        ndn         = parse(Float64, ARGS[5]),
+        nup         = parse(Int,     ARGS[4]), 
+        ndn         = parse(Int,     ARGS[5]),
         pht         = parse(Bool,    ARGS[6]),
         N_equil     = parse(Int,     ARGS[7]), 
         N_opt       = parse(Int,     ARGS[8]), 

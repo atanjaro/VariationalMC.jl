@@ -14,7 +14,8 @@ using VariationalMC
 # arguments used to run this script.
 function run_hubbard_square_simulation(;
     sID,                    # Simulation ID.
-    L,                      # System size.
+    Lx,                     # System size x.
+    Ly,                     # System size y.
     U,                      # Hubbard interaction.
     density,                # Electron density.
     pht,                    # Whether model is particle-hole transformed. 
@@ -44,27 +45,29 @@ function run_hubbard_square_simulation(;
         # local d-wave pairing
         Δ_d = false,
         # site-dependent d-wave pairing (Larkin-Ovchinnikov-type)
-        Δ_dlo = false,
+        Δ_dlo = true,
         # site-dependent d-wave pairing (Fulde-Ferrell-type)
         Δ_dff = false,     
         # spin-x (in-plane magnetization)
         Δ_sx = false,
         # spin-z (out-of-plane magnetization)
-        Δ_sz = true,
+        Δ_sz = false,
         # site-dependent spin density
-        Δ_ssd = false,
+        Δ_ssd = true,
         # (BCS) chemical potential
         μ = false,
         # uniform charge density 
         Δ_cdw = false,
         # site-dependent charge density
-        Δ_csd = false,
+        Δ_csd = true,
         # density-density Jastrow 
-        density_J = true
+        density_J = true,
+        # spin-spin Jastrow 
+        spin_J = true
     )
 
     # Construct the foldername the data will be written.
-    df_prefix = @sprintf("hubbard_square_U%.2f_density%.3f_Lx%d_Ly%d_opt", U, density, L, L)
+    df_prefix = @sprintf("hubbard_square_U%.2f_density%.3f_Lx%d_Ly%d_opt", U, density, Lx, Ly)
 
     # Append optimized parameter names to the foldername.
     datafolder_prefix = create_datafolder_prefix(optimize, df_prefix)
@@ -130,7 +133,7 @@ function run_hubbard_square_simulation(;
     # Note that the current version of LatticeUtilities requires 
     # periodic boundary conditions be used.
     lattice = Lattice(
-        [L, L], 
+        [Lx, Ly], 
         [true, true]
     )
 
@@ -209,11 +212,20 @@ function run_hubbard_square_simulation(;
         rng
     )
 
+    # Initialize spin-spin Jastrow variational parameters.
+    spin_J_parameters = JastrowParameters(
+        "e-spn-spn",
+        optimize, 
+        model_geometry,
+        rng
+    )
+
     # Write model summary TOML file specifying the Hamiltonian that will be simulated.
     model_summary(
         simulation_info, 
         determinantal_parameters, 
         density_J_parameters, 
+        spin_J_parameters,
         pht, 
         model_geometry, 
         tight_binding_model, 
@@ -236,12 +248,20 @@ function run_hubbard_square_simulation(;
         sim_bin_size,
         determinantal_parameters,
         density_J_parameters,
+        spin_J_parameters,
         model_geometry
     )
 
     # Add density-density correlation measurements.
     initialize_correlation_measurement!(
         "density", 
+        measurement_container, 
+        model_geometry
+    )
+
+    # Add spin-spin correlation measurements.
+    initialize_correlation_measurement!(
+        "spin", 
         measurement_container, 
         model_geometry
     )
@@ -284,15 +304,25 @@ function run_hubbard_square_simulation(;
             pht
         )
 
+        # Initialize spin-spin Jastrow factor.
+        spin_J_factor = get_jastrow_factor(
+            spin_J_parameters,
+            detwf,
+            model_geometry,
+            pht
+        )
+
         # Iterate over optimization bin length
         for n in 1:opt_bin_size
 
             # Iterate over equilibration/thermalization updates
             for equil in 1:N_equil
-                (acceptance_rate, detwf, density_J_factor) = local_fermion_update!(
+                (acceptance_rate, detwf, density_J_factor, spin_J_factor) = local_fermion_update!(
                     detwf, 
                     density_J_factor,
+                    spin_J_factor,
                     density_J_parameters,
+                    spin_J_parameters,
                     Np, 
                     model_geometry, 
                     pht,
@@ -314,7 +344,9 @@ function run_hubbard_square_simulation(;
                 tight_binding_model, 
                 determinantal_parameters, 
                 density_J_parameters,
+                spin_J_parameters,
                 density_J_factor,
+                spin_J_factor,
                 optimize,
                 model_geometry, 
                 U,
@@ -331,6 +363,7 @@ function run_hubbard_square_simulation(;
             measurement_container,  
             determinantal_parameters, 
             density_J_parameters,
+            spin_J_parameters,
             η, 
             dt, 
             dt_J,
@@ -386,15 +419,25 @@ function run_hubbard_square_simulation(;
             pht
         )
 
+        # Initialize spin-spin Jastrow factor.
+        spin_J_factor = get_jastrow_factor(
+            spin_J_parameters,
+            detwf,
+            model_geometry,
+            pht
+        )
+
         # Iterate over optimization bin length
         for n in 1:sim_bin_size
 
             # Iterate over equilibration/thermalization updates
             for equil in 1:N_equil
-                (acceptance_rate, detwf, density_J_factor) = local_fermion_update!(
+                (acceptance_rate, detwf, density_J_factor, spin_J_factor) = local_fermion_update!(
                     detwf, 
                     density_J_factor,
+                    spin_J_factor,
                     density_J_parameters,
+                    spin_J_parameters,
                     Np, 
                     model_geometry, 
                     pht,
@@ -415,7 +458,9 @@ function run_hubbard_square_simulation(;
                 detwf, 
                 tight_binding_model, 
                 density_J_parameters,
+                spin_J_parameters,
                 density_J_factor,
+                spin_J_factor,
                 model_geometry, 
                 U,
                 Np, 
@@ -458,6 +503,7 @@ function run_hubbard_square_simulation(;
         simulation_info, 
         determinantal_parameters, 
         density_J_parameters,
+        spin_J_parameters,
         model_geometry
     )
     
@@ -470,15 +516,15 @@ if abspath(PROGRAM_FILE) == @__FILE__
     # Run the simulation.
     run_hubbard_square_simulation(;
         sID         = parse(Int,     ARGS[1]), 
-        L           = parse(Int,     ARGS[2]), 
-        U           = parse(Float64, ARGS[3]), 
-        density     = parse(Float64, ARGS[4]), 
-        pht         = parse(Bool,    ARGS[5]),
-        N_equil     = parse(Int,     ARGS[6]), 
-        N_opt       = parse(Int,     ARGS[7]), 
-        N_opt_bins  = parse(Int,     ARGS[8]), 
-        N_sim       = parse(Int,     ARGS[9]), 
-        N_sim_bins  = parse(Int,     ARGS[10])
+        Lx          = parse(Int,     ARGS[2]), 
+        Ly          = parse(Int,     ARGS[3]),       
+        U           = parse(Float64, ARGS[4]), 
+        density     = parse(Float64, ARGS[5]), 
+        pht         = parse(Bool,    ARGS[6]),
+        N_equil     = parse(Int,     ARGS[7]), 
+        N_opt       = parse(Int,     ARGS[8]), 
+        N_opt_bins  = parse(Int,     ARGS[9]), 
+        N_sim       = parse(Int,     ARGS[10]), 
+        N_sim_bins  = parse(Int,     ARGS[11])
     )
 end
-

@@ -183,6 +183,103 @@ end
 
 @doc raw"""
 
+    process_measurements( measurement_container::NamedTuple,
+                          simulation_info::SimulationInfo,
+                          determinantal_parameters::DeterminantalParameters,
+                          jastrow_parameters_1::JastrowParameters,
+                          jastrow_parameters_2::JastrowParameters,
+                          model_geometry::ModelGeometry )
+
+Processes all simulation and optimization measurements by organinzing them into CSV files.
+
+- `measurement_container::NamedTuple`: contains measurement quantities.
+- `simulation_info::SimulationInfo`: contains all simulation info.
+- `determinantal_parameters::DeterminantalParameters`: set of determinantal variational parameters.
+- `jastrow_parameters_1::JastrowParameters`: first set of Jastrow parameters.
+- `jastrow_parameters_2::JastrowParameters`: second set of Jastrow parameters.
+- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities. 
+
+"""
+function process_measurements(
+    measurement_container, 
+    simulation_info::SimulationInfo,
+    determinantal_parameters::DeterminantalParameters,
+    jastrow_parameters_1::JastrowParameters,
+    jastrow_parameters_2::JastrowParameters,
+    model_geometry::ModelGeometry
+)
+    (; datafolder, pID) = simulation_info
+    # (; N_opt, N_sim) = measurement_container
+
+    # merge `opt` and `sim` bins
+    merge_bin_measurements!(datafolder * "/simulation/", pID)
+    if haskey(measurement_container.correlation_measurements, "density") || haskey(measurement_container.correlation_measurements, "spin")
+        merge_bin_measurements!(datafolder * "/correlation/", pID)
+    end
+
+    # process all scalar measurements
+    process_scalar_measurements(
+        datafolder, 
+        pID,
+        "local_energy"
+    )
+    process_scalar_measurements(
+        datafolder,
+        pID, 
+        "double_occ"
+    )
+    process_scalar_measurements(
+        datafolder,
+        pID, 
+        "global_density"
+    )
+    process_scalar_measurements(
+        datafolder,
+        pID, 
+        "pconfig"
+    )
+
+    if haskey(measurement_container.simulation_measurements, "local_spin-z")
+        process_scalar_measurements(
+            datafolder,
+            pID, 
+            "local_spin-z"
+        )
+    end
+
+   # process optimization measurements
+    process_optimization_measurements(
+        datafolder, 
+        pID,
+        determinantal_parameters,
+        jastrow_parameters_1,
+        jastrow_parameters_2
+    )
+
+    if haskey(measurement_container.correlation_measurements, "density")
+        process_correlation_measurements(
+            datafolder, 
+            pID,
+            "density", 
+            model_geometry
+        )
+    end
+
+    if haskey(measurement_container.correlation_measurements, "spin")
+        process_correlation_measurements(
+            datafolder, 
+            pID,
+            "spin", 
+            model_geometry
+        )
+    end
+
+    return nothing
+end
+
+
+@doc raw"""
+
     process_scalar_measurements( datafolder::T,
                                  pID::I,
                                  measurement::T;
@@ -756,6 +853,255 @@ function process_optimization_measurements(
 end
 
 
+@doc raw"""
+
+    process_optimization_measurements( datafolder::T,
+                                       pID::I,
+                                       determinantal_parameters::DeterminantalParameters,
+                                       jastrow_parameters_1::JastrowParameters,
+                                       jastrow_parameters_2::JastrowParameters;
+                                       N_bins::Union{I, Nothing}=nothing ) where {T<:AbstractString, I<:Integer}
+
+Writes binned optimization measurements to CSV.
+
+- `datafolder::T`: path to folder where simulation files are written.
+- `pID::I`: processor ID/MPI rank
+- `determinantal_parameters::DeterminantalParameters`: set of determinantal variational parameters.
+- `jastrow_parameters_1::JastrowParameters`: first set of Jastrow parameters.
+- `jastrow_parameters_2::JastrowParameters`: second set of Jastrow parameters.
+- `N_bins::Union{I, Nothing}=nothing`: (optional) total number of bins.
+
+"""
+function process_optimization_measurements(
+    datafolder::T,
+    pID::I,
+    determinantal_parameters::DeterminantalParameters,
+    jastrow_parameters_1::JastrowParameters,
+    jastrow_parameters_2::JastrowParameters;
+    N_bins::Union{I, Nothing}=nothing
+) where {T<:AbstractString, I<:Integer}
+
+    opt_file = joinpath(datafolder, "optimization", "opt_bin_measurements_rank-$(pID).h5")
+    @assert isfile(opt_file) "HDF5 file not found: $opt_file"
+
+    convert_name(name::AbstractString) = replace(name, "Δ" => "delta", "μ" => "mu", " " => "_")
+
+    current_det_pars = determinantal_parameters.det_pars
+    param_names = collect(keys(current_det_pars))
+
+    # determine Jastrow lengths
+    function infer_n_jpars(jp)
+        try
+            if hasproperty(jp, :num_jpar_opts)
+                return Int(getproperty(jp, :num_jpar_opts))
+            elseif hasproperty(jp, :jpars)
+                return length(getproperty(jp, :jpars))
+            elseif hasproperty(jp, :vpars)
+                return length(getproperty(jp, :vpars))
+            elseif hasproperty(jp, :parameters)
+                return length(getproperty(jp, :parameters))
+            end
+        catch
+        end
+        return 0
+    end
+
+    n_j1 = infer_n_jpars(jastrow_parameters_1)
+    n_j2 = infer_n_jpars(jastrow_parameters_2)
+
+    function reconstruct_from_vpars(vpars::AbstractVector,
+                                    current_det_pars,
+                                    param_names::Vector{Symbol},
+                                    n_j1::Int,
+                                    n_j2::Int)
+
+        reconstructed = Dict{Symbol, Any}()
+        pos = 1
+
+        for pname in param_names
+            old_val = current_det_pars[pname]
+            if old_val isa AbstractVector
+                n = length(old_val)
+                reconstructed[pname] = collect(vpars[pos:pos+n-1])
+                pos += n
+            else
+                reconstructed[pname] = vpars[pos]
+                pos += 1
+            end
+        end
+
+        j1 = pos <= length(vpars) ?
+            collect(vpars[pos : min(pos + n_j1 - 1, length(vpars))]) :
+            missing
+        pos += n_j1
+
+        j2 = pos <= length(vpars) ?
+            collect(vpars[pos : min(pos + n_j2 - 1, length(vpars))]) :
+            missing
+
+        return reconstructed, j1, j2
+    end
+
+    results = Vector{Any}()
+
+    h5open(opt_file, "r") do f
+        path_for_bin(bin_num) = "/parameters/bin-$bin_num"
+
+        if N_bins === nothing
+            bin_num = 1
+            while true
+                path = path_for_bin(bin_num)
+                if haskey(f, path)
+                    push!(results, read(f[path]))
+                    bin_num += 1
+                else
+                    break
+                end
+            end
+        else
+            for bin_num in 1:N_bins
+                path = path_for_bin(bin_num)
+                if haskey(f, path)
+                    push!(results, read(f[path]))
+                else
+                    push!(results, missing)
+                end
+            end
+        end
+    end
+
+    bins = collect(1:length(results))
+
+    per_bin_params = Vector{Union{Dict{Symbol,Any}, Missing}}(undef, length(results))
+    per_bin_j1 = Vector{Union{Vector{Any}, Missing}}(undef, length(results))
+    per_bin_j2 = Vector{Union{Vector{Any}, Missing}}(undef, length(results))
+
+    for (i, entry) in enumerate(results)
+        if entry === missing
+            per_bin_params[i] = missing
+            per_bin_j1[i] = missing
+            per_bin_j2[i] = missing
+        else
+            vpars = collect(entry)
+            det_dict, j1, j2 = reconstruct_from_vpars(
+                vpars, current_det_pars, param_names, n_j1, n_j2
+            )
+            per_bin_params[i] = det_dict
+            per_bin_j1[i] = j1
+            per_bin_j2[i] = j2
+        end
+    end
+
+    outdir = joinpath(datafolder, "optimization")
+    isdir(outdir) || mkpath(outdir)
+
+    # --- determinantal CSVs ---
+    for pname in param_names
+        converted = convert_name(String(pname))
+        outcsv = joinpath(outdir, "parameter_$(converted)_stats_rank-$(pID).csv")
+
+        template_val = current_det_pars[pname]
+        if template_val isa AbstractVector
+            n = length(template_val)
+            el_is_complex = Base.eltype(template_val) <: Complex ||
+                any(b -> b !== missing && any(x -> x isa Complex, b[pname]),
+                    per_bin_params)
+
+            df_cols = Dict{Symbol, Any}()
+            df_cols[:BIN] = bins
+            for j in 1:n
+                df_cols[Symbol("MEAN_R_$(j)")] = Vector{Union{Float64, Missing}}(undef, length(bins))
+            end
+            if el_is_complex
+                for j in 1:n
+                    df_cols[Symbol("MEAN_I_$(j)")] = Vector{Union{Float64, Missing}}(undef, length(bins))
+                end
+            end
+
+            for (i, entry) in enumerate(per_bin_params)
+                if entry === missing
+                    for j in 1:n
+                        df_cols[Symbol("MEAN_R_$(j)")][i] = missing
+                        if el_is_complex
+                            df_cols[Symbol("MEAN_I_$(j)")][i] = missing
+                        end
+                    end
+                else
+                    val = entry[pname]
+                    for j in 1:n
+                        comp = val[j]
+                        df_cols[Symbol("MEAN_R_$(j)")][i] = comp isa Complex ? real(comp) : comp
+                        if el_is_complex
+                            df_cols[Symbol("MEAN_I_$(j)")][i] = comp isa Complex ? imag(comp) : 0.0
+                        end
+                    end
+                end
+            end
+
+            CSV.write(outcsv, DataFrame(df_cols))
+        else
+            el_is_complex = template_val isa Complex ||
+                any(b -> b !== missing && (b[pname] isa Complex), per_bin_params)
+
+            MEAN_R = Vector{Union{Float64, Missing}}(undef, length(bins))
+            MEAN_I = el_is_complex ? Vector{Union{Float64, Missing}}(undef, length(bins)) : nothing
+
+            for (i, entry) in enumerate(per_bin_params)
+                if entry === missing
+                    MEAN_R[i] = missing
+                    if el_is_complex; MEAN_I[i] = missing; end
+                else
+                    val = entry[pname]
+                    MEAN_R[i] = val isa Complex ? real(val) : val
+                    if el_is_complex
+                        MEAN_I[i] = val isa Complex ? imag(val) : 0.0
+                    end
+                end
+            end
+
+            df = el_is_complex ?
+                DataFrame(BIN=bins, MEAN_R=MEAN_R, MEAN_I=MEAN_I) :
+                DataFrame(BIN=bins, MEAN_R=MEAN_R)
+
+            CSV.write(outcsv, df)
+        end
+    end
+
+    # --- write Jastrow CSVs ---
+    function write_jastrow(per_bin, n_j, jp)
+        jtype = try string(getproperty(jp, :jastrow_type)) catch; "jastrow" end
+        jfile = joinpath(outdir, "$(jtype)_jastrow_parameters_rank-$(pID).csv")
+
+        if n_j > 0
+            jcols = Dict{Symbol,Any}()
+            jcols[:BIN] = bins
+            for k in 1:n_j
+                jcols[Symbol("MEAN_V_$(k)")] = Vector{Union{Float64, Missing}}(undef, length(bins))
+            end
+
+            for i in 1:length(bins)
+                row = per_bin[i]
+                for k in 1:n_j
+                    if row === missing || k > length(row)
+                        jcols[Symbol("MEAN_V_$(k)")][i] = missing
+                    else
+                        v = row[k]
+                        jcols[Symbol("MEAN_V_$(k)")][i] = v isa Complex ? real(v) : Float64(v)
+                    end
+                end
+            end
+
+            CSV.write(jfile, DataFrame(jcols))
+        else
+            CSV.write(jfile, DataFrame(BIN=bins))
+        end
+    end
+
+    write_jastrow(per_bin_j1, n_j1, jastrow_parameters_1)
+    write_jastrow(per_bin_j2, n_j2, jastrow_parameters_2)
+
+    return nothing
+end
 
 
 @doc raw"""
@@ -769,10 +1115,10 @@ For either density-density or spin-spin correlation data, calculates the static 
 ``N(\mathbf{q}) = \langle \hat{n}_{-\mathbf{q}\hat{n}_{\mathbf{q}}\rangle`` or 
 ``S(\mathbf{q}) = \langle \hat{S}_{-\mathbf{q}\hat{S}_{\mathbf{q}}\rangle``, respectively.
 
-`datafolder::T`: path to folder where simulation files are written.
-`pID::I`: processor ID/MPI rank
-`correlation_type::T`: either "density" or "spin".
-`model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
+- `datafolder::T`: path to folder where simulation files are written.
+- `pID::I`: processor ID/MPI rank
+- `correlation_type::T`: either "density" or "spin".
+- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 
 """
 function process_correlation_measurements(
@@ -891,11 +1237,11 @@ end
 
 Calculates the static structure factor from either density-density or spin-spin correlations.
 
-`corr::Matrix{T}`: correlation data.
-`q_points::Matrix{SVector{2, Float64}}`: set of momentum points.
-`N::I`: number of lattice sites.
-`unit_cell::UnitCell`: unit cell.
-`lattice::Lattice`: lattice.
+- `corr::Matrix{T}`: correlation data.
+- `q_points::Matrix{SVector{2, Float64}}`: set of momentum points.
+- `N::I`: number of lattice sites.
+- `unit_cell::UnitCell`: unit cell.
+- `lattice::Lattice`: lattice.
 
 """
 function calculate_structure_factor(
@@ -905,23 +1251,35 @@ function calculate_structure_factor(
     unit_cell::UnitCell,
     lattice::Lattice
 ) where {T<:AbstractFloat, I<:Integer}
-    Sq = AbstractFloat[]
+    nq = length(q_points)
+    Sq = zeros(Float64, nq)
 
-    # calculate onsite part of the sum
-    onsite = sum(diag(corr))/N       
+    # onsite contribution
+    onsite = tr(corr) / N
 
-    # calculate sum for each momentum point
-    for q in q_points
-        sum = 0.0
-        for i in 1:N
-            for j in (i+1):N
-                Δl = sites_to_displacement(i, j, unit_cell, lattice)
-                Δr = displacement_to_vec(Δl, unit_cell.n, unit_cell.n, unit_cell)
-                sum += cos(dot(q, Δr)) * corr[i, j]
-            end
+    # Precompute all Δr_{ij} for i < j
+    # Store them in a flat vector aligned with (i,j) pairs
+    Δrs = Vector{SVector{2,Float64}}()
+    Cs  = Vector{T}()
+    sizehint!(Δrs, N*(N-1) ÷ 2)
+    sizehint!(Cs,  N*(N-1) ÷ 2)
+
+    @inbounds for i in 1:N
+        for j in i+1:N
+            Δl = sites_to_displacement(i, j, unit_cell, lattice)
+            Δr = displacement_to_vec(Δl, unit_cell.n, unit_cell.n, unit_cell)
+            push!(Δrs, Δr)
+            push!(Cs, corr[i, j])
         end
-        sq = (2.0 / N) * sum + onsite     
-        push!(Sq, sq)
+    end
+
+    # Now loop over q only
+    @inbounds for (k, q) in enumerate(q_points)
+        s = 0.0
+        for n in eachindex(Δrs)
+            s += cos(dot(q, Δrs[n])) * Cs[n]
+        end
+        Sq[k] = (2.0 / N) * s + onsite
     end
 
     return Sq

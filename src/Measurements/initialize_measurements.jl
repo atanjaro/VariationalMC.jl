@@ -212,7 +212,7 @@ function initialize_measurement_container(
     num_jpars = jastrow_parameters_1.num_jpars + jastrow_parameters_2.num_jpars 
 
     # number of variational parameters to be optimized
-    num_vpars = determinantal_parameters.num_det_opts + jastrow_parameters_1.num_jpar_opts + jastrow_parameters_2.num_jpar_opts 
+    num_vpars = num_detpars + num_jpars 
 
     # initial parameters
     init_vpars = collect_parameters(determinantal_parameters, jastrow_parameters_1, jastrow_parameters_2)
