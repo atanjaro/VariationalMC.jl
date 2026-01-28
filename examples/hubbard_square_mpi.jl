@@ -27,7 +27,7 @@ function run_hubbard_square_simulation(
     N_opt_bins,             # Number of times bin-averaged measurements are written to file during optimization step.
     N_sim,                  # Number of simulation steps.
     N_sim_bins,             # Number of times bin-averaged measurements are written to file during simulation step.
-    dt = 0.03,              # Optimization rate.
+    dt = 0.1,               # Optimization rate.
     dt_J = 1.0,             # Optional boost in the Jastrow optimization rate.
     η = 1e-4,               # Optimization stablity factor.
     n_stab_W = 50,          # Green's function stabilization frequency.

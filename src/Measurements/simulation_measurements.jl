@@ -200,13 +200,15 @@ end
 
 @doc raw"""
 
-    measure_n!( measurement_container::NamedTuple, 
+    measure_n!( type::String,
+                measurement_container::NamedTuple, 
                 detwf::DeterminantalWavefunction{T, Q, E, I}, 
                 model_geometry::ModelGeometry,
                 pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
 
-Measures the local particle density averaged over all sites ``\langle n\rangle``.
+Measures the local or site-dependent particle density averaged over all sites ``\langle n\rangle``.
 
+- `type::String`: type of measurement. Either `"local"` or `"site-dependent"`.
 - `measurement_container::NamedTuple`: container where measurements are stored.
 - `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
@@ -214,34 +216,49 @@ Measures the local particle density averaged over all sites ``\langle n\rangle``
 
 """
 function measure_n!(
+    type::String,
     measurement_container::NamedTuple, 
     detwf::DeterminantalWavefunction{T, Q, E, I}, 
     model_geometry::ModelGeometry,
     pht::Bool
 ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
-    # calculate current density
-    density_current = get_n(
-        detwf, 
-        model_geometry,
-        pht
-    )
+    if type == "local"
+        # calculate current density
+        density_current = get_n(
+            detwf, 
+            model_geometry,
+            pht
+        )
 
-    # add the current measurement to the accumulator
-    measurement_container.simulation_measurements["global_density"] += density_current
+        # add the current measurement to the accumulator
+        measurement_container.simulation_measurements["global_density"] += density_current
+    elseif type == "site-dependent"
+        # calculate current density
+        density_current = get_site_dependent_n(
+            detwf, 
+            model_geometry,
+            pht
+        )
 
+        # add the current measurement to the accumulator
+        measurement_container.simulation_measurements["site-dependent_density"] += density_current
+    end
+    
     return nothing
 end
 
 
 @doc raw"""
 
-    measure_Sz!( measurement_container::NamedTuple, 
-                detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                model_geometry::ModelGeometry,
-                pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+    measure_Sz!( type::String,
+                 measurement_container::NamedTuple, 
+                 detwf::DeterminantalWavefunction{T, Q, E, I}, 
+                 model_geometry::ModelGeometry,
+                 pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
 
-Measures the local spin z-component over averaged all sites ``\langle S_z\rangle``.
+Measures the local or site-dependent spin z-component over averaged all sites ``\langle S_z\rangle``.
 
+- `type::String`: type of measurement. Either `"local"` or `"site-dependent"`.
 - `measurement_container::NamedTuple`: container where measurements are stored.
 - `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
@@ -249,20 +266,33 @@ Measures the local spin z-component over averaged all sites ``\langle S_z\rangle
 
 """
 function measure_Sz!(
+    type::String,
     measurement_container::NamedTuple, 
     detwf::DeterminantalWavefunction{T, Q, E, I}, 
     model_geometry::ModelGeometry,
     pht::Bool
 ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
-    # calculate current Sz
-    Sz_current = get_Sz(
-        detwf, 
-        model_geometry,
-        pht
-    )
+    if type == "local"
+        # calculate current Sz
+        Sz_current = get_Sz(
+            detwf, 
+            model_geometry,
+            pht
+        )
 
-    # add the current measurement to the accumulator
-    measurement_container.simulation_measurements["local_spin-z"] += Sz_current
+        # add the current measurement to the accumulator
+        measurement_container.simulation_measurements["local_spin-z"] += Sz_current
+    elseif type == "site-dependent"
+        # calculate current density
+        Sz_current = get_site_dependent_s(
+            detwf, 
+            model_geometry,
+            pht
+        )
+
+        # add the current measurement to the accumulator
+        measurement_container.simulation_measurements["site-dependent_spin-z"] += Sz_current 
+    end
 
     return nothing
 end

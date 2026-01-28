@@ -20,7 +20,9 @@ function process_measurements(
     model_geometry::ModelGeometry
 )
     (; datafolder, pID) = simulation_info
-    # (; N_opt, N_sim) = measurement_container
+    (; N_opt, opt_bin_size) = measurement_container
+
+    bins_to_avg = div(N_opt, opt_bin_size)
 
     # merge `opt` and `sim` bins
     merge_bin_measurements!(datafolder * "/simulation/", pID)
@@ -33,17 +35,20 @@ function process_measurements(
     process_scalar_measurements(
         datafolder, 
         pID,
-        "local_energy"
+        "local_energy";
+        bins_to_avg = bins_to_avg
     )
     process_scalar_measurements(
         datafolder, 
         pID,
-        "double_occ"
+        "double_occ";
+        bins_to_avg = bins_to_avg
     )
     process_scalar_measurements(
         datafolder, 
         pID,
-        "global_density"
+        "global_density";
+        bins_to_avg = bins_to_avg
     )
     process_scalar_measurements(
         datafolder, 
@@ -55,7 +60,26 @@ function process_measurements(
         process_scalar_measurements(
             datafolder, 
             pID,
-            "local_spin-z"
+            "local_spin-z";
+            bins_to_avg = bins_to_avg
+        )
+    end
+
+    if haskey(measurement_container.simulation_measurements, "site-dependent_spin-z")
+        process_scalar_measurements(
+            datafolder, 
+            pID,
+            "site-dependent_spin-z";
+            bins_to_avg = bins_to_avg
+        )
+    end
+
+    if haskey(measurement_container.simulation_measurements, "site-dependent_density")
+        process_scalar_measurements(
+            datafolder, 
+            pID,
+            "site-dependent_density";
+            bins_to_avg = bins_to_avg
         )
     end
 
@@ -71,7 +95,8 @@ function process_measurements(
             datafolder, 
             pID,
             "density", 
-            model_geometry
+            model_geometry;
+            bins_to_avg = bins_to_avg
         )
     end
 
@@ -80,7 +105,8 @@ function process_measurements(
             datafolder, 
             pID,
             "spin", 
-            model_geometry
+            model_geometry;
+            bins_to_avg = bins_to_avg
         )
     end
 
@@ -113,7 +139,9 @@ function process_measurements(
     model_geometry::ModelGeometry
 )
     (; datafolder, pID) = simulation_info
-    # (; N_opt, N_sim) = measurement_container
+    (; N_opt, opt_bin_size) = measurement_container
+
+    bins_to_avg = div(N_opt, opt_bin_size)
 
     # merge `opt` and `sim` bins
     merge_bin_measurements!(datafolder * "/simulation/", pID)
@@ -125,17 +153,20 @@ function process_measurements(
     process_scalar_measurements(
         datafolder, 
         pID,
-        "local_energy"
+        "local_energy";
+        bins_to_avg = bins_to_avg
     )
     process_scalar_measurements(
         datafolder,
         pID, 
-        "double_occ"
+        "double_occ";
+        bins_to_avg = bins_to_avg
     )
     process_scalar_measurements(
         datafolder,
         pID, 
-        "global_density"
+        "global_density";
+        bins_to_avg = bins_to_avg
     )
     process_scalar_measurements(
         datafolder,
@@ -147,7 +178,26 @@ function process_measurements(
         process_scalar_measurements(
             datafolder,
             pID, 
-            "local_spin-z"
+            "local_spin-z";
+            bins_to_avg = bins_to_avg
+        )
+    end
+
+    if haskey(measurement_container.simulation_measurements, "site-dependent_spin-z")
+        process_scalar_measurements(
+            datafolder, 
+            pID,
+            "site-dependent_spin-z";
+            bins_to_avg = bins_to_avg
+        )
+    end
+
+    if haskey(measurement_container.simulation_measurements, "site-dependent_density")
+        process_scalar_measurements(
+            datafolder, 
+            pID,
+            "site-dependent_density";
+            bins_to_avg = bins_to_avg
         )
     end
 
@@ -164,7 +214,8 @@ function process_measurements(
             datafolder, 
             pID,
             "density", 
-            model_geometry
+            model_geometry;
+            bins_to_avg = bins_to_avg
         )
     end
 
@@ -173,7 +224,8 @@ function process_measurements(
             datafolder, 
             pID,
             "spin", 
-            model_geometry
+            model_geometry;
+            bins_to_avg = bins_to_avg
         )
     end
 
@@ -209,7 +261,9 @@ function process_measurements(
     model_geometry::ModelGeometry
 )
     (; datafolder, pID) = simulation_info
-    # (; N_opt, N_sim) = measurement_container
+    (; N_opt, opt_bin_size) = measurement_container
+
+    bins_to_avg = div(N_opt, opt_bin_size)
 
     # merge `opt` and `sim` bins
     merge_bin_measurements!(datafolder * "/simulation/", pID)
@@ -221,17 +275,20 @@ function process_measurements(
     process_scalar_measurements(
         datafolder, 
         pID,
-        "local_energy"
+        "local_energy";
+        bins_to_avg = bins_to_avg
     )
     process_scalar_measurements(
         datafolder,
         pID, 
-        "double_occ"
+        "double_occ";
+        bins_to_avg = bins_to_avg
     )
     process_scalar_measurements(
         datafolder,
         pID, 
-        "global_density"
+        "global_density";
+        bins_to_avg = bins_to_avg
     )
     process_scalar_measurements(
         datafolder,
@@ -243,7 +300,26 @@ function process_measurements(
         process_scalar_measurements(
             datafolder,
             pID, 
-            "local_spin-z"
+            "local_spin-z";
+            bins_to_avg = bins_to_avg
+        )
+    end
+
+    if haskey(measurement_container.simulation_measurements, "site-dependent_spin-z")
+        process_scalar_measurements(
+            datafolder, 
+            pID,
+            "site-dependent_spin-z";
+            bins_to_avg = bins_to_avg
+        )
+    end
+
+    if haskey(measurement_container.simulation_measurements, "site-dependent_density")
+        process_scalar_measurements(
+            datafolder, 
+            pID,
+            "site-dependent_density";
+            bins_to_avg = bins_to_avg
         )
     end
 
@@ -261,7 +337,8 @@ function process_measurements(
             datafolder, 
             pID,
             "density", 
-            model_geometry
+            model_geometry;
+            bins_to_avg = bins_to_avg
         )
     end
 
@@ -270,7 +347,8 @@ function process_measurements(
             datafolder, 
             pID,
             "spin", 
-            model_geometry
+            model_geometry;
+            bins_to_avg = bins_to_avg
         )
     end
 
@@ -283,35 +361,47 @@ end
     process_scalar_measurements( datafolder::T,
                                  pID::I,
                                  measurement::T;
-                                 N_bins::Union{I, Nothing}=nothing) where {T<:AbstractString, I<:Integer}
+                                 N_bins::Union{I, Nothing}=nothing;
+                                 bins_to_avg::Union{I, Nothing}=nothing ) where {T<:AbstractString, I<:Integer}
 
 Write binned simulation measurements to CSV.
 
 - `datafolder::T`: path to folder where simulation files are written.
 - `pID::I`: processor ID/MPI rank
-- `measurement::T`: `local_energy`, `double_occ`, `global_density`, `pconfig`, or `local_spin-z`.
+- `measurement::T`: "local_energy", "double_occ", "global_density",
+  "site-dependent_density", "pconfig", "local_spin-z", or "site-dependent_spin-z".
 - `N_bins::Union{I, Nothing}=nothing`: (optional) total number of bins.
+- `bins_to_avg::Union{I, Nothing}=nothing`: number of bins to average over when performing jackknife resampling.
 
 """
 function process_scalar_measurements(
     datafolder::T,
     pID::I,
     measurement::T,
-    N_bins::Union{I, Nothing}=nothing
+    N_bins::Union{I, Nothing}=nothing;
+    bins_to_avg::Union{I, Nothing}=nothing
 ) where {T<:AbstractString, I<:Integer}
-    sim_file = joinpath(datafolder, "simulation" ,"bin_measurements_rank-$(pID).h5")
+
+    sim_file = joinpath(datafolder, "simulation", "bin_measurements_rank-$(pID).h5")
     @assert isfile(sim_file) "HDF5 file not found: $sim_file"
-    # sim_file = joinpath(datafolder, "simulation", "simulation_measurements.h5")
-    
-    allowed = Set(["local_energy", "double_occ", "global_density", "pconfig", "local_spin-z"])
+
+    allowed = Set([
+        "local_energy",
+        "double_occ",
+        "global_density",
+        "site-dependent_density",
+        "pconfig",
+        "local_spin-z",
+        "site-dependent_spin-z"
+    ])
+    @assert measurement in allowed "Unknown measurement: $measurement"
+
     results = Vector{Any}()
 
     h5open(sim_file, "r") do f
-        # helper to form the dataset path
         path_for_bin(bin_num) = "/$measurement/bin-$bin_num"
 
         if N_bins === nothing
-            # probe bins until a bin is missing
             bin_num = 1
             while true
                 path = path_for_bin(bin_num)
@@ -334,22 +424,133 @@ function process_scalar_measurements(
         end
     end
 
-    # Post-process results into a DataFrame.
     bins = collect(1:length(results))
 
     if measurement == "local_energy"
-        # Separate real and imaginary components
-        mean_r = [real(x) for x in results]
-        mean_i = [imag(x) for x in results]
+        # Complex scalar per bin
+        mean_r = real.(results)
+        mean_i = imag.(results)
         df = DataFrame(BIN = bins, MEAN_R = mean_r, MEAN_I = mean_i)
+
+    elseif measurement in ("site-dependent_spin-z", "site-dependent_density")
+        # Vector-valued per bin (one value per site)
+        @assert all(!ismissing(r) for r in results) """
+        Missing bins are not supported for site-dependent measurements
+        """
+
+        n_sites = length(results[1])
+        @assert all(length(r) == n_sites for r in results) """
+        Inconsistent site vector lengths across bins
+        """
+
+        # bins × sites matrix
+        data = reduce(hcat, results)'
+
+        df = DataFrame(BIN = bins)
+        for s in 1:n_sites
+            df[!, Symbol("SITE_$s")] = data[:, s]
+        end
+
     else
-        mean_r = [x for x in results]
-        df = DataFrame(BIN = bins, MEAN_R = mean_r)
+        # Real scalar per bin
+        df = DataFrame(BIN = bins, MEAN_R = results)
     end
 
-    output_csv = joinpath(datafolder, "simulation", measurement*"_stats_rank-$(pID).csv")
+    output_csv = joinpath(
+        datafolder,
+        "simulation",
+        measurement * "_stats_rank-$(pID).csv"
+    )
 
     CSV.write(output_csv, df)
+
+    ## JACKKNIFE RESAMPLING OF SELECT OBSERVABLES ##
+    # allowable observables
+    jk_measurements = Set([
+        "local_energy",
+        "double_occ",
+        "global_density",
+        "local_spin-z"
+    ])
+
+    if measurement in jk_measurements
+        if measurement == "local_energy"
+            samples = real.(results)
+        else
+            samples = Float64.(results)
+        end
+
+        # collect samples
+        samples = @view samples[bins_to_avg+1:end]
+
+        # perform jackknife resampling
+        mean, err = jackknife(identity, samples)
+
+        # write to file
+        summary_file = joinpath(datafolder, "vmc_summary_rank-$(pID).csv")
+
+        summary_df = DataFrame(
+            MEASUREMENT = [measurement],
+            MEAN_R      = [mean],
+            STD         = [err]
+        )
+
+        if isfile(summary_file)
+            CSV.write(summary_file, summary_df; append=true)
+        else
+            CSV.write(summary_file, summary_df)
+        end
+    end
+
+    ## JACKKNIFE RESAMPLING FOR SITE-DEPENDENT OBSERVABLES ##
+    site_jk_measurements = Set([
+        "site-dependent_density",
+        "site-dependent_spin-z"
+    ])
+
+    if measurement in site_jk_measurements
+        n_sites = length(results[1])
+
+        # bins × sites matrix
+        data = reduce(hcat, results)'  # size: (nbins, n_sites)
+
+        # discard thermalization
+        data = @view data[bins_to_avg+1:end, :]
+
+        # output file
+        site_summary_file = joinpath(
+            datafolder,
+            "site-dependent_summary_rank-$(pID).csv"
+        )
+
+        # load existing file if present
+        if isfile(site_summary_file)
+            site_df = CSV.read(site_summary_file, DataFrame)
+        else
+            site_df = DataFrame(
+                SITE   = 1:n_sites,
+                MEAN_D = fill(NaN, n_sites),
+                STD_D  = fill(NaN, n_sites),
+                MEAN_S = fill(NaN, n_sites),
+                STD_S  = fill(NaN, n_sites)
+            )
+        end
+
+        for s in 1:n_sites
+            samples = data[:, s]
+            mean, err = jackknife(identity, samples)
+
+            if measurement == "site-dependent_density"
+                site_df.MEAN_D[s] = mean
+                site_df.STD_D[s]  = err
+            elseif measurement == "site-dependent_spin-z"
+                site_df.MEAN_S[s] = mean
+                site_df.STD_S[s]  = err
+            end
+        end
+
+        CSV.write(site_summary_file, site_df)
+    end
 
     return nothing
 end
@@ -1109,7 +1310,8 @@ end
     process_correlation_measurements( datafolder::T,
                                       pID::I
                                       correlation_type::T,
-                                      model_geometry::ModelGeometry ) where {T<:AbstractString, I<:Integer}
+                                      model_geometry::ModelGeometry;
+                                      bins_to_avg::Union{I, Nothing}=nothing ) where {T<:AbstractString, I<:Integer}
 
 For either density-density or spin-spin correlation data, calculates the static structure factor 
 ``N(\mathbf{q}) = \langle \hat{n}_{-\mathbf{q}\hat{n}_{\mathbf{q}}\rangle`` or 
@@ -1119,13 +1321,15 @@ For either density-density or spin-spin correlation data, calculates the static 
 - `pID::I`: processor ID/MPI rank
 - `correlation_type::T`: either "density" or "spin".
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
+- `bins_to_avg::Union{I, Nothing}=nothing`: number of bins to average over when performing jackknife resampling.
 
 """
 function process_correlation_measurements(
     datafolder::T,
     pID::I,
     correlation_type::T,
-    model_geometry::ModelGeometry
+    model_geometry::ModelGeometry;
+    bins_to_avg::Union{I, Nothing}=nothing
 ) where {T<:AbstractString, I<:Integer}
     unit_cell = model_geometry.unit_cell
     lattice = model_geometry.lattice
@@ -1222,6 +1426,57 @@ function process_correlation_measurements(
     # write CSV
     out_csv = joinpath(datafolder, "correlation", "$(correlation_type)_static_structure_factor_stats_rank-$(pID).csv")
     CSV.write(out_csv, df)
+
+    ## JACKKNIFE RESAMPLING OF STRUCTURE FACTORS ##
+    # Determine which columns to write
+    is_density = correlation_type == "density"
+    is_spin    = correlation_type == "spin"
+
+    # Extract q-columns as a matrix: bins × nq
+    qcols = Symbol.("q" .* string.(1:nq))
+    data = Matrix(df[:, qcols])
+
+    # discard thermalization bins
+    data = @view data[bins_to_avg+1:end, :]
+
+    # output file
+    summary_file = joinpath(
+        datafolder,
+        "structure_factor_summary_rank-$(pID).csv"
+    )
+
+    # load or initialize summary DataFrame
+    if isfile(summary_file)
+        sum_df = CSV.read(summary_file, DataFrame)
+    else
+        sum_df = DataFrame(
+            Q      = 1:nq,
+            MEAN_D = fill(NaN, nq),
+            STD_D  = fill(NaN, nq),
+            MEAN_S = fill(NaN, nq),
+            STD_S  = fill(NaN, nq)
+        )
+    end
+
+    # sanity check
+    @assert nrow(sum_df) == nq "Mismatch in number of q-points in structure factor summary"
+
+    # jackknife per q
+    for iq in 1:nq
+        samples = data[:, iq]
+        mean, err = jackknife(identity, samples)
+
+        if is_density
+            sum_df.MEAN_D[iq] = mean
+            sum_df.STD_D[iq]  = err
+        elseif is_spin
+            sum_df.MEAN_S[iq] = mean
+            sum_df.STD_S[iq]  = err
+        end
+    end
+
+    # write back
+    CSV.write(summary_file, sum_df)
 
     return nothing
 end

@@ -24,7 +24,7 @@ function run_hubbard_square_simulation(;
     N_opt_bins,             # Number of times bin-averaged measurements are written to file during optimization step.
     N_sim,                  # Number of simulation steps.
     N_sim_bins,             # Number of times bin-averaged measurements are written to file during simulation step.
-    dt = 0.03,              # Optimization rate.
+    dt = 0.1,              # Optimization rate.
     dt_J = 1.0,             # Optional boost in the Jastrow optimization rate.
     η = 1e-4,               # Optimization stablity factor.
     n_stab_W = 50,          # Green's function stabilization frequency.
@@ -45,21 +45,21 @@ function run_hubbard_square_simulation(;
         # local d-wave pairing
         Δ_d = false,
         # site-dependent d-wave pairing (Larkin-Ovchinnikov-type)
-        Δ_dlo = true,
+        Δ_dlo = false,
         # site-dependent d-wave pairing (Fulde-Ferrell-type)
         Δ_dff = false,     
         # spin-x (in-plane magnetization)
         Δ_sx = false,
         # spin-z (out-of-plane magnetization)
-        Δ_sz = false,
+        Δ_sz = true,
         # site-dependent spin density
-        Δ_ssd = true,
+        Δ_ssd = false,
         # (BCS) chemical potential
         μ = false,
         # uniform charge density 
         Δ_cdw = false,
         # site-dependent charge density
-        Δ_csd = true,
+        Δ_csd = false,
         # density-density Jastrow 
         density_J = true,
         # spin-spin Jastrow 
@@ -67,7 +67,7 @@ function run_hubbard_square_simulation(;
     )
 
     # Construct the foldername the data will be written.
-    df_prefix = @sprintf("hubbard_square_U%.2f_density%.3f_Lx%d_Ly%d_opt", U, density, Lx, Ly)
+    df_prefix = @sprintf("hubbard_rectangle_U%.2f_density%.3f_Lx%d_Ly%d_opt", U, density, Lx, Ly)
 
     # Append optimized parameter names to the foldername.
     datafolder_prefix = create_datafolder_prefix(optimize, df_prefix)
@@ -249,6 +249,22 @@ function run_hubbard_square_simulation(;
         determinantal_parameters,
         density_J_parameters,
         spin_J_parameters,
+        model_geometry
+    )
+
+    # add measurement of site-dependent Sz
+    initialize_simulation_measurement!(
+        "site-dependent",
+        "spin-z",
+        measurement_container,
+        model_geometry
+    )
+
+    # add measurement of site-dependent n
+    initialize_simulation_measurement!(
+        "site-dependent",
+        "density",
+        measurement_container,
         model_geometry
     )
 

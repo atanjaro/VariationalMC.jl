@@ -5,6 +5,7 @@ using Random
 using LinearAlgebra
 using SparseArrays
 using OrderedCollections
+using Statistics
 using Printf
 using CSV
 using HDF5
@@ -67,6 +68,8 @@ include("Measurements/correlation_measurements.jl")
 
 include("Measurements/write_measurements.jl")
 export write_measurements!
+
+include("Measurements/jackknife.jl")
 
 include("Measurements/process_measurements.jl")
 export process_measurements

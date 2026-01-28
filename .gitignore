@@ -19,3 +19,4 @@ examples/plotting.jl
 examples/hubbard_square_test_no_jastrow.jl
 
 examples/mpi_test.jl
+examples/hubbard_rectangle_test.jl

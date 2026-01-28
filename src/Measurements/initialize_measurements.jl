@@ -317,7 +317,7 @@ function initialize_simulation_measurement!(
         @assert observable == "spin-z" || "density" || observable == "spin"
         measurement_container.simulation_measurements[type * "_" * observable] = 0.0
     elseif type == "site-dependent"
-        @assert observable == "density" || observable == "spin"
+        @assert observable == "density" || observable == "spin-z"
         measurement_container.simulation_measurements[type * "_" * observable] = zeros(N)
     end
 

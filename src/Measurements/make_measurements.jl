@@ -86,15 +86,39 @@ function make_measurements!(
 
     # measure average density
     measure_n!(
+        "local",
         measurement_container, 
         detwf, 
         model_geometry,
         pht
     )
 
+    # measure site_dependent density (if added)
+    if haskey(measurement_container.simulation_measurements, "site-dependent_density")
+        measure_n!(
+            "site-dependent",
+            measurement_container, 
+            detwf, 
+            model_geometry,
+            pht
+        ) 
+    end
+
     # measure average Sz (if added)
     if haskey(measurement_container.simulation_measurements, "local_spin-z")
         measure_Sz!(
+            "local",
+            measurement_container, 
+            detwf, 
+            model_geometry,
+            pht
+        ) 
+    end
+
+    # measure site_dependent Sz (if added)
+    if haskey(measurement_container.simulation_measurements, "site-dependent_spin-z")
+        measure_Sz!(
+            "site-dependent",
             measurement_container, 
             detwf, 
             model_geometry,
@@ -227,17 +251,41 @@ function make_measurements!(
         pht
     )
 
-    # measure average density
+     # measure average density
     measure_n!(
+        "local",
         measurement_container, 
         detwf, 
         model_geometry,
         pht
     )
 
+    # measure site_dependent density (if added)
+    if haskey(measurement_container.simulation_measurements, "site-dependent_density")
+        measure_n!(
+            "site-dependent",
+            measurement_container, 
+            detwf, 
+            model_geometry,
+            pht
+        ) 
+    end
+
     # measure average Sz (if added)
     if haskey(measurement_container.simulation_measurements, "local_spin-z")
         measure_Sz!(
+            "local",
+            measurement_container, 
+            detwf, 
+            model_geometry,
+            pht
+        ) 
+    end
+
+    # measure site_dependent Sz (if added)
+    if haskey(measurement_container.simulation_measurements, "site-dependent_spin-z")
+        measure_Sz!(
+            "site-dependent",
             measurement_container, 
             detwf, 
             model_geometry,
@@ -384,15 +432,39 @@ function make_measurements!(
 
     # measure average density
     measure_n!(
+        "local",
         measurement_container, 
         detwf, 
         model_geometry,
         pht
     )
 
+    # measure site_dependent density (if added)
+    if haskey(measurement_container.simulation_measurements, "site-dependent_density")
+        measure_n!(
+            "site-dependent",
+            measurement_container, 
+            detwf, 
+            model_geometry,
+            pht
+        ) 
+    end
+
     # measure average Sz (if added)
     if haskey(measurement_container.simulation_measurements, "local_spin-z")
         measure_Sz!(
+            "local",
+            measurement_container, 
+            detwf, 
+            model_geometry,
+            pht
+        ) 
+    end
+
+    # measure site_dependent Sz (if added)
+    if haskey(measurement_container.simulation_measurements, "site-dependent_spin-z")
+        measure_Sz!(
+            "site-dependent",
             measurement_container, 
             detwf, 
             model_geometry,
@@ -478,15 +550,39 @@ function make_measurements!(
 
     # measure average density
     measure_n!(
+        "local",
         measurement_container, 
         detwf, 
         model_geometry,
         pht
     )
 
+    # measure site_dependent density (if added)
+    if haskey(measurement_container.simulation_measurements, "site-dependent_density")
+        measure_n!(
+            "site-dependent",
+            measurement_container, 
+            detwf, 
+            model_geometry,
+            pht
+        ) 
+    end
+
     # measure average Sz (if added)
     if haskey(measurement_container.simulation_measurements, "local_spin-z")
         measure_Sz!(
+            "local",
+            measurement_container, 
+            detwf, 
+            model_geometry,
+            pht
+        ) 
+    end
+
+    # measure site_dependent Sz (if added)
+    if haskey(measurement_container.simulation_measurements, "site-dependent_spin-z")
+        measure_Sz!(
+            "site-dependent",
             measurement_container, 
             detwf, 
             model_geometry,
@@ -579,15 +675,39 @@ function make_measurements!(measurement_container::NamedTuple,
 
     # measure average density
     measure_n!(
+        "local",
         measurement_container, 
         detwf, 
         model_geometry,
         pht
     )
 
+    # measure site_dependent density (if added)
+    if haskey(measurement_container.simulation_measurements, "site-dependent_density")
+        measure_n!(
+            "site-dependent",
+            measurement_container, 
+            detwf, 
+            model_geometry,
+            pht
+        ) 
+    end
+
     # measure average Sz (if added)
     if haskey(measurement_container.simulation_measurements, "local_spin-z")
         measure_Sz!(
+            "local",
+            measurement_container, 
+            detwf, 
+            model_geometry,
+            pht
+        ) 
+    end
+
+    # measure site_dependent Sz (if added)
+    if haskey(measurement_container.simulation_measurements, "site-dependent_spin-z")
+        measure_Sz!(
+            "site-dependent",
             measurement_container, 
             detwf, 
             model_geometry,
@@ -688,15 +808,39 @@ function make_measurements!(measurement_container::NamedTuple,
 
     # measure average density
     measure_n!(
+        "local",
         measurement_container, 
         detwf, 
         model_geometry,
         pht
     )
 
+    # measure site_dependent density (if added)
+    if haskey(measurement_container.simulation_measurements, "site-dependent_density")
+        measure_n!(
+            "site-dependent",
+            measurement_container, 
+            detwf, 
+            model_geometry,
+            pht
+        ) 
+    end
+
     # measure average Sz (if added)
     if haskey(measurement_container.simulation_measurements, "local_spin-z")
         measure_Sz!(
+            "local",
+            measurement_container, 
+            detwf, 
+            model_geometry,
+            pht
+        ) 
+    end
+
+    # measure site_dependent Sz (if added)
+    if haskey(measurement_container.simulation_measurements, "site-dependent_spin-z")
+        measure_Sz!(
+            "site-dependent",
             measurement_container, 
             detwf, 
             model_geometry,

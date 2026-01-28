@@ -74,7 +74,7 @@ function write_measurements!(
             attrs(f)["proc_id"]    = pID
         end
 
-        expected = ["global_density", "double_occ", "local_energy", "pconfig", "local_spin-z"]
+        expected = ["global_density", "site-dependent_density", "double_occ", "local_energy", "pconfig", "local_spin-z", "site-dependent_spin-z"]
         for key in expected
             if haskey(simulation_measurements, key)
                 data = simulation_measurements[key]

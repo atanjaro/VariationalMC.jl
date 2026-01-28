@@ -1,7 +1,7 @@
 name = "VariationalMC"
 uuid = "519ac81d-5865-4374-9f64-28b66ac9043d"
 authors = ["Andy Tanjaroon Ly"]
-version = "1.0.0-BETA"
+version = "1.0.5-BETA"
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
@@ -23,6 +23,7 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [compat]
 CSV = "0.10.15"
