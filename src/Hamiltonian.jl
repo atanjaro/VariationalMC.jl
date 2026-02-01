@@ -1089,58 +1089,33 @@ function add_spin_order!(
         L = model_geometry.lattice.L
         nshifts = L[1]
 
-        # --- precompute staggering signs ---
-        stag = Vector{Int8}(undef, twoN)
-        if dims == 1
-            @inbounds for s in 1:twoN
-                ix = locs[s]
-                stag[s] = isodd(ix) ? Int8(-1) : Int8(1)
-            end
-        else
-            @inbounds for s in 1:twoN
-                (ix, iy) = locs[s]
-                stag[s] = isodd(ix + iy) ? Int8(-1) : Int8(1)
-            end
-        end
-
-        # reusable buffer
-        ssd_vec = Vector{Int8}(undef, twoN)
-        fill!(ssd_vec, 0)
-
         for shift in 0:(nshifts - 1)
 
-            # fill pattern + signs in one pass
-            @inbounds begin
-                k = 0
-                while true
-                    idx = shift + 1 + k * L[1]
-                    idx > twoN && break
+            ssd_vec = Vector{Int8}(undef, twoN)
+            fill!(ssd_vec, 0)
 
-                    v = stag[idx]
-                    if pht && idx > N
-                        v = -v
-                    end
+            # stride-based index fill
+            @inbounds for idx in (1 + shift):L[1]:twoN
+                ssd_vec[idx] = 1
+            end
 
-                    ssd_vec[idx] = v
-                    k += 1
-                end
+            # change sign for the spin-down sector
+            if pht == false
+                ssd_vec[N+1:twoN] *=- 1.0                
+            end
+
+            # apply phase shift
+            @inbounds for s in 1:twoN
+                (ix, iy) = locs[s]
+                v = isodd(ix + iy) ? Int8(-1) : Int8(1)
+
+                ssd_vec[s]     *= v
             end
 
             V_ssd = LinearAlgebra.Diagonal(ssd_vec)
             push!(H_vpars, V_ssd)
             if optimize.Δ_ssd
                 push!(V, V_ssd)
-            end
-
-            # clear only touched entries
-            @inbounds begin
-                k = 0
-                while true
-                    idx = shift + 1 + k * L[1]
-                    idx > twoN && break
-                    ssd_vec[idx] = 0
-                    k += 1
-                end
             end
         end
     end
@@ -1239,32 +1214,9 @@ function add_charge_order!(
                 csd_vec[idx] = 1
             end
 
-            if dims == 1
-                if pht
-                    @inbounds for s in 1:twoN
-                        ix = locs[s]
-                        stag = isodd(ix) ? Int8(-1) : Int8(1)
-                        csd_vec[s] *= (s > N ? -stag : stag)
-                    end
-                else
-                    @inbounds for s in 1:twoN
-                        ix = locs[s]
-                        csd_vec[s] *= isodd(ix) ? Int8(-1) : Int8(1)
-                    end
-                end
-            else
-                if pht
-                    @inbounds for s in 1:twoN
-                        (ix, iy) = locs[s]
-                        stag = isodd(ix + iy) ? Int8(-1) : Int8(1)
-                        csd_vec[s] *= (s > N ? -stag : stag)
-                    end
-                else
-                    @inbounds for s in 1:twoN
-                        (ix, iy) = locs[s]
-                        csd_vec[s] *= isodd(ix + iy) ? Int8(-1) : Int8(1)
-                    end
-                end
+            # change sign for the spin-down sector
+            if pht == false
+                csd_vec[N+1:twoN] *=- 1.0                
             end
 
             V_csd = LinearAlgebra.Diagonal(csd_vec)

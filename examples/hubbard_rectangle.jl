@@ -112,6 +112,7 @@ function run_hubbard_square_simulation(;
     metadata["n_stab_W"] = n_stab_W
     metadata["n_stab_T"] = n_stab_T
     metadata["dt"] = dt 
+    metadata["seed"] = seed
     metadata["acceptance_rate"] = 0.0
     metadata["opt_time"] = 0.0
     metadata["sim_time"] = 0.0
