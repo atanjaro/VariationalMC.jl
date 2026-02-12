@@ -50,21 +50,13 @@ function propose_random_move(
 ) where {I<:Integer}
     # create nearest neighbor table
     nbr_table = build_neighbor_table(
-        model_geometry.bond[1],
+        model_geometry.bond,
         model_geometry.unit_cell,
         model_geometry.lattice
     )
 
     # map nearest neighbor table to dictionary of bonds and neighbors                                
-    nbr_map = map_neighbor_table(nbr_table)
-
-    # # checks for next nearest neighbors
-    # if length(bonds) == 2
-    #     nbr_table_p = build_neighbor_table(model_geometry.bond[2],
-    #                                       model_geometry.unit_cell,
-    #                                       model_geometry.lattice)
-    #     nbr_map_p = map_neighbor_table(nbr_table_p)
-    # end
+    nbr_map = map_neighbor_table(nbr_table) 
 
     # select a random particle
     β = rand(rng, 1:Np)

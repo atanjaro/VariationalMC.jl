@@ -1,7 +1,7 @@
 name = "VariationalMC"
 uuid = "519ac81d-5865-4374-9f64-28b66ac9043d"
 authors = ["Andy Tanjaroon Ly"]
-version = "1.0.6-BETA"
+version = "1.0.7-BETA"
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"

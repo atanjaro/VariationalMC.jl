@@ -297,8 +297,8 @@ function build_variational_hamiltonian(
     bonds = model_geometry.bond
    
     # initialize Hamiltonian and operator matrices
-    H_vpars = Vector{Matrix{AbstractFloat}}()
-    V       = Vector{Matrix{AbstractFloat}}()
+    H_vpars = Vector{Matrix{Complex}}()
+    V       = Vector{Matrix{Complex}}()
 
     # get all determinantal parameters
     pars = determinantal_parameters.det_pars
