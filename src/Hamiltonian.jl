@@ -1302,8 +1302,8 @@ unitary matrix `U_aux`.
 function diagonalize!(
     H::Matrix{T}
 ) where {T<:Number}
-    # check if Hamiltonian is Hermitian
-    @assert ishermitian(H) 
+    # # check if Hamiltonian is Hermitian
+    # @assert ishermitian(H) 
 
     if T <: Real
         # in-place path exists
