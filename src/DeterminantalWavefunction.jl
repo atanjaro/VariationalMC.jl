@@ -14,7 +14,7 @@ A type defining quantities related to a determinantal wavefunction.
 - `nq_updates_W::I`: tracker for the number for quick updates to the W matrix.
 
 """
-mutable struct DeterminantalWavefunction{T<:Number, Q, E<:AbstractFloat, I<:Integer}
+mutable struct DeterminantalWavefunction{T<:Number, Q, E<:Number, I<:Integer}
     # equal-time Green's function
     W::Matrix{T}
 
@@ -60,7 +60,7 @@ of twist angles.
 - `nq_updates_W::I`: tracker for the number for quick updates to the W matrix.
 
 """
-mutable struct DeterminantalWavefunctionTABC{T<:Number, Q, E<:AbstractFloat, I<:Integer}
+mutable struct DeterminantalWavefunctionTABC{T<:Number, Q, E<:Number, I<:Integer}
     # equal-time Green's functions
     W_θ::Vector{Matrix{T}}
 

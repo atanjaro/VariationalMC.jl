@@ -18,13 +18,13 @@ Calculates the local variational energy ``E_{\mathrm{var}}`` per site for a Hubb
 
 """
 function get_local_energy(
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    tight_binding_model::TightBindingModel{E}, 
+    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    tight_binding_model::TightBindingModel{E2}, 
     model_geometry::ModelGeometry, 
-    U::E,
+    U::E2,
     Np::I, 
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
     # number of lattice sites
     N = model_geometry.lattice.N
 
@@ -76,15 +76,15 @@ Calculates the local variational energy ``E_{\mathrm{var}}`` per site for a Hubb
 
 """
 function get_local_energy(
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    tight_binding_model::TightBindingModel{E}, 
+    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    tight_binding_model::TightBindingModel{E2}, 
     jastrow_parameters::JastrowParameters{S, K, V, I},
-    jastrow_factor::JastrowFactor{E}, 
+    jastrow_factor::JastrowFactor{E2}, 
     model_geometry::ModelGeometry, 
-    U::E,
+    U::E2,
     Np::I, 
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
     # number of lattice sites
     N = model_geometry.lattice.N
 
@@ -137,17 +137,17 @@ Calculates the local variational energy ``E_{\mathrm{var}}`` per site for a Hubb
 
 """
 function get_local_energy(
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    tight_binding_model::TightBindingModel{E}, 
+    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    tight_binding_model::TightBindingModel{E2}, 
     jastrow_parameters_1::JastrowParameters{S, K, V, I},
     jastrow_parameters_2::JastrowParameters{S, K, V, I},
-    jastrow_factor_1::JastrowFactor{E},
-    jastrow_factor_2::JastrowFactor{E}, 
+    jastrow_factor_1::JastrowFactor{E2},
+    jastrow_factor_2::JastrowFactor{E2}, 
     model_geometry::ModelGeometry, 
-    U::E,
+    U::E2,
     Np::I, 
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
     # number of lattice sites
     N = model_geometry.lattice.N
 
@@ -192,12 +192,12 @@ Calculates the local kinetic energy ``E_{\mathrm{kin}}`` .
 
 """
 function get_local_kinetic_energy(
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    tight_binding_model::TightBindingModel{E}, 
+    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    tight_binding_model::TightBindingModel{E2}, 
     model_geometry::ModelGeometry, 
     Np::I, 
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
     dims = length(model_geometry.lattice.L)
     Lx   = model_geometry.lattice.L[1]
     if dims != 1
@@ -329,14 +329,14 @@ Calculates the local kinetic energy ``E_{\mathrm{kin}}`` .
 
 """
 function get_local_kinetic_energy(
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    tight_binding_model::TightBindingModel{E}, 
+    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    tight_binding_model::TightBindingModel{E2}, 
     jastrow_parameters::JastrowParameters{S, K, V, I}, 
-    jastrow_factor::JastrowFactor{E},
+    jastrow_factor::JastrowFactor{E2},
     model_geometry::ModelGeometry, 
     Np::I, 
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
     dims = length(model_geometry.lattice.L)
     Lx   = model_geometry.lattice.L[1]
     if dims != 1
@@ -493,16 +493,16 @@ Calculates the local kinetic energy ``E_{\mathrm{kin}}`` .
 
 """
 function get_local_kinetic_energy(
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    tight_binding_model::TightBindingModel{E}, 
+    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    tight_binding_model::TightBindingModel{E2}, 
     jastrow_parameters_1::JastrowParameters{S, K, V, I},
     jastrow_parameters_2::JastrowParameters{S, K, V, I}, 
-    jastrow_factor_1::JastrowFactor{E},
-    jastrow_factor_2::JastrowFactor{E},
+    jastrow_factor_1::JastrowFactor{E2},
+    jastrow_factor_2::JastrowFactor{E2},
     model_geometry::ModelGeometry, 
     Np::I, 
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
     dims = length(model_geometry.lattice.L)
     Lx   = model_geometry.lattice.L[1]
     if dims != 1
@@ -670,11 +670,11 @@ Calculates the energy due to on-site Hubbard interaction ``U``.
 
 """
 function get_local_hubbard_energy(
-    U::E, 
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
+    U::E1, 
+    detwf::DeterminantalWavefunction{T, Q, E2, I}, 
     model_geometry::ModelGeometry, 
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+) where {E1<:AbstractFloat, T<:Number, Q, E2<:Number, I<:Integer}
     # number of sites
     N = model_geometry.lattice.N
         
@@ -711,7 +711,7 @@ function get_double_occ(
     detwf::DeterminantalWavefunction{T, Q, E, I}, 
     model_geometry::ModelGeometry, 
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+) where {T<:Number, Q, E<:Number, I<:Integer}
     N = model_geometry.lattice.N
 
     nup_ndn = 0.0
@@ -745,7 +745,7 @@ function get_n(
     detwf::DeterminantalWavefunction{T, Q, E, I}, 
     model_geometry::ModelGeometry,
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+) where {T<:Number, Q, E<:Number, I<:Integer}
     total_occ = 0.0
     N = model_geometry.lattice.N
 
@@ -781,7 +781,7 @@ function get_Sz(
     detwf::DeterminantalWavefunction{T, Q, E, I}, 
     model_geometry::ModelGeometry,
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+) where {T<:Number, Q, E<:Number, I<:Integer}
     total_Sz = 0.0
     N = model_geometry.lattice.N
 

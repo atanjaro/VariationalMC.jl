@@ -93,12 +93,12 @@ Green's function is replaced by one calculated from scratch.
 """
 function update_equal_time_greens!(
     markov_move::MarkovMove{I}, 
-    detwf::DeterminantalWavefunction{T, V, E, I}, 
+    detwf::DeterminantalWavefunction{T, V, E1, I}, 
     model_geometry::ModelGeometry,
     Np::I, 
     n_stab_W::I, 
-    δW::E
-) where {I<:Integer, T<:Number, V, E<:AbstractFloat}
+    δW::E2
+) where {I<:Integer, T<:Number, V, E1<:Number, E2<:AbstractFloat}
     if detwf.nq_updates_W >= n_stab_W
         @debug """
         Greens::update_equal_greens!() : 
@@ -203,7 +203,7 @@ Performs an in-place rank-1 update of the equal-time Green's function.
 function rank1_update!(
     markov_move::MarkovMove{I}, 
     detwf::DeterminantalWavefunction{T, V, E, I}
-) where {I<:Integer, T<:Number, V, E<:AbstractFloat}
+) where {I<:Integer, T<:Number, V, E<:Number}
     # particle 
     β = markov_move.particle
 
@@ -310,7 +310,7 @@ Checks floating point error accumulation in the equal-time Green's function.
 function check_deviation(
     detwf::DeterminantalWavefunction{T, V, E, I}, 
     Wᵣ::Matrix{T}
-) where {T<:Number, V, E<:AbstractFloat, I<:Integer} 
+) where {T<:Number, V, E<:Number, I<:Integer} 
     @assert size(detwf.W) == size(Wᵣ)
 
     exact_square_sum = sum(abs2, detwf.W)

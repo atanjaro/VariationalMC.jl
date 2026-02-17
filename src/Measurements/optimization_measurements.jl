@@ -25,7 +25,7 @@ function measure_Δk!(
     optimize::NamedTuple,
     model_geometry::ModelGeometry, 
     Np::I
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+) where {T<:Number, Q, E<:Number, I<:Integer}
     # calculate variational parameter derivatives
     Δk_current = get_Δk(
         optimize, 
@@ -75,7 +75,7 @@ function measure_Δk!(
     model_geometry::ModelGeometry, 
     Np::I, 
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+) where {T<:Number, Q, E<:Number, I<:Integer, S<:AbstractString, K, V}
     # calculate determinantal parameter derivatives
     Δk_determinantal = get_Δk(
         optimize, 
@@ -140,7 +140,7 @@ function measure_Δk!(
     model_geometry::ModelGeometry, 
     Np::I, 
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+) where {T<:Number, Q, E<:Number, I<:Integer, S<:AbstractString, K, V}
     # calculate determinantal parameter derivatives
     Δk_determinantal = get_Δk(
         optimize, 
@@ -203,7 +203,7 @@ function measure_ΔkΔkp!(
     optimize::NamedTuple,
     model_geometry::ModelGeometry, 
     Np::I
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+) where {T<:Number, Q, E<:Number, I<:Integer}
     # calculate variational parameter derivatives
     Δk = get_Δk(
         optimize, 
@@ -255,7 +255,7 @@ function measure_ΔkΔkp!(
     model_geometry::ModelGeometry, 
     Np::I, 
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+) where {T<:Number, Q, E<:Number, I<:Integer, S<:AbstractString, K, V}
     # calculate determinantal parameter derivatives
     Δk_determinantal = get_Δk(
         optimize, 
@@ -322,7 +322,7 @@ function measure_ΔkΔkp!(
     model_geometry::ModelGeometry, 
     Np::I, 
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+) where {T<:Number, Q, E<:Number, I<:Integer, S<:AbstractString, K, V}
     # calculate determinantal parameter derivatives
     Δk_determinantal = get_Δk(
         optimize, 
@@ -389,15 +389,15 @@ writes them to the measurement container.
 """
 function measure_ΔkE!(
     measurement_container::NamedTuple, 
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    tight_binding_model::TightBindingModel{E}, 
+    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    tight_binding_model::TightBindingModel{E2}, 
     determinantal_parameters::DeterminantalParameters{I}, 
     optimize::NamedTuple,
     model_geometry::ModelGeometry, 
-    U::E,
+    U::E2,
     Np::I, 
     pht::Bool
-)where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+)where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
     # calculate variational parameter derivatives
     Δk = get_Δk(
         optimize, 
@@ -459,17 +459,17 @@ writes them to the measurement container.
 """
 function measure_ΔkE!(
     measurement_container::NamedTuple, 
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    tight_binding_model::TightBindingModel{E}, 
+    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    tight_binding_model::TightBindingModel{E2}, 
     determinantal_parameters::DeterminantalParameters{I}, 
     jastrow_parameters::JastrowParameters{S, K, V, I}, 
-    jastrow_factor::JastrowFactor{E, I},
+    jastrow_factor::JastrowFactor{E2, I},
     optimize::NamedTuple,
     model_geometry::ModelGeometry, 
-    U::E,
+    U::E2,
     Np::I, 
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
     # calculate determinantal parameter derivatives
     Δk_determinantal = get_Δk(
         optimize, 
@@ -549,19 +549,19 @@ writes them to the measurement container.
 """
 function measure_ΔkE!(
     measurement_container::NamedTuple, 
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    tight_binding_model::TightBindingModel{E}, 
+    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    tight_binding_model::TightBindingModel{E2}, 
     determinantal_parameters::DeterminantalParameters{I}, 
     jastrow_parameters_1::JastrowParameters{S, K, V, I},
     jastrow_parameters_2::JastrowParameters{S, K, V, I}, 
-    jastrow_factor_1::JastrowFactor{E, I},
-    jastrow_factor_2::JastrowFactor{E, I},
+    jastrow_factor_1::JastrowFactor{E2, I},
+    jastrow_factor_2::JastrowFactor{E2, I},
     optimize::NamedTuple,
     model_geometry::ModelGeometry, 
-    U::E,
+    U::E2,
     Np::I, 
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
     # calculate determinantal parameter derivatives
     Δk_determinantal = get_Δk(
         optimize, 

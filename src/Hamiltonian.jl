@@ -1365,13 +1365,13 @@ where ``\eta > N_p`` and ``\nu \leq N_p``.
 
 """
 function get_variational_matrices(
-    ptmask::Matrix{E},
-    V::Vector{Matrix{T1}}, 
-    U_aux::Matrix{T2}, 
-    ε::Vector{E}, 
+    ptmask::Matrix{T1},
+    V::Vector{Matrix{T2}}, 
+    U_aux::Matrix{T3}, 
+    ε::Vector{T4}, 
     Np::I,
     N::I
-) where {T1<:Number, T2<:Number, E<:AbstractFloat, I<:Integer}
+) where {T1<:Number, T2<:Number, T3<:Number, T4<:Number, I<:Integer}
     # ### OLD ALGORTHIM ###
     # # populate perturbation mask
     # for η in 1:2*N

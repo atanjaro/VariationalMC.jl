@@ -27,15 +27,15 @@ Also records the current particle configuration ``|x\rangle``.
 """
 function make_measurements!(
     measurement_container::NamedTuple, 
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    tight_binding_model::TightBindingModel{E}, 
+    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    tight_binding_model::TightBindingModel{E2}, 
     determinantal_parameters::DeterminantalParameters{I}, 
     optimize::NamedTuple,
     model_geometry::ModelGeometry,
-    U::E,
+    U::E2,
     Np::I, 
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
     # measure the energy
     measure_local_energy!(
         measurement_container, 
@@ -184,17 +184,17 @@ Also records the current particle configuration ``|x\rangle``.
 """
 function make_measurements!(
     measurement_container::NamedTuple, 
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    tight_binding_model::TightBindingModel{E}, 
+    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    tight_binding_model::TightBindingModel{E2}, 
     determinantal_parameters::DeterminantalParameters{I},
     jastrow_parameters::JastrowParameters{S, K, V, I},
-    jastrow_factor::JastrowFactor{E, I},  
+    jastrow_factor::JastrowFactor{E2, I},  
     optimize::NamedTuple,
     model_geometry::ModelGeometry,
-    U::E,
+    U::E2,
     Np::I, 
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
     # measure the energy
     measure_local_energy!(
         measurement_container, 
@@ -355,19 +355,19 @@ Also records the current particle configuration ``|x\rangle``.
 """
 function make_measurements!(
     measurement_container::NamedTuple, 
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    tight_binding_model::TightBindingModel{E}, 
+    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    tight_binding_model::TightBindingModel{E2}, 
     determinantal_parameters::DeterminantalParameters{I},
     jastrow_parameters_1::JastrowParameters{S, K, V, I},
     jastrow_parameters_2::JastrowParameters{S, K, V, I},
-    jastrow_factor_1::JastrowFactor{E, I},
-    jastrow_factor_2::JastrowFactor{E, I}, 
+    jastrow_factor_1::JastrowFactor{E2, I},
+    jastrow_factor_2::JastrowFactor{E2, I}, 
     optimize::NamedTuple,
     model_geometry::ModelGeometry,
-    U::E,
+    U::E2,
     Np::I, 
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
     # measure the energy
     measure_local_energy!(
         measurement_container, 
@@ -522,13 +522,13 @@ Also records the current particle configuration ``|x\rangle``.
 """
 function make_measurements!(
     measurement_container::NamedTuple, 
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    tight_binding_model::TightBindingModel{E}, 
+    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    tight_binding_model::TightBindingModel{E2}, 
     model_geometry::ModelGeometry, 
-    U::E,
+    U::E2,
     Np::I, 
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
     # measure the local energy
     measure_local_energy!(
         measurement_container, 
@@ -643,15 +643,15 @@ Also records the current particle configuration ``|x\rangle``.
 
 """
 function make_measurements!(measurement_container::NamedTuple, 
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    tight_binding_model::TightBindingModel{E},
+    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    tight_binding_model::TightBindingModel{E2},
     jastrow_parameters::JastrowParameters{S, K, V, I},
-    jastrow_factor::JastrowFactor{E},  
+    jastrow_factor::JastrowFactor{E2},  
     model_geometry::ModelGeometry, 
-    U::E,
+    U::E2,
     Np::I, 
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
     # measure the local energy
     measure_local_energy!(
         measurement_container, 
@@ -772,17 +772,17 @@ Also records the current particle configuration ``|x\rangle``.
 
 """
 function make_measurements!(measurement_container::NamedTuple, 
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    tight_binding_model::TightBindingModel{E},
+    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    tight_binding_model::TightBindingModel{E2},
     jastrow_parameters_1::JastrowParameters{S, K, V, I},
     jastrow_parameters_2::JastrowParameters{S, K, V, I},
-    jastrow_factor_1::JastrowFactor{E},
-    jastrow_factor_2::JastrowFactor{E},  
+    jastrow_factor_1::JastrowFactor{E2},
+    jastrow_factor_2::JastrowFactor{E2},  
     model_geometry::ModelGeometry, 
-    U::E,
+    U::E2,
     Np::I, 
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
     # measure the local energy
     measure_local_energy!(
         measurement_container, 

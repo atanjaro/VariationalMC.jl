@@ -41,6 +41,10 @@ function optimize_parameters!(
         opt_bin_size
     )
 
+    # strictly real
+    S = real(S)
+    f = real(f)
+
     # solve for variation in the parameters
     δvpars = (S + η * LinearAlgebra.I(size(S,1))) \ f  
 
@@ -119,6 +123,10 @@ function optimize_parameters!(
         opt_bin_size
     )
 
+    # strictly real
+    S = real(S)
+    f = real(f)
+
     # solve for variation in the parameters
     δvpars = (S + η * LinearAlgebra.I(size(S,1))) \ f  
 
@@ -196,13 +204,17 @@ function optimize_parameters!(
     S = get_covariance_matrix(
         measurement_container, 
         opt_bin_size
-    ) 
+    )
 
     # get f vector
     f = get_force_vector(
         measurement_container, 
         opt_bin_size
     )
+
+    # strictly real
+    S = real(S)
+    f = real(f)
 
     # solve for variation in the parameters
     δvpars = (S + η * LinearAlgebra.I(size(S,1))) \ f  
@@ -264,7 +276,7 @@ function get_Δk(
     detwf::DeterminantalWavefunction{T, V, E, I}, 
     model_geometry::ModelGeometry, 
     Np::I
-) where {I<:Integer, T<:Number, V, E<:AbstractFloat}
+) where {I<:Integer, T<:Number, V, E<:Number}
     # number of lattice sites
     N = model_geometry.unit_cell.n * model_geometry.lattice.N
 
@@ -275,7 +287,7 @@ function get_Δk(
     num_det_pars = determinantal_parameters.num_det_pars
 
     # resultant derivatives
-    result = zeros(Float64, num_det_pars)
+    result = zeros(E, num_det_pars)
 
     @assert any(values(optimize))
     G = zeros(Complex, 2*N, 2*N)
@@ -334,7 +346,7 @@ function get_Δk(
     detwf::DeterminantalWavefunction{Q, F, E, I}, 
     model_geometry::ModelGeometry,
     pht::Bool
-) where {T<:AbstractString, K, V, I<:Integer, Q<:Number, F, E<:AbstractFloat}
+) where {T<:AbstractString, K, V, I<:Integer, Q<:Number, F, E<:Number}
     # total number of sites
     N = model_geometry.lattice.N
 
@@ -429,7 +441,7 @@ function get_force_vector(
     opt_bin_size::I
 ) where {I<:Integer}
     # initialize force vector
-    f = Float64[]
+    f = []
 
     # measure local parameters derivatives ⟨Δₖ⟩ for the current bin
     Δk = measurement_container.optimization_measurements["Δk"]/opt_bin_size

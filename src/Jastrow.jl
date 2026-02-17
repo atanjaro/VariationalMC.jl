@@ -42,7 +42,7 @@ function get_jastrow_factor(
     detwf::DeterminantalWavefunction{T, Q, E, I}, 
     model_geometry::ModelGeometry, 
     pht::Bool
-) where {S<:AbstractString, K, V, I<:Integer, T<:Number, Q, E<:AbstractFloat}
+) where {S<:AbstractString, K, V, I<:Integer, T<:Number, Q, E<:Number}
     # extent of the lattice
     N = model_geometry.lattice.N
 
@@ -97,7 +97,7 @@ function get_fermionic_Tvec(
     detwf::DeterminantalWavefunction{T, Q, E, I}, 
     N::I,
     pht::Bool
-) where {S<:AbstractString, I<:Integer, T<:Number, Q, E<:AbstractFloat}
+) where {S<:AbstractString, I<:Integer, T<:Number, Q, E<:Number}
     # initialize T vector
     Tvec_f = zeros(N) 
 

@@ -18,7 +18,7 @@ function measure_density_correlation!(
     detwf::DeterminantalWavefunction{T, Q, E, I},
     model_geometry::ModelGeometry,
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+) where {T<:Number, Q, E<:Number, I<:Integer}
     # get site-dependent density
     n = get_site_dependent_n(detwf, model_geometry, pht)
 
@@ -52,7 +52,7 @@ function measure_spin_correlation!(
     detwf::DeterminantalWavefunction{T, Q, E, I},
     model_geometry::ModelGeometry,
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+) where {T<:Number, Q, E<:Number, I<:Integer}
     # get site-dependent spin
     s = get_site_dependent_s(detwf, model_geometry, pht)
 
@@ -83,7 +83,7 @@ function get_site_dependent_n(
     detwf::DeterminantalWavefunction{T, Q, E, I}, 
     model_geometry::ModelGeometry,
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+) where {T<:Number, Q, E<:Number, I<:Integer}
     # number of lattice sites
     N = model_geometry.lattice.N
 
@@ -122,7 +122,7 @@ function get_site_dependent_s(
     detwf::DeterminantalWavefunction{T, Q, E, I},
     model_geometry::ModelGeometry,
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+) where {T<:Number, Q, E<:Number, I<:Integer}
     # number of lattice sites
     N = model_geometry.lattice.N
 

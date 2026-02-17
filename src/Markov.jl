@@ -20,13 +20,13 @@ by the Meteropolis algorithm.
 
 """
 function local_fermion_update!(
-    detwf::DeterminantalWavefunction{T, V, E, I},
+    detwf::DeterminantalWavefunction{T, V, E1, I},
     Np::I, 
     model_geometry::ModelGeometry, 
     n_stab_W::I,
-    δW::E, 
+    δW::E2, 
     rng::AbstractRNG
-) where {T<:Number, V, E<:AbstractFloat, I<:Integer}
+) where {T<:Number, V, E1<:Number, I<:Integer, E2<:AbstractFloat}
     acceptances = 0.0
     rejections = 0.0
 
@@ -97,18 +97,18 @@ by the Meteropolis algorithm.
 
 """
 function local_fermion_update!(
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    jastrow_factor::JastrowFactor{E}, 
+    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    jastrow_factor::JastrowFactor{E2}, 
     jastrow_parameters::JastrowParameters{S, K, V, I}, 
     Np::I, 
     model_geometry::ModelGeometry, 
     pht::Bool, 
     n_stab_W::I,
     n_stab_T::I,
-    δW::E, 
-    δT::E, 
+    δW::E2, 
+    δT::E2, 
     rng::AbstractRNG
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
     acceptances = 0.0
     rejections = 0.0
 
@@ -187,9 +187,9 @@ by the Meteropolis algorithm.
 
 """
 function local_fermion_update!(
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    jastrow_factor_1::JastrowFactor{E}, 
-    jastrow_factor_2::JastrowFactor{E},
+    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    jastrow_factor_1::JastrowFactor{E2}, 
+    jastrow_factor_2::JastrowFactor{E2},
     jastrow_parameters_1::JastrowParameters{S, K, V, I},  
     jastrow_parameters_2::JastrowParameters{S, K, V, I}, 
     Np::I, 
@@ -197,10 +197,10 @@ function local_fermion_update!(
     pht::Bool, 
     n_stab_W::I,
     n_stab_T::I,
-    δW::E, 
-    δT::E, 
+    δW::E2, 
+    δT::E2, 
     rng::AbstractRNG
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
     acceptances = 0.0
     rejections = 0.0
 
@@ -266,13 +266,13 @@ Attempts to move particle ``\beta`` at lattice site ``k`` to a randomly selected
 
 """
 function metropolis_step(
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
+    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
     Np::I, 
     n_stab_W::I, 
-    δW::E,
+    δW::E2,
     model_geometry::ModelGeometry, 
     rng::AbstractRNG
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
     # propose a random move
     markov_move = propose_random_move(
         Np, 
@@ -373,18 +373,18 @@ Attempts to move particle ``\beta`` at lattice site ``k`` to a randomly selected
 
 """
 function metropolis_step(
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    jastrow_factor::JastrowFactor{E}, 
+    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    jastrow_factor::JastrowFactor{E2}, 
     jastrow_parameters::JastrowParameters{S, K, V, I}, 
     Np::I, 
     n_stab_W::I, 
     n_stab_T::I, 
-    δW::E, 
-    δT::E, 
+    δW::E2, 
+    δT::E2, 
     model_geometry::ModelGeometry, 
     pht::Bool, 
     rng::AbstractRNG
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
     # propose a random move
     markov_move = propose_random_move(
         Np, 
@@ -510,20 +510,20 @@ Attempts to move particle ``\beta`` at lattice site ``k`` to a randomly selected
 
 """
 function metropolis_step(
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    jastrow_factor_1::JastrowFactor{E},  
-    jastrow_factor_2::JastrowFactor{E}, 
+    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    jastrow_factor_1::JastrowFactor{E2},  
+    jastrow_factor_2::JastrowFactor{E2}, 
     jastrow_parameters_1::JastrowParameters{S, K, V, I},
     jastrow_parameters_2::JastrowParameters{S, K, V, I}, 
     Np::I, 
     n_stab_W::I, 
     n_stab_T::I, 
-    δW::E, 
-    δT::E, 
+    δW::E2, 
+    δT::E2, 
     model_geometry::ModelGeometry, 
     pht::Bool, 
     rng::AbstractRNG
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
     # propose a random move
     markov_move = propose_random_move(
         Np, 

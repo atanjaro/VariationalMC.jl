@@ -21,13 +21,13 @@ Measures the total local energy ``E_{\mathrm{loc}}`` for a Hubbard model and wri
 """
 function measure_local_energy!(
     measurement_container::NamedTuple, 
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    tight_binding_model::TightBindingModel{E}, 
+    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    tight_binding_model::TightBindingModel{E2}, 
     model_geometry::ModelGeometry, 
-    U::E,
+    U::E2,
     Np::I, 
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
    # calculate the current local energy
     E_loc_current = get_local_energy(
         detwf, 
@@ -72,15 +72,15 @@ Measures the total local energy ``E_{\mathrm{loc}}`` for a Hubbard model and wri
 """
 function measure_local_energy!(
     measurement_container::NamedTuple, 
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    tight_binding_model::TightBindingModel{E}, 
+    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    tight_binding_model::TightBindingModel{E2}, 
     jastrow_parameters::JastrowParameters{S, K, V, I},
-    jastrow_factor::JastrowFactor{E}, 
+    jastrow_factor::JastrowFactor{E2}, 
     model_geometry::ModelGeometry, 
-    U::E,
+    U::E2,
     Np::I, 
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
    # calculate the current local energy
     E_loc_current = get_local_energy(
         detwf, 
@@ -131,17 +131,17 @@ Measures the total local energy ``E_{\mathrm{loc}}`` for a Hubbard model and wri
 """
 function measure_local_energy!(
     measurement_container::NamedTuple, 
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    tight_binding_model::TightBindingModel{E}, 
+    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    tight_binding_model::TightBindingModel{E2}, 
     jastrow_parameters_1::JastrowParameters{S, K, V, I},
     jastrow_parameters_2::JastrowParameters{S, K, V, I},
-    jastrow_factor_1::JastrowFactor{E},
-    jastrow_factor_2::JastrowFactor{E}, 
+    jastrow_factor_1::JastrowFactor{E2},
+    jastrow_factor_2::JastrowFactor{E2}, 
     model_geometry::ModelGeometry, 
-    U::E,
+    U::E2,
     Np::I, 
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
    # calculate the current local energy
     E_loc_current = get_local_energy(
         detwf, 
@@ -183,7 +183,7 @@ function measure_double_occ!(
     detwf::DeterminantalWavefunction{T, Q, E, I}, 
     model_geometry::ModelGeometry, 
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+) where {T<:Number, Q, E<:Number, I<:Integer}
     # calculate the current double occupancy
     dblocc_current = get_double_occ(
         detwf, 
@@ -221,7 +221,7 @@ function measure_n!(
     detwf::DeterminantalWavefunction{T, Q, E, I}, 
     model_geometry::ModelGeometry,
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+) where {T<:Number, Q, E<:Number, I<:Integer}
     if type == "local"
         # calculate current density
         density_current = get_n(
@@ -271,7 +271,7 @@ function measure_Sz!(
     detwf::DeterminantalWavefunction{T, Q, E, I}, 
     model_geometry::ModelGeometry,
     pht::Bool
-) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+) where {T<:Number, Q, E<:Number, I<:Integer}
     if type == "local"
         # calculate current Sz
         Sz_current = get_Sz(
