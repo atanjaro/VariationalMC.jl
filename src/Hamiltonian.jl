@@ -935,7 +935,9 @@ function add_pairing_symmetry!(
 
         Vdpdw = [zeros(T, twoN, twoN) for _ in 1:N]
 
-        @inbounds for col in 1:(2N)
+        nbonds = size(nbr_table, 2)
+
+        @inbounds for col in 1:nbonds
             i = nbr_table[1, col]
             j = nbr_table[2, col]
 

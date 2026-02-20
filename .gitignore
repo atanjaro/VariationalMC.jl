@@ -22,3 +22,5 @@ examples/mpi_test.jl
 examples/hubbard_rectangle_test.jl
 examples/hubbard_triangular_test.jl
 examples/hubbard_square_tabc_test.jl
+examples/hubbard_square_checkpoint_test.jl
+src/Measurements/checkpointing_utilities.jl
