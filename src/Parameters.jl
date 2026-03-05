@@ -806,3 +806,65 @@ function readin_parameters(
 
     return vpar_dict
 end
+
+
+@doc raw"""
+
+    update_parameters!( init_det_pars::AbstractVector, 
+                        determinantal_parameters::DeterminantalParameters{I} ) where {I<:Integer}
+
+Manually inputs initial determinantal parameters.
+
+- `new_det_pars::AbstractVector`: initial determinantal variational parameters.
+- `determinantal_parameters::DeterminantalParameters{I}`: current set of determinantal variational parameters.
+
+"""
+function manual_input_parameters!(
+    init_det_pars::AbstractVector,
+    determinantal_parameters::DeterminantalParameters{I}
+) where {I<:Integer}
+    # extract current parameters (a NamedTuple)
+    current_det_pars = determinantal_parameters.det_pars
+
+    # tuple of parameter names (Symbols) in the same order as current_pars
+    param_names = Tuple(keys(current_det_pars))
+
+    # Prepare to collect reconstructed parameter *values*
+    reconstructed_vals = Vector{Any}(undef, length(param_names))
+    pos = 1
+
+    for (i, pname) in enumerate(param_names)
+        old_val = current_det_pars[pname]
+
+        if old_val isa AbstractVector
+            n = length(old_val)
+            # bounds-check
+            if pos + n - 1 > length(init_det_pars)
+                throw(ArgumentError("new_vpars too short for parameter $(pname): need $n elements starting at $pos"))
+            end
+            slice = init_det_pars[pos:pos + n - 1]
+
+            # create a vector of the same shape/type as the old one when reasonable.
+            # If old_val is a plain Vector, collect(slice) is fine.
+            # For other custom vector types this may still produce a plain Vector; adapt if needed.
+            reconstructed_vals[i] = collect(slice)
+
+            pos += n
+        else
+            # scalar parameter
+            if pos > length(init_det_pars)
+                throw(ArgumentError("new_vpars too short for parameter $(pname) (expecting a scalar at position $pos)"))
+            end
+            reconstructed_vals[i] = init_det_pars[pos]
+            pos += 1
+        end
+    end
+
+    # build NamedTuple with the same field names in the same order
+    recon_det_pars = NamedTuple{param_names}(Tuple(reconstructed_vals))
+
+    # update determinantal_parameters and measurement container
+    determinantal_parameters.det_pars = recon_det_pars
+
+    return nothing
+end

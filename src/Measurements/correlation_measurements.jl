@@ -95,8 +95,7 @@ function get_site_dependent_n(
     dn_occs = Int.(pconfig[N+1:2*N] .!= 0)
 
     if pht
-        # n_occs = up_occs .- dn_occs .+ 1
-        n_occs = up_occs .+ dn_occs .- 1
+        n_occs = up_occs .- dn_occs .+ 1
     else
         n_occs = up_occs .+ dn_occs 
     end
@@ -134,10 +133,9 @@ function get_site_dependent_s(
     dn_occs = Int.(pconfig[N+1:2*N] .!= 0)
 
     if pht
-        # s_occs = up_occs .+ dn_occs .- 1
-        s_occs = up_occs .- dn_occs .+ 1
+        s_occs = up_occs .+ dn_occs .- 1
     else
-        s_occs = up_occs .- dn_occs
+        s_occs = 0.5 * (up_occs .- dn_occs)
     end
 
     return s_occs

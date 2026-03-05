@@ -82,7 +82,8 @@ function write_measurements!(
                 dset_path = "/" * key * "/" * bin_group
 
                 if haskey(f, dset_path)
-                    delete!(f, dset_path)
+                    # delete!(f, dset_path)
+                    HDF5.delete_object(f, dset_path)
                 end
                 f[dset_path] = data_to_write
             end
@@ -101,7 +102,8 @@ function write_measurements!(
             data_to_write = optimization_measurements["parameters"]
             dset_path = "/" * "parameters" * "/" * bin_group
             if haskey(f, dset_path)
-                delete!(f, dset_path)
+                # delete!(f, dset_path)
+                HDF5.delete_object(f, dset_path)
             end
             f[dset_path] = data_to_write
         end
@@ -122,7 +124,8 @@ function write_measurements!(
                     data_to_write = normalize_measurements(data, bin_size, string(key))
                     dset_path = "/" * string(key) * "/" * bin_group
                     if haskey(f, dset_path)
-                        delete!(f, dset_path)
+                        # delete!(f, dset_path)
+                        HDF5.delete_object(f, dset_path)
                     end
                     f[dset_path] = data_to_write
                 end

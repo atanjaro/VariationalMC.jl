@@ -1096,23 +1096,23 @@ function add_spin_order!(
             ssd_vec = Vector{Int8}(undef, twoN)
             fill!(ssd_vec, 0)
 
-            # stride-based index fill
+            ## stride-based index fill
             @inbounds for idx in (1 + shift):L[1]:twoN
                 ssd_vec[idx] = 1
             end
 
             # change sign for the spin-down sector
             if pht == false
-                ssd_vec[N+1:twoN] *=- 1.0                
+                ssd_vec[N+1:twoN] *= -1.0                
             end
 
             # apply phase shift
-            @inbounds for s in 1:twoN
-                (ix, iy) = locs[s]
-                v = isodd(ix + iy) ? Int8(-1) : Int8(1)
+            # @inbounds for s in 1:twoN
+            #     (ix, iy) = locs[s]
+            #     v = isodd(ix + iy) ? Int8(-1) : Int8(1)
 
-                ssd_vec[s]     *= v
-            end
+            #     ssd_vec[s]     *= v
+            # end
 
             V_ssd = LinearAlgebra.Diagonal(ssd_vec)
             push!(H_vpars, V_ssd)
@@ -1213,12 +1213,12 @@ function add_charge_order!(
 
             # stride-based index fill
             @inbounds for idx in (1 + shift):L[1]:twoN
-                csd_vec[idx] = 1
+                csd_vec[idx] = -1.0
             end
 
             # change sign for the spin-down sector
-            if pht == false
-                csd_vec[N+1:twoN] *=- 1.0                
+            if pht == true
+                csd_vec[N+1:twoN] *= -1.0                
             end
 
             V_csd = LinearAlgebra.Diagonal(csd_vec)
