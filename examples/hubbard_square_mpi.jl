@@ -39,32 +39,32 @@ function run_hubbard_square_simulation(
 )
     # Select which parameters in the variational wavefunction will be optimized.
     optimize = (
-        # local s-wave pairing
+        # Uniform s-wave pairing
         Δ_0 = false,
-        # site-dependent s-wave pairing (Larkin-Ovchinnikov-type)
+        # Site-dependent s-wave pairing (Larkin-Ovchinnikov)
         Δ_slo = false,
-        # site-dependent s-wave pairing (Fulde-Ferrell-type)
+        # Site-dependent s-wave pairing (Fulde-Ferrell)
         Δ_sff = false,
-        # local d-wave pairing
-        Δ_d = false,
-        # site-dependent d-wave pairing (Larkin-Ovchinnikov-type)
+        # Uniform d-wave pairing
+        Δ_d = true,
+        # Site-dependent d-wave pairing (Larkin-Ovchinnikov)
         Δ_dlo = false,
-        # site-dependent d-wave pairing (Fulde-Ferrell-type)
+        # Site-dependent d-wave pairing (Fulde-Ferrell)
         Δ_dff = false,     
-        # spin-x (in-plane magnetization)
+        # In-plane magnetization
         Δ_sx = false,
-        # spin-z (out-of-plane magnetization)
+        # Out-of-plane magnetization
         Δ_sz = true,
-        # site-dependent spin density
+        # Site-dependent magnetization
         Δ_ssd = false,
-        # (BCS) chemical potential
-        μ = false,
-        # uniform charge density 
+        # Chemical potential
+        μ = true,
+        # Charge density wave
         Δ_cdw = false,
-        # site-dependent charge density
+        # Site-dependent charge density
         Δ_csd = false,
-        # density-density Jastrow 
-        density_J = true
+        # Spin-spin Jastrow pseudopotentials
+        spin_J = true
     )
 
     # Construct the foldername the data will be written.
@@ -205,9 +205,9 @@ function run_hubbard_square_simulation(
         pht
     )
 
-    # Initialize density-density Jastrow variational parameters.
-    density_J_parameters = JastrowParameters(
-        "e-den-den",
+    # Initialize spin-spin Jastrow variational parameters.
+    spin_J_parameters = JastrowParameters(
+        "e-spn-spn",
         optimize, 
         model_geometry,
         rng
@@ -217,7 +217,7 @@ function run_hubbard_square_simulation(
     model_summary(
         simulation_info, 
         determinantal_parameters, 
-        density_J_parameters, 
+        spin_J_parameters, 
         pht, 
         model_geometry, 
         tight_binding_model, 
@@ -239,13 +239,13 @@ function run_hubbard_square_simulation(
         N_sim, 
         sim_bin_size,
         determinantal_parameters,
-        density_J_parameters,
+        spin_J_parameters,
         model_geometry
     )
 
-    # Add density-density correlation measurements.
+    # Add spin-spin correlation measurements.
     initialize_correlation_measurement!(
-        "density", 
+        "spin", 
         measurement_container, 
         model_geometry
     )
@@ -280,9 +280,9 @@ function run_hubbard_square_simulation(
             pconfig
         )  
 
-        # Initialize density-density Jastrow factor.
-        density_J_factor = get_jastrow_factor(
-            density_J_parameters,
+        # Initialize spin-spin Jastrow factor.
+        spin_J_factor = get_jastrow_factor(
+            spin_J_parameters,
             detwf,
             model_geometry,
             pht
@@ -293,10 +293,10 @@ function run_hubbard_square_simulation(
 
             # Iterate over equilibration/thermalization updates
             for equil in 1:N_equil
-                (acceptance_rate, detwf, density_J_factor) = local_fermion_update!(
+                (acceptance_rate, detwf, spin_J_factor) = local_fermion_update!(
                     detwf, 
-                    density_J_factor,
-                    density_J_parameters,
+                    spin_J_factor,
+                    spin_J_parameters,
                     Np, 
                     model_geometry, 
                     pht,
@@ -317,8 +317,8 @@ function run_hubbard_square_simulation(
                 detwf, 
                 tight_binding_model, 
                 determinantal_parameters, 
-                density_J_parameters,
-                density_J_factor,
+                spin_J_parameters,
+                spin_J_factor,
                 optimize,
                 model_geometry, 
                 U,
@@ -334,7 +334,7 @@ function run_hubbard_square_simulation(
         optimize_parameters!( 
             measurement_container,  
             determinantal_parameters, 
-            density_J_parameters,
+            spin_J_parameters,
             η, 
             dt, 
             dt_J,
@@ -382,9 +382,9 @@ function run_hubbard_square_simulation(
             pconfig
         )  
 
-        # Initialize density-density Jastrow factor.
-        density_J_factor = get_jastrow_factor(
-            density_J_parameters,
+        # Initialize spin-spin Jastrow factor.
+        spin_J_factor = get_jastrow_factor(
+            spin_J_parameters,
             detwf,
             model_geometry,
             pht
@@ -395,10 +395,10 @@ function run_hubbard_square_simulation(
 
             # Iterate over equilibration/thermalization updates
             for equil in 1:N_equil
-                (acceptance_rate, detwf, density_J_factor) = local_fermion_update!(
+                (acceptance_rate, detwf, spin_J_factor) = local_fermion_update!(
                     detwf, 
-                    density_J_factor,
-                    density_J_parameters,
+                    spin_J_factor,
+                    spin_J_parameters,
                     Np, 
                     model_geometry, 
                     pht,
@@ -418,8 +418,8 @@ function run_hubbard_square_simulation(
                 measurement_container, 
                 detwf, 
                 tight_binding_model, 
-                density_J_parameters,
-                density_J_factor,
+                spin_J_parameters,
+                spin_J_factor,
                 model_geometry, 
                 U,
                 Np, 
@@ -464,7 +464,7 @@ function run_hubbard_square_simulation(
         measurement_container, 
         simulation_info, 
         determinantal_parameters, 
-        density_J_parameters,
+        spin_J_parameters,
         model_geometry
     )
 

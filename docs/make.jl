@@ -13,7 +13,12 @@ makedocs(
     checkdocs = :none,    
     pages = [
         "Home" => "index.md",
-        "Examples" => "examples.md",
+        "Examples" => [
+            "Hubbard Chain" => "examples/hubbard_chain.md",
+            "Hubbard Square" => "examples/hubbard_square.md",
+            "Hubbard Square with MPI" => "examples/hubbard_square_mpi.md",
+            "Hubbard Rectangle" => "examples/hubbard_rectangle.md"
+    ],
         "Simulation Output Overview" => "simulation_output.md",
         "API" => "api.md"
     ],

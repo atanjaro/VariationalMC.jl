@@ -1,12 +1,13 @@
 # VariationalMC
 
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://atanjaro.github.io/VariationalMC.jl/dev/)
 [![Build Status](https://github.com/atanjaro/VariationalMC.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/atanjaro/VariationalMC.jl/actions/workflows/CI.yml?query=branch%3Amain)
 
 ![alt text](https://github.com/atanjaro/VariationalMC/blob/main/images/variationalmc-logo-dark.png "VariationalMC logo")
 
 This package implements the Variational Monte Carlo (VMC) method for the Hubbard model and (to be added) models of electron-phonon interaction. 
 
-This code is currently the experimental stage of development. Use with caution.
+**This code is currently the experimental stage of development. Use with caution.**
 
 ## Funding 
 

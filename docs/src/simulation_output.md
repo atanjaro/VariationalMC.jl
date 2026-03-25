@@ -11,25 +11,27 @@ Inside the `datafolder` a set of files and folders resembling the structure outl
 
 - `[datafolder]`: 
   - `model_summary.toml`: A TOML file that describes qunatities that were used in the simulation.
+  - `simulation_info_sID*_rank*.toml`: A TOML file reporting basic information about the simulation, including the version of Julia and VariationalMC.jl that was used to run the simulation. A [metadata] table contains the contents of a user defined dictionary as well. One such file is generated for each MPI rank if multiple simulations are being performed in parallel.
+  - `vmc_summary_sID*_rank*.csv`: A CSV file containing the final optimized values of energy, double occupancy, and particle density.
   - `[correlation]`: Directory containing all files pertaining to correlation measurements made during the simulation.
-    - `opt_bin_measurements.h5`: HDF5 file containing binned measurements made during the optimization step.
-    - `sim_bin_measurements.h5`: HDF5 file containing binned measurements made during the simulation step.
-    - `den-den_correlation_stats.csv`
-    - `spn-spn_correlation_states.csv`
+    - `opt_bin_measurements_rank*.h5`: HDF5 file containing binned measurements made during the optimization step.
+    - `sim_bin_measurements_rank*.h5`: HDF5 file containing binned measurements made during the simulation step.
+    - `den-den_correlation_stats_rank*.csv`
+    - `spn-spn_correlation_states_rank*.csv`
   - `[optimization]`: Directory containing all file pertaining to measurements used during the optimization step.
-    - `opt_bin_measurements.h5`: HDF5 file containing binned measurements made during the optimization step.
-    - `e-den-den_jastrow_parameters.csv`
-    - `parameter_cdw_stats.csv`
-    - `parameter_csd_stats.csv`
-    - `parameter_ssd_stats.csv`
-    - `parameter_sx_stats.csv`
-    - `parameter_msz_stats.csv`
-    - `parameter_mu_stats.csv`
+    - `opt_bin_measurements_rank*.h5`: HDF5 file containing binned measurements made during the optimization step.
+    - `e-den-den_jastrow_parameters_rank*.csv`
+    - `parameter_cdw_stats_rank*.csv`
+    - `parameter_csd_stats_rank*.csv`
+    - `parameter_ssd_stats_rank*.csv`
+    - `parameter_sx_stats_rank*.csv`
+    - `parameter_msz_stats_rank*.csv`
+    - `parameter_mu_stats_rank*.csv`
   - `[simulation]`: Directory containing all files pertaining to measured observables made during the simulation. 
-    - `opt_bin_measurements.h5`: HDF5 file containing binned measurements made during the optimization step.
-    - `sim_bin_measurements.h5`: HDF5 file containing binned measurements made during the simulation step.
-    - `bin_measurements.h5`: merged HDF5 file containing all binned measurments made during the simulation.
-    - `double_occ_stats.csv`
-    - `global_density_stats.csv`
-    - `local_energy_stats.csv`
-    - `pconfig_stats.csv`
+    - `opt_bin_measurements_rank*.h5`: HDF5 file containing binned measurements made during the optimization step.
+    - `sim_bin_measurements_rank*.h5`: HDF5 file containing binned measurements made during the simulation step.
+    - `bin_measurements_rank*.h5`: merged HDF5 file containing all binned measurments made during the simulation.
+    - `double_occ_stats_rank*.csv`
+    - `global_density_stats_rank*.csv`
+    - `local_energy_stats_rank*.csv`
+    - `pconfig_stats_rank*.csv`

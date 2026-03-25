@@ -14,7 +14,7 @@ using VariationalMC
 # arguments used to run this script.
 function run_hubbard_square_simulation(;
     sID,                    # Simulation ID.
-    Lx,                     # System size x.
+    Lx,                     # System size x. 
     Ly,                     # System size y.
     U,                      # Hubbard interaction.
     density,                # Electron density.
@@ -205,6 +205,15 @@ function run_hubbard_square_simulation(;
         pht
     )
 
+    # Override random determinantal parameters with some initial values.
+    init_det_pars = [0.001,                                                                                     # In-plane magnetization
+                     0.0001,                                                                                    # Out-of-plane magnetization
+                     0.5, -0.5, 0.5, -0.5, 0.5, -0.5, 0.0, 0.0, -0.5, 0.5, -0.5, 0.5, -0.5, 0.5, 0.0, 0.0,      # Site-dependent magnetization
+                     -0.15224093497742808,                                                                      # Exact chemical potential
+                     0.001,                                                                                     # Charge density wave
+                     0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.3, 0.3, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.3, 0.3]            # Site-dependent charge density
+    manual_input_parameters!(init_det_pars, determinantal_parameters)
+
     # Initialize density-density Jastrow variational parameters.
     density_J_parameters = JastrowParameters(
         "e-den-den",
@@ -266,20 +275,6 @@ function run_hubbard_square_simulation(;
         "site-dependent",
         "density",
         measurement_container,
-        model_geometry
-    )
-
-    # Add density-density correlation measurements.
-    initialize_correlation_measurement!(
-        "density", 
-        measurement_container, 
-        model_geometry
-    )
-
-    # Add spin-spin correlation measurements.
-    initialize_correlation_measurement!(
-        "spin", 
-        measurement_container, 
         model_geometry
     )
 

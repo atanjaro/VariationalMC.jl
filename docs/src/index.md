@@ -2,7 +2,7 @@
 
 Documentation for `VariationalMC.jl`. This package impelments the variational Monte Carlo (VMC) method for Hubbard and electron-phonon interactions (coming soon).
 
-This code is currently the experimental stage of development. Use with caution. 
+**This code is currently the experimental stage of development. Use with caution.** 
 
 ## Funding 
 
@@ -14,11 +14,26 @@ To install the [VariationalMC.jl](https://github.com/atanjaro/VariationalMC.jl),
 simply open the Julia REPL and run the commands
 ```
 julia> ]
-pkg> add VariationalMC
+pkg> add https://github.com/atanjaro/VariationalMC.jl
 ```
 or equivalently via `Pkg` do
 ```
-julia> using Pkg; Pkg.add("VariationalMC")
+julia> using Pkg; Pkg.add(url="https://github.com/atanjaro/VariationalMC.jl")
+```
+
+### Updating
+
+To update [VariationalMC.jl](https://github.com/atanjaro/VariationalMC.jl) try the following:
+```
+julia> ]
+pkg> update VariationalMC
+```
+However, sometimes this fails to update required dependencies.
+If issues arise, we recommend first removing and then reinstalling [VariationalMC.jl](https://github.com/atanjaro/VariationalMC.jl):
+```
+julia> ]
+pkg> remove VariationalMC
+pkg> add https://github.com/atanjaro/VariationalMC.jl
 ```
 
 ## Notable External Package Dependencies
