@@ -60,9 +60,9 @@ function run_hubbard_square_simulation(;
         Δ_cdw = false,
         # site-dependent charge density
         Δ_csd = false,
-        # density-density Jastrow 
+        # density-density Jastrow pseudopotential
         density_J = true,
-        # spin-spin Jastrow 
+        # spin-spin Jastrow pseudopotentials
         spin_J = true
     )
 

@@ -36,18 +36,20 @@ function run_hubbard_chain_simulation(;
 )
     # Select which parameters in the variational wavefunction will be optimized.
     optimize = (
-        # local s-wave pairing
-        Δ_0 = true,
-        # spin-x (in-plane magnetization)
+        # Uniform s-wave pairing
+        Δ_0 = false,
+        # In-plane magnetization
         Δ_sx = false,
-        # spin-z (out-of-plane magnetization)
-        Δ_sz = false,
-        # (BCS) chemical potential
-        μ = true,
-        # uniform charge density
+        # Out-of-plane magnetization
+        Δ_sz = true,
+        # Chemical potential
+        μ = false,
+        # Charge density wave
         Δ_cdw = false,
-        # density-density Jastrow 
-        density_J = true
+        # Density-density Jastrow pseudopotentials
+        density_J = true,
+        # Spin-spin Jastrow pseudopotentials
+        spin_J = false,
     )
 
     # Construct the foldername the data will be written.
