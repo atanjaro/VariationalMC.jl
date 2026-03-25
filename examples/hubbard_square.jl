@@ -101,20 +101,20 @@ function run_hubbard_square_simulation(;
     # Initialize a dictionary to store additional information about the simulation.
     # This is a sort of "notebook" for tracking extraneous parameters during the VMC simulation.
     metadata = Dict()
-    metadata["N_equil"] = N_equil
-    metadata["N_opt"] = N_opt
-    metadata["N_sim"] = N_sim
-    metadata["N_opt_bins"] = N_opt_bins
-    metadata["N_sim_bins"] = N_sim_bins
-    metadata["δW"] = δW
-    metadata["δT"] = δT
-    metadata["n_stab_W"] = n_stab_W
-    metadata["n_stab_T"] = n_stab_T
-    metadata["dt"] = dt 
-    metadata["acceptance_rate"] = 0.0
-    metadata["opt_time"] = 0.0
-    metadata["sim_time"] = 0.0
-    metadata["vmc_time"] = 0.0
+    metadata["N_equil"]             = N_equil
+    metadata["N_opt"]               = N_opt
+    metadata["N_sim"]               = N_sim
+    metadata["N_opt_bins"]          = N_opt_bins
+    metadata["N_sim_bins"]          = N_sim_bins
+    metadata["δW"]                  = δW
+    metadata["δT"]                  = δT
+    metadata["n_stab_W"]            = n_stab_W
+    metadata["n_stab_T"]            = n_stab_T
+    metadata["dt"]                  = dt 
+    metadata["acceptance_rate"]     = 0.0
+    metadata["opt_time"]            = 0.0
+    metadata["sim_time"]            = 0.0
+    metadata["vmc_time"]            = 0.0
 
     #######################
     ### DEFINE THE MODEL ##
@@ -205,7 +205,7 @@ function run_hubbard_square_simulation(;
 
     # Initialize spin-spin Jastrow variational parameters.
     spin_J_parameters = JastrowParameters(
-        "e-spin-spn",
+        "e-spn-spn",
         optimize, 
         model_geometry,
         rng
