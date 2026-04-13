@@ -26,3 +26,6 @@ examples/hubbard_square_checkpoint_test.jl
 src/Measurements/checkpointing_utilities.jl
 examples/hubbard_new_script.jl
 examples/hubbard_rectangle_new.jl
+examples/hubbard_chain_test.jl
+examples/hubbard_bilayer_test.jl
+examples/hubbard_bilayer.jl

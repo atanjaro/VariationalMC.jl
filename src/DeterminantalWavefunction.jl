@@ -97,15 +97,15 @@ end
 
     get_determinantal_wavefunction( tight_binding_model::TightBindingModel{E}, 
                                     determinantal_parameters::DeterminantalParameters{I}, 
+                                    model_geometry::ModelGeometry, 
                                     optimize::NamedTuple, 
+                                    pconfig::Vector{I} = Int[],
                                     Np::I, 
                                     nup::I, 
                                     ndn::I, 
-                                    model_geometry::ModelGeometry, 
                                     rng::AbstractRNG, 
-                                    pht::Bool,
-                                    pconfig::Vector{I} = Int[];
-                                    q_p::AbstractVector{T} = [0.0, 0.0] ) where {E<:AbstractFloat, I<:Integer, T<:Number}
+                                    pht::Bool;
+                                    q_p = [0.0, 0.0] ) where {E<:AbstractFloat, I<:Integer, T<:Number}
 
 Constructs a variational wavefunction ``|\Phi_0\rangle`` based on parameters given by the tight-binding model 
 and determinantal parameter and returns an instance of the `DeterminantalWavefunction` type. If no initial 
@@ -113,32 +113,34 @@ particle configuration is specified, a random configuration will be generated.
 
 - `tight_binding_model::TightBindingModel{E}`: parameters for a non-interacting tight-binding model. 
 - `determinantal_parameters::DeterminantalParameters{I}`: set of determinantal variational parameters.
+- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 - `optimize::NamedTuple`: field of optimization flags.
+- `pconfig::Vector{I}`: initial particle configuration.
 - `Np::I`: total number of particles in the system.
 - `nup::I`: number of spin-up electrons.
 - `ndn::I`: number of spin-down electrons.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 - `rng::AbstractRNG`: random number generator. 
 - `pht::Bool`: whether model is particle-hole transformed.
-- `pconfig::Vector{I} = Int[]`: optional initial particle configuration.
 - `q_p::AbstractVector{T} = [0.0, 0.0]`: pairing momentum for density wave pairing.
 
 """
 function get_determinantal_wavefunction(
     tight_binding_model::TightBindingModel{E}, 
     determinantal_parameters::DeterminantalParameters{I}, 
+    model_geometry::ModelGeometry, 
     optimize::NamedTuple, 
+    pconfig::Vector{I},
     Np::I, 
     nup::I, 
     ndn::I, 
-    model_geometry::ModelGeometry, 
     rng::AbstractRNG, 
-    pht::Bool,
-    pconfig::Vector{I} = Int[];
+    pht::Bool;
     q_p = [0.0, 0.0]
 ) where {E<:AbstractFloat, I<:Integer}
     # number of lattice sites
-    N = model_geometry.lattice.N 
+    Norbs = model_geometry.unit_cell.n
+    Ncells = model_geometry.lattice.N
+    N = Norbs * Ncells
 
     # build auxiliary (mean-field) Hamiltonian and variational operators
     (H, V) = build_auxiliary_hamiltonian(
@@ -258,24 +260,21 @@ function get_determinantal_wavefunction(
     return DeterminantalWavefunction(W, D, M, U_aux, A, ε, pconfig, nq_updates_W)
 end
 
-# TABC prototypes
-N_θ = 10
-twist_angles = range(-π, π; length=N_θ+1)[1:end-1] .+ π/N_θ
 
 @doc raw"""
 
     get_determinantal_wavefunction( tight_binding_model::TightBindingModel{E}, 
                                     determinantal_parameters::DeterminantalParameters{I}, 
+                                    model_geometry::ModelGeometry, 
                                     optimize::NamedTuple, 
+                                    pconfig::Vector{I},
                                     Np::I, 
                                     nup::I, 
                                     ndn::I, 
-                                    model_geometry::ModelGeometry, 
                                     N_θ::I,
                                     twist_angles::AbstractRange{E},
                                     rng::AbstractRNG, 
-                                    pht::Bool,
-                                    pconfig::Vector{I} = Int[] ) where {E<:AbstractFloat, I<:Integer}
+                                    pht::Bool ) where {E<:AbstractFloat, I<:Integer}
 
 Constructs a variational wavefunction ``|\Phi_{0}^{\theta}\rangle`` for `N_\theta` twist angles based on parameters 
 given by the tight-binding model and determinantal parameter and returns an instance of the `DeterminantalWavefunctionTABC` 
@@ -283,33 +282,35 @@ type. If no initial particle configuration is specified, a random configuration 
 
 - `tight_binding_model::TightBindingModel{E}`: parameters for a non-interacting tight-binding model. 
 - `determinantal_parameters::DeterminantalParameters{I}`: set of determinantal variational parameters.
+- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 - `optimize::NamedTuple`: field of optimization flags.
+- `pconfig::Vector{I}`: optional initial particle configuration.
 - `Np::I`: total number of particles in the system.
 - `nup::I`: number of spin-up electrons.
 - `ndn::I`: number of spin-down electrons.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 - `N_θ::I`: number of twist angles.
 - `twist_angles::AbstractRange{E}`: list of twist angles.
 - `rng::AbstractRNG`: random number. 
 - `pht::Bool`: whether model is particle-hole transformed.
-- `pconfig::Vector{I} = Int[]`: optional initial particle configuration.
 
 """
 function get_determinantal_wavefunction(
     tight_binding_model::TightBindingModel{E}, 
     determinantal_parameters::DeterminantalParameters{I}, 
+    model_geometry::ModelGeometry, 
     optimize::NamedTuple, 
+    pconfig::Vector{I},
     Np::I, 
     nup::I, 
     ndn::I, 
-    model_geometry::ModelGeometry, 
     N_θ::I,
     twist_angles::AbstractRange{E},
     rng::AbstractRNG, 
-    pht::Bool,
-    pconfig::Vector{I} = Int[]
+    pht::Bool
 ) where {E<:AbstractFloat, I<:Integer}
-    N = model_geometry.lattice.N 
+    Norbs = model_geometry.unit_cell.n
+    Ncells = model_geometry.lattice.N
+    N = Norbs * Ncells
     ε_θ = Vector{Vector{AbstractFloat}}()
     U_θ = Vector{Matrix{<:Number}}()
     A_θ = Vector{Vector{Matrix{<:Number}}}()

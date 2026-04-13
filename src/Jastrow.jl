@@ -44,7 +44,9 @@ function get_jastrow_factor(
     pht::Bool
 ) where {S<:AbstractString, K, V, I<:Integer, T<:Number, Q, E<:Number}
     # extent of the lattice
-    N = model_geometry.lattice.N
+    N_orbs = model_geometry.unit_cell.n
+    N_cells = model_geometry.lattice.N
+    N = N_orbs * N_cells
 
     # Jastrow type
     jastrow_type = jastrow_parameters.jastrow_type
@@ -328,7 +330,9 @@ function update_fermionic_Tvec!(
     pht::Bool
 ) where {S<:AbstractString, K, V, I<:Integer, E<:AbstractFloat}
     # number of lattice sites
-    N = model_geometry.lattice.N
+    N_orbs = model_geometry.unit_cell.n
+    N_cells = model_geometry.lattice.N
+    N = N_orbs * N_cells
 
     # dimensions
     dims = size(model_geometry.lattice.L)[1]
@@ -454,8 +458,10 @@ function map_jastrow_parameters(
     rng::AbstractRNG
 )
     # number of lattice sites
-    N = model_geometry.lattice.N
-    
+    N_orbs = model_geometry.unit_cell.n
+    N_cells = model_geometry.lattice.N
+    N = N_orbs * N_cells
+
     # vector to store reduced indices
     reduced_indices = []
 
@@ -523,7 +529,9 @@ function map_jastrow_parameters(
     init_jpars::Vector{E}
 ) where {E<:AbstractFloat}
     # number of lattice sites
-    N = model_geometry.lattice.N
+    N_orbs = model_geometry.unit_cell.n
+    N_cells = model_geometry.lattice.N
+    N = N_orbs * N_cells
     
     # vector to store reduced indices
     reduced_indices = []

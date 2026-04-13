@@ -1,14 +1,14 @@
 @doc raw"""
 
     make_measurements!( measurement_container::NamedTuple, 
-                        detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                        tight_binding_model::TightBindingModel{E}, 
+                        detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+                        tight_binding_model::TightBindingModel{E2}, 
+                        hubbard_model::HubbardModel{E2},
                         determinantal_parameters::DeterminantalParameters{I}, 
-                        optimize::NamedTuple,
                         model_geometry::ModelGeometry,
-                        U::E,
+                        optimize::NamedTuple,
                         Np::I, 
-                        pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+                        pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
 
 Measures optimization and simulation observables including the local energy ``\langle E_{\mathrm{loc}}\rangle``, logarithmic
 derivatives ``\langle\Delta_k\rangle``, ``\langle\Delta_{k}\Delta_{k}^\prime\rangle``, ``\langle\Delta_{k}E\rangle``, average double occupancy ``\langle D\rangle``, and average density ``\langle n\rangle``.
@@ -17,10 +17,10 @@ Also records the current particle configuration ``|x\rangle``.
 - `measurement_container::NamedTuple`: container where measurements are stored.
 - `detwf::DeterminantalWavefunction{T, Q, E, I}`: current determinantal wavefunction.
 - `tight_binding_model::TightBindingModel{E}`: non-interacting tight-binding model. 
+- `hubbard_model::HubbardModel`: Hubbard interaction parameters.
 - `determinantal_parameters{I}::DeterminantalParameters{I}`: set of determinantal variational parameters.
-- `optimize::NamedTuple`:: tuple of optimization flags.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `U::E`: Hubbard interaction.
+- `optimize::NamedTuple`:: tuple of optimization flags.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether or not model is particle-hole transformed.
 
@@ -29,10 +29,10 @@ function make_measurements!(
     measurement_container::NamedTuple, 
     detwf::DeterminantalWavefunction{T, Q, E1, I}, 
     tight_binding_model::TightBindingModel{E2}, 
+    hubbard_model::HubbardModel{E2},
     determinantal_parameters::DeterminantalParameters{I}, 
-    optimize::NamedTuple,
     model_geometry::ModelGeometry,
-    U::E2,
+    optimize::NamedTuple,
     Np::I, 
     pht::Bool
 ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
@@ -41,8 +41,8 @@ function make_measurements!(
         measurement_container, 
         detwf, 
         tight_binding_model, 
+        hubbard_model,
         model_geometry,
-        U, 
         Np, 
         pht
     )
@@ -52,26 +52,26 @@ function make_measurements!(
         measurement_container, 
         detwf, 
         determinantal_parameters,
-        optimize,
         model_geometry, 
+        optimize,
         Np
     )
     measure_ΔkΔkp!(
         measurement_container, 
         detwf, 
         determinantal_parameters, 
-        optimize,
-        model_geometry, 
+        model_geometry,
+        optimize, 
         Np
     )
     measure_ΔkE!(
         measurement_container, 
         detwf, 
         tight_binding_model, 
+        hubbard_model,
         determinantal_parameters, 
-        optimize,
         model_geometry, 
-        U,
+        optimize,
         Np, 
         pht
     )
@@ -154,30 +154,30 @@ end
 @doc raw"""
 
     make_measurements!( measurement_container::NamedTuple, 
-                        detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                        tight_binding_model::TightBindingModel{E},
+                        detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+                        jastrow_factor::JastrowFactor{E2, I},
+                        tight_binding_model::TightBindingModel{E2},
+                        hubbard_model::HubbardModel{E2},
                         determinantal_parameters::DeterminantalParameters{I},
                         jastrow_parameters::JastrowParameters{S, K, V, I},
-                        jastrow_factor::JastrowFactor{E, I},
-                        optimize::NamedTuple,
                         model_geometry::ModelGeometry, 
-                        U::E,
+                        optimize::NamedTuple,
                         Np::I, 
-                        pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+                        pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
 
 Measures optimization and simulation observables including the local energy ``\langle E_{\mathrm{loc}}\rangle``, logarithmic
 derivatives ``\langle\Delta_k\rangle``, ``\langle\Delta_{k}\Delta_{k}^\prime\rangle``, ``\langle\Delta_{k}E\rangle``, average double occupancy ``\langle D\rangle``, and average density ``\langle n\rangle``.
 Also records the current particle configuration ``|x\rangle``.
 
 - `measurement_container::NamedTuple`: container where measurements are stored.
-- `detwf::DeterminantalWavefunction{T, Q, E, I}`: current determinantal wavefunction.
+- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current determinantal wavefunction.
+- `jastrow_factor::JastrowFactor{E2, I}`: current Jastrow factor. 
 - `tight_binding_model::TightBindingModel{E}`: non-interacting tight-binding model. 
+- `hubbard_model::HubbardModel{E2}`: Hubbard interaction parameters.
 - `determinantal_parameters::DeterminantalParameters{I}`: set of determinantal variational parameters.
 - `jastrow_parameters::JastrowParameters{S, K, V, I}`: current set of Jastrow variational parameters.
-- `jastrow_factor::JastrowFactor{E, I}`: current Jastrow factor. 
-- `optimize::NamedTuple`:: tuple of optimization flags.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `U::E`: Hubbard interaction.
+- `optimize::NamedTuple`:: tuple of optimization flags.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether or not model is particle-hole transformed.
 
@@ -185,13 +185,13 @@ Also records the current particle configuration ``|x\rangle``.
 function make_measurements!(
     measurement_container::NamedTuple, 
     detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    jastrow_factor::JastrowFactor{E2, I}, 
     tight_binding_model::TightBindingModel{E2}, 
+    hubbard_model::HubbardModel{E2},
     determinantal_parameters::DeterminantalParameters{I},
     jastrow_parameters::JastrowParameters{S, K, V, I},
-    jastrow_factor::JastrowFactor{E2, I},  
-    optimize::NamedTuple,
     model_geometry::ModelGeometry,
-    U::E2,
+    optimize::NamedTuple,
     Np::I, 
     pht::Bool
 ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
@@ -199,11 +199,11 @@ function make_measurements!(
     measure_local_energy!(
         measurement_container, 
         detwf, 
+        jastrow_factor,
         tight_binding_model, 
+        hubbard_model,
         jastrow_parameters,
-        jastrow_factor, 
         model_geometry, 
-        U,
         Np, 
         pht
     )
@@ -214,8 +214,8 @@ function make_measurements!(
         detwf,
         determinantal_parameters,
         jastrow_parameters,
-        optimize,
         model_geometry,
+        optimize,
         Np,
         pht
     )
@@ -224,21 +224,21 @@ function make_measurements!(
         detwf, 
         determinantal_parameters, 
         jastrow_parameters,
-        optimize,
         model_geometry, 
+        optimize,
         Np,
         pht
     )
     measure_ΔkE!(
         measurement_container, 
         detwf, 
+        jastrow_factor,
         tight_binding_model, 
+        hubbard_model,
         determinantal_parameters, 
         jastrow_parameters,
-        jastrow_factor,
-        optimize,
         model_geometry, 
-        U,
+        optimize,
         Np, 
         pht
     )
@@ -321,18 +321,18 @@ end
 @doc raw"""
 
     make_measurements!( measurement_container::NamedTuple, 
-                        detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                        tight_binding_model::TightBindingModel{E},
+                        detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+                        jastrow_factor_1::JastrowFactor{E2, I},
+                        jastrow_factor_2::JastrowFactor{E2, I},
+                        tight_binding_model::TightBindingModel{E2},
+                        hubbard_model::HubbardModel{E2},
                         determinantal_parameters::DeterminantalParameters{I},
                         jastrow_parameters_1::JastrowParameters{S, K, V, I},
                         jastrow_parameters_2::JastrowParameters{S, K, V, I},
-                        jastrow_factor_1::JastrowFactor{E, I},
-                        jastrow_factor_2::JastrowFactor{E, I}, 
-                        optimize::NamedTuple,
                         model_geometry::ModelGeometry, 
-                        U::E,
+                        optimize::NamedTuple,
                         Np::I, 
-                        pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+                        pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
 
 Measures optimization and simulation observables including the local energy ``\langle E_{\mathrm{loc}}\rangle``, logarithmic
 derivatives ``\langle\Delta_k\rangle``, ``\langle\Delta_{k}\Delta_{k}^\prime\rangle``, ``\langle\Delta_{k}E\rangle``, average double occupancy ``\langle D\rangle``, and average density ``\langle n\rangle``.
@@ -340,15 +340,15 @@ Also records the current particle configuration ``|x\rangle``.
 
 - `measurement_container::NamedTuple`: container where measurements are stored.
 - `detwf::DeterminantalWavefunction{T, Q, E, I}`: current determinantal wavefunction.
+- `jastrow_factor_1::JastrowFactor{E, I}`: first Jastrow factor.
+- `jastrow_factor_2::JastrowFactor{E, I}`: second Jastrow factor.
 - `tight_binding_model::TightBindingModel{E}`: non-interacting tight-binding model. 
+- `hubbard_model::HubbardModel`: Hubbard interaction parameters.
 - `determinantal_parameters::DeterminantalParameters`: set of determinantal variational parameters.
 - `jastrow_parameters_1::JastrowParameters{S, K, V, I}`: first set of Jastrow variational parameters.
 - `jastrow_parameters_2::JastrowParameters{S, K, V, I}`: second set of Jastrow variational parameters.
-- `jastrow_factor_1::JastrowFactor{E, I}`: first Jastrow factor.
-- `jastrow_factor_2::JastrowFactor{E, I}`: second Jastrow factor.
-- `optimize::NamedTuple`:: tuple of optimization flags. 
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `U::E`: Hubbard interaction.
+- `optimize::NamedTuple`:: tuple of optimization flags. 
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether or not model is particle-hole transformed.
 
@@ -356,15 +356,15 @@ Also records the current particle configuration ``|x\rangle``.
 function make_measurements!(
     measurement_container::NamedTuple, 
     detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    jastrow_factor_1::JastrowFactor{E2, I},
+    jastrow_factor_2::JastrowFactor{E2, I}, 
     tight_binding_model::TightBindingModel{E2}, 
+    hubbard_model::HubbardModel{E2},
     determinantal_parameters::DeterminantalParameters{I},
     jastrow_parameters_1::JastrowParameters{S, K, V, I},
     jastrow_parameters_2::JastrowParameters{S, K, V, I},
-    jastrow_factor_1::JastrowFactor{E2, I},
-    jastrow_factor_2::JastrowFactor{E2, I}, 
-    optimize::NamedTuple,
     model_geometry::ModelGeometry,
-    U::E2,
+    optimize::NamedTuple,
     Np::I, 
     pht::Bool
 ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
@@ -372,13 +372,13 @@ function make_measurements!(
     measure_local_energy!(
         measurement_container, 
         detwf, 
+        jastrow_factor_1,
+        jastrow_factor_2,
         tight_binding_model, 
+        hubbard_model,
         jastrow_parameters_1,
         jastrow_parameters_2,
-        jastrow_factor_1,
-        jastrow_factor_2, 
         model_geometry, 
-        U,
         Np, 
         pht
     )
@@ -390,8 +390,8 @@ function make_measurements!(
         determinantal_parameters,
         jastrow_parameters_1,
         jastrow_parameters_2,
-        optimize,
         model_geometry,
+        optimize,
         Np,
         pht
     )
@@ -401,23 +401,23 @@ function make_measurements!(
         determinantal_parameters, 
         jastrow_parameters_1,
         jastrow_parameters_2,
-        optimize,
         model_geometry, 
+        optimize,
         Np,
         pht
     )
     measure_ΔkE!(
         measurement_container, 
         detwf, 
+        jastrow_factor_1,
+        jastrow_factor_2,
         tight_binding_model, 
+        hubbard_model,
         determinantal_parameters, 
         jastrow_parameters_1,
         jastrow_parameters_2,
-        jastrow_factor_1,
-        jastrow_factor_2,
-        optimize,
         model_geometry, 
-        U,
+        optimize,
         Np, 
         pht
     )
@@ -500,12 +500,12 @@ end
 @doc raw"""
 
     make_measurements!( measurement_container::NamedTuple, 
-                        detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                        tight_binding_model::TightBindingModel{E}, 
+                        detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+                        tight_binding_model::TightBindingModel{E2}, 
+                        hubbard_model::HubbardModel{E2},
                         model_geometry::ModelGeometry, 
-                        U::E,
                         Np::I, 
-                        pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+                        pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
 
 Measures simulation observables including the local energy ``\langle E_{\mathrm{loc}}\rangle``,
 average double occupancy ``\langle D\rangle``, and average density ``\langle n\rangle``.
@@ -514,8 +514,8 @@ Also records the current particle configuration ``|x\rangle``.
 - `measurement_container::NamedTuple`: container where measurements are stored.
 - `detwf::DeterminantalWavefunction{T, Q, E, I}`: current determinantal wavefunction.
 - `tight_binding_model::TightBindingModel{E}`: non-interacting tight-binding model. 
+- `hubbard_model::HubbardModel{E2}`: Hubbard interaction parameters.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `U::E`: Hubbard interaction.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether or not model is particle-hole transformed.
 
@@ -524,8 +524,8 @@ function make_measurements!(
     measurement_container::NamedTuple, 
     detwf::DeterminantalWavefunction{T, Q, E1, I}, 
     tight_binding_model::TightBindingModel{E2}, 
+    hubbard_model::HubbardModel{E2},
     model_geometry::ModelGeometry, 
-    U::E2,
     Np::I, 
     pht::Bool
 ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
@@ -534,8 +534,8 @@ function make_measurements!(
         measurement_container, 
         detwf, 
         tight_binding_model, 
+        hubbard_model,
         model_geometry, 
-        U,
         Np, 
         pht
     )
@@ -618,37 +618,37 @@ end
 @doc raw"""
 
     make_measurements!( measurement_container::NamedTuple, 
-                        detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                        tight_binding_model::TightBindingModel{E}, 
+                        detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+                        jastrow_factor::JastrowFactor{E2},
+                        tight_binding_model::TightBindingModel{E2}, 
+                        hubbard_model::HubbardModel{E2},
                         jastrow_parameters::JastrowParameters{S, K, V, I},
-                        jastrow_factor::JastrowFactor{E}, 
                         model_geometry::ModelGeometry, 
-                        U::E,
                         Np::I, 
-                        pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+                        pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
 
 Measures simulation observables including the local energy ``\langle E_{\mathrm{loc}}\rangle``,
 average double occupancy ``\langle D\rangle``, and average density ``\langle n\rangle``.
 Also records the current particle configuration ``|x\rangle``.
 
 - `measurement_container::NamedTuple`: container where measurements are stored.
-- `detwf::DeterminantalWavefunction{T, Q, E, I}`: current determinantal wavefunction.
-- `tight_binding_model::TightBindingModel{E}`: non-interacting tight-binding model. 
+- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current determinantal wavefunction.
+- `jastrow_factor::JastrowFactor{E2}`: current Jastrow factor. 
+- `tight_binding_model::TightBindingModel{E2}`: non-interacting tight-binding model. 
+- `hubbard_model::HubbardMode{E2}`: Hubbard interaction parameters.
 - `jastrow_parameters::JastrowParameters{S, K, V, I}`: current set of Jastrow variational parameters.
-- `jastrow_factor::JastrowFactor{E}`: current Jastrow factor. 
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `U::E`: Hubbard interaction.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether or not model is particle-hole transformed.
 
 """
 function make_measurements!(measurement_container::NamedTuple, 
     detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    jastrow_factor::JastrowFactor{E2},
     tight_binding_model::TightBindingModel{E2},
+    hubbard_model::HubbardModel{E2},
     jastrow_parameters::JastrowParameters{S, K, V, I},
-    jastrow_factor::JastrowFactor{E2},  
     model_geometry::ModelGeometry, 
-    U::E2,
     Np::I, 
     pht::Bool
 ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
@@ -656,11 +656,11 @@ function make_measurements!(measurement_container::NamedTuple,
     measure_local_energy!(
         measurement_container, 
         detwf, 
-        tight_binding_model, 
-        jastrow_parameters,
         jastrow_factor, 
+        tight_binding_model, 
+        hubbard_model,
+        jastrow_parameters,
         model_geometry, 
-        U,
         Np, 
         pht
     )
@@ -743,43 +743,43 @@ end
 @doc raw"""
 
     make_measurements!( measurement_container::NamedTuple, 
-                        detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                        tight_binding_model::TightBindingModel{E}, 
+                        detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+                        jastrow_factor_1::JastrowFactor{E2},
+                        jastrow_factor_2::JastrowFactor{E2},
+                        tight_binding_model::TightBindingModel{E2}, 
+                        hubbard_model::HubbardModel{E2},
                         jastrow_parameters_1::JastrowParameters{S, K, V, I},
                         jastrow_parameters_2::JastrowParameters{S, K, V, I},
-                        jastrow_factor_1::JastrowFactor{E},
-                        jastrow_factor_2::JastrowFactor{E}, 
                         model_geometry::ModelGeometry, 
-                        U::E,
                         Np::I, 
-                        pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+                        pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
 
 Measures simulation observables including the local energy ``\langle E_{\mathrm{loc}}\rangle``,
 average double occupancy ``\langle D\rangle``, and average density ``\langle n\rangle``.
 Also records the current particle configuration ``|x\rangle``.
 
 - `measurement_container::NamedTuple`: container where measurements are stored.
-- `detwf::DeterminantalWavefunction{T, Q, E, I}`: current determinantal wavefunction.
-- `tight_binding_model::TightBindingModel{E}`: non-interacting tight-binding model. 
+- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current determinantal wavefunction.
+- `jastrow_factor_1::JastrowFactor{E2}`: first Jastrow factor.
+- `jastrow_factor_2::JastrowFactor{E2}`: second Jastrow factor. 
+- `tight_binding_model::TightBindingModel{E2}`: non-interacting tight-binding model. 
+- `hubbard_model::HubbardModel{E2}`: Hubbard interaction parameters.
 - `jastrow_parameters_1::JastrowParameters{S, K, V, I}`: first set of Jastrow variational parameters.
 - `jastrow_parameters_2::JastrowParameters{S, K, V, I}`: second set of Jastrow variational parameters.
-- `jastrow_factor_1::JastrowFactor{E}`: first Jastrow factor.
-- `jastrow_factor_2::JastrowFactor{E}`: second Jastrow factor. 
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `U::E`: Hubbard interaction.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether or not model is particle-hole transformed.
 
 """
 function make_measurements!(measurement_container::NamedTuple, 
     detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    jastrow_factor_1::JastrowFactor{E2},
+    jastrow_factor_2::JastrowFactor{E2},
     tight_binding_model::TightBindingModel{E2},
+    hubbard_model::HubbardModel{E2},
     jastrow_parameters_1::JastrowParameters{S, K, V, I},
     jastrow_parameters_2::JastrowParameters{S, K, V, I},
-    jastrow_factor_1::JastrowFactor{E2},
-    jastrow_factor_2::JastrowFactor{E2},  
     model_geometry::ModelGeometry, 
-    U::E2,
     Np::I, 
     pht::Bool
 ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
@@ -787,13 +787,13 @@ function make_measurements!(measurement_container::NamedTuple,
     measure_local_energy!(
         measurement_container, 
         detwf, 
+        jastrow_factor_1,
+        jastrow_factor_2,
         tight_binding_model, 
+        hubbard_model,
         jastrow_parameters_1,
         jastrow_parameters_2,
-        jastrow_factor_1,
-        jastrow_factor_2, 
         model_geometry, 
-        U,
         Np, 
         pht
     )

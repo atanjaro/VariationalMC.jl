@@ -152,21 +152,9 @@ function run_hubbard_square_simulation(
         displacement = [0,1]
     )
 
-    # Define the next-nearest neighbor bonds for a square lattice.
-    bond_xy = Bond(
-        orbitals = (1,1), 
-        displacement = [1,1]
-    )
-
-    # Define the next-nearest neighbor bonds for a square lattice.
-    bond_yx = Bond(
-        orbitals = (1,1), 
-        displacement = [1,-1]
-    )
-
     # Collect all bond definitions into a single vector.
     # Note that this has the structure [[nearest],[next-nearest]].
-    bonds = [[bond_x, bond_y], [bond_xy, bond_yx]]
+    bonds = [[bond_x, bond_y]]
 
     # Initialize an instance of the ModelGeometry type.
     # This type helps keep track of all the relevant features of the lattice
@@ -198,6 +186,9 @@ function run_hubbard_square_simulation(
     # Define the non-interacting tight binding model.
     tight_binding_model = TightBindingModel(t, tp, tpd)
 
+    # Define a Hubbard model.
+    hubbard_model = HubbardModel(U, 0.0)
+
     # Initialize determinantal variational parameters.
     determinantal_parameters = DeterminantalParameters(
         optimize, 
@@ -218,12 +209,12 @@ function run_hubbard_square_simulation(
     # Write model summary TOML file specifying the Hamiltonian that will be simulated.
     model_summary(
         simulation_info, 
+        tight_binding_model, 
+        hubbard_model,
         determinantal_parameters, 
         spin_J_parameters, 
-        pht, 
-        model_geometry, 
-        tight_binding_model, 
-        U
+        model_geometry,
+        pht
     )
 
     # Initialize the (fermionic) particle configuration.
@@ -236,13 +227,13 @@ function run_hubbard_square_simulation(
 
     # Initialize the container that measurements will be accumulated into.
     measurement_container = initialize_measurement_container(
+        determinantal_parameters,
+        spin_J_parameters,
+        model_geometry,
         N_opt, 
         opt_bin_size, 
         N_sim, 
-        sim_bin_size,
-        determinantal_parameters,
-        spin_J_parameters,
-        model_geometry
+        sim_bin_size
     )
 
     # Add spin-spin correlation measurements.
@@ -272,14 +263,14 @@ function run_hubbard_square_simulation(
         detwf = get_determinantal_wavefunction(
             tight_binding_model, 
             determinantal_parameters, 
+            model_geometry,
             optimize, 
+            pconfig,
             Np, 
             nup, 
             ndn, 
-            model_geometry, 
             rng,
-            pht,
-            pconfig
+            pht
         )  
 
         # Initialize spin-spin Jastrow factor.
@@ -298,15 +289,15 @@ function run_hubbard_square_simulation(
                 (acceptance_rate, detwf, spin_J_factor) = local_fermion_update!(
                     detwf, 
                     spin_J_factor,
+                    model_geometry,
                     spin_J_parameters,
                     Np, 
-                    model_geometry, 
-                    pht,
-                    n_stab_W,
-                    n_stab_T,
                     δW, 
                     δT,
-                    rng
+                    n_stab_W,
+                    n_stab_T,
+                    rng,
+                    pht
                 )
 
                 # Record acceptance rate.
@@ -317,13 +308,13 @@ function run_hubbard_square_simulation(
             make_measurements!(
                 measurement_container, 
                 detwf, 
+                spin_J_factor,
                 tight_binding_model, 
+                hubbard_model,
                 determinantal_parameters, 
                 spin_J_parameters,
-                spin_J_factor,
+                model_geometry,
                 optimize,
-                model_geometry, 
-                U,
                 Np, 
                 pht
             )
@@ -374,14 +365,14 @@ function run_hubbard_square_simulation(
         detwf = get_determinantal_wavefunction(
             tight_binding_model, 
             determinantal_parameters, 
+            model_geometry,
             optimize, 
+            pconfig,
             Np, 
             nup, 
             ndn, 
-            model_geometry, 
             rng,
-            pht,
-            pconfig
+            pht
         )  
 
         # Initialize spin-spin Jastrow factor.
@@ -400,15 +391,15 @@ function run_hubbard_square_simulation(
                 (acceptance_rate, detwf, spin_J_factor) = local_fermion_update!(
                     detwf, 
                     spin_J_factor,
+                    model_geometry,
                     spin_J_parameters,
                     Np, 
-                    model_geometry, 
-                    pht,
-                    n_stab_W,
-                    n_stab_T,
                     δW, 
                     δT,
-                    rng
+                    n_stab_W,
+                    n_stab_T,
+                    rng,
+                    pht
                 )
 
                 # Record acceptance rate.
@@ -419,11 +410,11 @@ function run_hubbard_square_simulation(
             make_measurements!(
                 measurement_container, 
                 detwf, 
-                tight_binding_model, 
-                spin_J_parameters,
                 spin_J_factor,
+                tight_binding_model, 
+                hubbard_model,
+                spin_J_parameters,
                 model_geometry, 
-                U,
                 Np, 
                 pht
             )

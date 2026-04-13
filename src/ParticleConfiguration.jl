@@ -238,7 +238,9 @@ function generate_initial_fermion_configuration!(
     rng::AbstractRNG
 ) where {I<:Integer}
     # lattice sites
-    N = model_geometry.lattice.N
+    N_orbs = model_geometry.unit_cell.n
+    N_cells = model_geometry.lattice.N
+    N = N_orbs * N_cells
 
     # reset configuration to zeros
     fill!(pconfig, 0)
@@ -312,7 +314,9 @@ function get_particle_density(
     pht::Bool
 ) where {E<:AbstractFloat}
     # total number of lattice sites
-    N = model_geometry.lattice.N
+    N_orbs = model_geometry.unit_cell.n
+    N_cells = model_geometry.lattice.N
+    N = N_orbs * N_cells
 
     # total number of particles
     Np = 2 * round(Int, (density * N) / 2)
@@ -367,7 +371,9 @@ function get_particle_density(
     @assert Np isa Integer && isinteger(Np) "Np must be an integer, but got $Np"
 
     # total number of lattice sites
-    N = model_geometry.lattice.N
+    N_orbs = model_geometry.unit_cell.n
+    N_cells = model_geometry.lattice.N
+    N = N_orbs * N_cells
 
     # number of spin-up particles
     nup = Np / 2
@@ -416,7 +422,9 @@ function get_particle_density(
     @assert ndn isa Integer && isinteger(ndn) "ndn must be an integer, but got $ndn"
 
     # total number of lattice sites
-    N = model_geometry.lattice.N
+    N_orbs = model_geometry.unit_cell.n
+    N_cells = model_geometry.lattice.N
+    N = N_orbs * N_cells
 
     # total number of particles and electrons
     if !pht
@@ -443,15 +451,15 @@ Returns the spin species at a given spindex.
 
 - `spindex::I`: spin index.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-
+TODO: this need to be updated.
 """
 function get_spindex_type(
     spindex::I, 
     model_geometry::ModelGeometry
 ) where {I<:Integer}
-    @assert spindex < 2 * model_geometry.lattice.N + 1
+    @assert spindex < 2 * model_geometry.unit_cell.n*model_geometry.lattice.N + 1
 
-    return spindex < model_geometry.lattice.N + 1 ? 1 : -1
+    return spindex < model_geometry.unit_cell.n*model_geometry.lattice.N + 1 ? 1 : -1
 end
 
 
@@ -464,13 +472,13 @@ Returns the lattice site ``i`` for a given spindex.
 
 - `spindex::I`: spin index.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-
+TODO: this need to be updated.
 """
 function get_index_from_spindex(
     spindex::I, 
     model_geometry::ModelGeometry
 ) where {I<:Integer}
-    L = model_geometry.lattice.N
+    L = model_geometry.unit_cell.n*model_geometry.lattice.N
     @assert spindex < 2 * L + 1
 
     return spindex <= L ? spindex : spindex - L
@@ -486,13 +494,13 @@ Returns spin-up and spin-down indices from a given site index.
 
 - `index::I`: lattice site index.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-
+TODO: this need to be updated.
 """
 function get_spindices_from_index(
     index::I, 
     model_geometry::ModelGeometry
 ) where {I<:Integer}
-    L = model_geometry.lattice.N
+    L = model_geometry.unit_cell.n*model_geometry.lattice.N
     @assert index <= L
 
     return index, index + L

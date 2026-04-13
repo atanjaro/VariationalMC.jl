@@ -64,6 +64,64 @@ function Base.show(io::IO, ::MIME"text/plain", model_geometry::ModelGeometry{D,T
     return nothing
 end
 
+#### Prototypes for new ModelGeometry structure
+
+# struct ModelGeometry{D, T<:AbstractFloat, N}
+
+#     unit_cell::UnitCell{D,T,N}
+#     lattice::Lattice{D}
+#     bonds::Vector{Bond{D}}
+
+# end
+
+
+# function ModelGeometry(unit_cell::UnitCell{D}, lattice::Lattice{D}) where {D}
+
+#     # # ensure all spatial dimension are periodic
+#     # @assert all(i -> i, lattice.periodic) "All spatial dimensions in lattice must be periodic."
+
+#     # define trivial bond connecting each orbital in unit cell to itself
+#     n     = unit_cell.n
+#     bonds = Bond{D}[]
+#     for i in 1:n
+#         push!(bonds, Bond((i,i),zeros(Int,D)))
+#     end
+
+#     return ModelGeometry(unit_cell, lattice, bonds)
+# end
+
+# function add_bond!(model_geometry::ModelGeometry{D,T}, bond::Bond{D}) where {D, T}
+
+#     (; bonds) = model_geometry
+
+#     # get the bond ID
+#     bond_id = get_bond_id(model_geometry, bond)
+
+#     # if the bond is not already recorded, then record it and get its new bond ID
+#     if iszero(bond_id)
+#         # record the bond ID
+#         push!(bonds, bond)
+#         # get the ID of the new bond
+#         bond_id = length(bonds)
+#     end
+
+#     return bond_id
+# end
+
+# function get_bond_id(model_geometry::ModelGeometry{D,T}, bond::Bond{D}) where {D, T}
+
+#     (; bonds) = model_geometry
+
+#     if bond in bonds
+#         bond_id = findfirst(b -> b==bond, bonds)
+#     else
+#         bond_id = 0
+#     end
+    
+#     return bond_id
+# end
+
+
 
 @doc raw"""
 

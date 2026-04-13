@@ -1,31 +1,29 @@
 @doc raw"""
 
-    model_summary( simulation_info::SimulationInfo,
-                   optimize::NamedTuple,
-                   pht::Bool,
-                   model_geometry::ModelGeometry,
-                   tight_binding_model::TightBindingModel,
-                   U::T;
-                   jastrow_parameters_1::JastrowParameters,
-                   jastrow_parameters_2::JastrowParameters ) where {T<:AbstractFloat}
+    model_summary(  simulation_info::SimulationInfo,
+                    tight_binding_model::TightBindingModel,
+                    hubbard_model::HubbardModel,
+                    determinantal_parameters::DeterminantalParameters,
+                    model_geometry::ModelGeometry,
+                    pht::Bool ) where {T<:AbstractFloat}
 
 Writes model summary to file.
 
 - `simulation_info::SimulationInfo`: contains simulation information. 
-- `determinantal_parameters::DeterminantalParameters`: initial determinantal parameters values.
-- `pht::Bool`: whether model is particle-hole transformed. 
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities. 
 - `tight_binding_model::TightBindingModel`: parameters for a non-interacting tight-binding model. 
-- `U::T`: Hubbard interaction. 
-
+- `hubbard_model::HubbardModel{T}`: Hubbard interaction parameters.
+- `determinantal_parameters::DeterminantalParameters`: initial determinantal parameters values.
+- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities. 
+- `pht::Bool`: whether model is particle-hole transformed. 
+ 
 """
 function model_summary(
     simulation_info::SimulationInfo,
-    determinantal_parameters::DeterminantalParameters,
-    pht::Bool,
-    model_geometry::ModelGeometry,
     tight_binding_model::TightBindingModel,
-    U::T
+    hubbard_model::HubbardModel{T},
+    determinantal_parameters::DeterminantalParameters,
+    model_geometry::ModelGeometry,
+    pht::Bool
 ) where {T<:AbstractFloat}
 
     # if process ID is 1
@@ -36,14 +34,28 @@ function model_summary(
 
         # open file to write to
         open(fn, "w") do fout
+            # write model geometry out to file
+            show(fout, "text/plain", model_geometry)
+
+            # write tight binding model to file
+            show(fout, MIME("text/plain"), tight_binding_model)
+
+            # write Hubbard interaction
+            show(fout, MIME("text/plain"), hubbard_model)
+
+            # write pht
+            @printf fout "[ParticleHole]\n\n"
+            @printf(fout, "pht = %s\n\n", pht)
+
             # write initial values of determinantal parameters
             # Map parameter names → section labels
             name_map = Dict(
                 :Δ_0   => "s-wave",
-                :Δ_spd => "sPDW",
+                :Δ_slo => "Larkin-Ovchinnikov",
+                :Δ_sff => "Fulde-Ferrell",
                 :Δ_d   => "d-wave",
-                :Δ_dpd => "dPDW",
-                :q_p   => "pairing momentum",
+                :Δ_dlo => "Larkin-Ovchinnikov",
+                :Δ_dff => "Fulde-Ferrell",
                 :Δ_sx  => "spin-x",
                 :Δ_sz  => "spin-z",
                 :Δ_ssd => "site-dependent spin",
@@ -67,20 +79,6 @@ function model_summary(
                     @printf fout "%s = %s\n\n" key string(val)
                 end
             end
-            
-            # write pht
-            @printf fout "[ParticleHole]\n\n"
-            @printf(fout, "pht = %s\n\n", pht)
-
-            # write model geometry out to file
-            show(fout, "text/plain", model_geometry)
-
-            # write tight binding model to file
-            show(fout, MIME("text/plain"), tight_binding_model)
-
-            # write Hubbard interaction
-            @printf fout "[HubbardU]\n\n"
-            @printf(fout, "U = %s\n\n", U)
         end
     end
 
@@ -90,33 +88,34 @@ end
 
 @doc raw"""
 
-    model_summary( simulation_info::SimulationInfo,
-                   determinantal_parameters::DeterminantalParameters,
-                   jastrow_parameters::JastrowParameters,
-                   pht::Bool,
-                   model_geometry::ModelGeometry,
-                   tight_binding_model::TightBindingModel,
-                   U::T ) where {T<:AbstractFloat}
+    model_summary(  simulation_info::SimulationInfo,
+                    tight_binding_model::TightBindingModel,
+                    hubbard_model::HubbardModel{T},
+                    determinantal_parameters::DeterminantalParameters,
+                    jastrow_parameters::JastrowParameters,
+                    model_geometry::ModelGeometry,
+                    pht::Bool ) where {T<:AbstractFloat}
 
 Writes model summary to file.
 
 - `simulation_info::SimulationInfo`: contains simulation information. 
+- `tight_binding_model::TightBindingModel`: parameters for a non-interacting tight-binding model. 
+- `hubbard_model::HubbardModel{T}`: Hubbard interaction parameters. 
 - `determinantal_parameters::DeterminantalParameters`: initial determinantal parameters values.
 - `jastrow_parameters::JastrowParameters`: initial set of Jastrow parameters. 
-- `pht::Bool`: whether model is particle-hole transformed. 
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities. 
-- `tight_binding_model::TightBindingModel`: parameters for a non-interacting tight-binding model. 
-- `U::T`: Hubbard interaction. 
+- `pht::Bool`: whether model is particle-hole transformed. 
+
 
 """
 function model_summary(
     simulation_info::SimulationInfo,
+    tight_binding_model::TightBindingModel,
+    hubbard_model::HubbardModel{T},
     determinantal_parameters::DeterminantalParameters,
     jastrow_parameters::JastrowParameters,
-    pht::Bool,
     model_geometry::ModelGeometry,
-    tight_binding_model::TightBindingModel,
-    U::T
+    pht::Bool
 ) where {T<:AbstractFloat}
 
     # if process ID is 1
@@ -127,20 +126,34 @@ function model_summary(
 
         # open file to write to
         open(fn, "w") do fout
+            # write model geometry out to file
+            show(fout, "text/plain", model_geometry)
+
+            # write tight binding model to file
+            show(fout, MIME("text/plain"), tight_binding_model)
+
+            # write Hubbard interaction
+            show(fout, MIME("text/plain"), hubbard_model)
+
+            # write pht
+            @printf fout "[ParticleHole]\n\n"
+            @printf(fout, "pht      = %s\n\n", pht)
+
             # write initial values of determinantal parameters
             # Map parameter names → section labels
             name_map = Dict(
                 :Δ_0   => "s-wave",
-                :Δ_spd => "sPDW",
+                :Δ_slo => "Larkin-Ovchinnikov",
+                :Δ_sff => "Fulde-Ferrell",
                 :Δ_d   => "d-wave",
-                :Δ_dpd => "dPDW",
-                :q_p   => "Pairing momentum",
+                :Δ_dlo => "Larkin-Ovchinnikov",
+                :Δ_dff => "Fulde-Ferrell",
                 :Δ_sx  => "spin-x",
                 :Δ_sz  => "spin-z",
-                :Δ_ssd => "Site-dependent spin",
-                :μ     => "Chemical potential",
-                :Δ_cdw => "Charge density wave",
-                :Δ_csd => "Site-dependent density"
+                :Δ_ssd => "site-dependent spin",
+                :μ     => "chemical potential",
+                :Δ_cdw => "charge density wave",
+                :Δ_csd => "site-dependent density"
             )
 
             @printf fout "[DeterminantalParameters]\n\n"
@@ -168,20 +181,6 @@ function model_summary(
                 @printf fout "index    = %d\n" idx
                 @printf fout "v_%d      = %.17g\n\n" idx value
             end
-            
-            # write pht
-            @printf fout "[ParticleHole]\n\n"
-            @printf(fout, "pht      = %s\n\n", pht)
-
-            # write model geometry out to file
-            show(fout, "text/plain", model_geometry)
-
-            # write tight binding model to file
-            show(fout, MIME("text/plain"), tight_binding_model)
-
-            # write Hubbard interaction
-            @printf fout "[HubbardU]\n\n"
-            @printf(fout, "U        = %s\n\n", U)
         end
     end
 
@@ -191,36 +190,36 @@ end
 
 @doc raw"""
 
-    model_summary( simulation_info::SimulationInfo,
-                   determinantal_parameters::DeterminantalParameters,
-                   jastrow_parameters_1::JastrowParameters,
-                   jastrow_parameters_2::JastrowParameters,
-                   pht::Bool,
-                   model_geometry::ModelGeometry,
-                   tight_binding_model::TightBindingModel,
-                   U::T ) where {T<:AbstractFloat}
+    model_summary(  simulation_info::SimulationInfo,
+                    tight_binding_model::TightBindingModel,
+                    hubbard_model::HubbardModel{T},
+                    determinantal_parameters::DeterminantalParameters,
+                    jastrow_parameters_1::JastrowParameters,
+                    jastrow_parameters_2::JastrowParameters,
+                    model_geometry::ModelGeometry,
+                    pht::Bool ) where {T<:AbstractFloat}
 
 Writes model summary to file.
 
 - `simulation_info::SimulationInfo`: contains simulation information.
+- `tight_binding_model::TightBindingModel`: parameters for a non-interacting tight-binding model. 
+- `hubbard_model::HubbardModel{T}`: Hubbard interaction parameters. 
 - `determinantal_parameters::DeterminantalParameters`: initial determinantal parameters values.
 - `jastrow_parameters_1::JastrowParameters`: first set of Jastrow parameters.
 - `jastrow_parameters_2::JastrowParameters`: second set of Jastrow parameters.
-- `pht::Bool`: whether model is particle-hole transformed. 
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities. 
-- `tight_binding_model::TightBindingModel`: parameters for a non-interacting tight-binding model. 
-- `U::T`: Hubbard interaction. 
+- `pht::Bool`: whether model is particle-hole transformed. 
 
 """
 function model_summary(
     simulation_info::SimulationInfo,
+    tight_binding_model::TightBindingModel,
+    hubbard_model::HubbardModel{T},
     determinantal_parameters::DeterminantalParameters,
     jastrow_parameters_1::JastrowParameters,
     jastrow_parameters_2::JastrowParameters,
-    pht::Bool,
     model_geometry::ModelGeometry,
-    tight_binding_model::TightBindingModel,
-    U::T
+    pht::Bool
 ) where {T<:AbstractFloat}
 
     # if process ID is 1
@@ -231,20 +230,34 @@ function model_summary(
 
         # open file to write to
         open(fn, "w") do fout
+            # write model geometry out to file
+            show(fout, "text/plain", model_geometry)
+
+            # write tight binding model to file
+            show(fout, MIME("text/plain"), tight_binding_model)
+
+            # write Hubbard interaction
+            show(fout, MIME("text/plain"), hubbard_model)
+
+            # write pht
+            @printf fout "[ParticleHole]\n\n"
+            @printf(fout, "pht      = %s\n\n", pht)
+
             # write initial values of determinantal parameters
             # Map parameter names → section labels
             name_map = Dict(
                 :Δ_0   => "s-wave",
-                :Δ_spd => "sPDW",
+                :Δ_slo => "Larkin-Ovchinnikov",
+                :Δ_sff => "Fulde-Ferrell",
                 :Δ_d   => "d-wave",
-                :Δ_dpd => "dPDW",
-                :q_p   => "Pairing momentum",
+                :Δ_dlo => "Larkin-Ovchinnikov",
+                :Δ_dff => "Fulde-Ferrell",
                 :Δ_sx  => "spin-x",
                 :Δ_sz  => "spin-z",
-                :Δ_ssd => "Site-dependent spin",
-                :μ     => "Chemical potential",
-                :Δ_cdw => "Charge density wave",
-                :Δ_csd => "Site-dependent density"
+                :Δ_ssd => "site-dependent spin",
+                :μ     => "chemical potential",
+                :Δ_cdw => "charge density wave",
+                :Δ_csd => "site-dependent density"
             )
 
             @printf fout "[DeterminantalParameters]\n\n"
@@ -282,20 +295,6 @@ function model_summary(
                 @printf fout "index    = %d\n" idx
                 @printf fout "v_%d      = %.17g\n\n" idx value
             end
-            
-            # write pht
-            @printf fout "[ParticleHole]\n\n"
-            @printf(fout, "pht      = %s\n\n", pht)
-
-            # write model geometry out to file
-            show(fout, "text/plain", model_geometry)
-
-            # write tight binding model to file
-            show(fout, MIME("text/plain"), tight_binding_model)
-
-            # write Hubbard interaction
-            @printf fout "[HubbardU]\n\n"
-            @printf(fout, "U        = %s\n\n", U)
         end
     end
 

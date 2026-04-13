@@ -115,7 +115,9 @@ function update_equal_time_greens!(
         )
 
         # number of lattice sites
-        N = model_geometry.lattice.N
+        Norbs = model_geometry.unit_cell.n
+        Ncells = model_geometry.lattice.N
+        N = Norbs * Ncells
 
         # re-initialize W matrix
         Wᵣ = zeros(ComplexF64, 2*N, Np)

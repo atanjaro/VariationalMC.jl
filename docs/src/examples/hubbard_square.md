@@ -48,7 +48,7 @@ function run_hubbard_square_simulation(;
     N_opt_bins,                     # Number of times bin-averaged measurements are written to file during optimization step.
     N_sim,                          # Number of simulation steps.
     N_sim_bins,                     # Number of times bin-averaged measurements are written to file during simulation step.
-    dt          = 0.03,             # Optimization rate.
+    dt          = 0.1,             # Optimization rate.
     dt_J        = 1.0,              # Optional boost in the Jastrow optimization rate.
     η           = 1e-4,             # Optimization stablity factor.
     n_stab_W    = 50,               # Green's function stabilization frequency.
@@ -197,21 +197,9 @@ All of this information regarding the lattice geometry is then stored in an inst
         displacement = [0,1]
     )
 
-    # Define the next-nearest neighbor bonds for a square lattice.
-    bond_xy = Bond(
-        orbitals = (1,1), 
-        displacement = [1,1]
-    )
-
-    # Define the next-nearest neighbor bonds for a square lattice.
-    bond_yx = Bond(
-        orbitals = (1,1), 
-        displacement = [1,-1]
-    )
-
     # Collect all bond definitions into a single vector.
     # Note that this has the structure [[nearest],[next-nearest]].
-    bonds = [[bond_x, bond_y], [bond_xy, bond_yx]]
+    bonds = [[bond_x, bond_y]]
 
     # Initialize an instance of the ModelGeometry type.
     model_geometry = ModelGeometry(
@@ -230,7 +218,7 @@ The next step is to initialize our model parameters, which includes calculating 
     (density, Np, Ne, nup, ndn) = get_particle_density(density, model_geometry, pht) 
 ````
 
-We then specify parameters for our tight binding model and initializes all of the parameters that are in the determinantal part of the trial wavefunction. Parameters for the spin-spin Jastrow factor are initialized seperately. The `model_summary` function is used to write a `model_summary.toml` file, completely specifying the Hamiltonian that will be simulated. Lastly, we can also set an initial particle configuration, if we have one. If an empty array is provided instead, a random configuration will be given at the start of the simulation. 
+We then specify parameters for our tight binding and Hubbard models, and initializes all of the parameters that are in the determinantal part of the trial wavefunction. Parameters for the spin-spin Jastrow factor are initialized seperately. The `model_summary` function is used to write a `model_summary.toml` file, completely specifying the Hamiltonian that will be simulated. Lastly, we can also set an initial particle configuration, if we have one. If an empty array is provided instead, a random configuration will be given at the start of the simulation. 
 
 ````julia
     # Define the nearest neighbor hopping amplitude, setting the energy scale of the system. 
@@ -245,11 +233,14 @@ We then specify parameters for our tight binding model and initializes all of th
     # Define the non-interacting tight binding model.
     tight_binding_model = TightBindingModel(t, tp, tpd)
 
+    # Define a Hubbard model.
+    hubbard_model = HubbardModel(U, 0.0)
+
     # Initialize determinantal variational parameters.
     determinantal_parameters = DeterminantalParameters(
-        optimize, 
         tight_binding_model, 
         model_geometry, 
+        optimize, 
         Ne, 
         pht
     )
@@ -265,12 +256,12 @@ We then specify parameters for our tight binding model and initializes all of th
     # Write model summary TOML file specifying the Hamiltonian that will be simulated.
     model_summary(
         simulation_info, 
+        tight_binding_model, 
+        hubbard_model,
         determinantal_parameters, 
         spin_J_parameters, 
-        pht, 
-        model_geometry, 
-        tight_binding_model, 
-        U
+        model_geometry,
+        pht
     )
 
     # Initialize the (fermionic) particle configuration.
@@ -283,12 +274,13 @@ Finally, we initialize the mesaurement container, which accumulates the sums of 
 ````julia
     # Initialize the container that measurements will be accumulated into.
     measurement_container = initialize_measurement_container(
+        determinantal_parameters,
+        spin_J_parameters,
+        model_geometry,
         N_opt, 
         opt_bin_size, 
         N_sim, 
-        sim_bin_size,
-        determinantal_parameters,
-        model_geometry
+        sim_bin_size
     )
 
     # Add spin-spin correlation measurements.
@@ -318,14 +310,14 @@ Now that we have set-up the VMC simulation, we can begin optimizing the variatio
         detwf = get_determinantal_wavefunction(
             tight_binding_model, 
             determinantal_parameters, 
+            model_geometry,
             optimize, 
+            pconfig,
             Np, 
             nup, 
             ndn, 
-            model_geometry, 
             rng,
-            pht,
-            pconfig
+            pht
         )  
 
         # Initialize spin-spin Jastrow factor.
@@ -354,15 +346,15 @@ The bin-averaged measurements are written to file once `bin_size` measurements a
                 (acceptance_rate, detwf, spin_J_factor) = local_fermion_update!(
                     detwf, 
                     spin_J_factor,
+                    model_geometry,
                     spin_J_parameters,
                     Np, 
-                    model_geometry, 
-                    pht,
-                    n_stab_W,
-                    n_stab_T,
                     δW, 
                     δT,
-                    rng
+                    n_stab_W,
+                    n_stab_T,
+                    rng,
+                    pht
                 )
 
                 # Record acceptance rate.
@@ -373,13 +365,13 @@ The bin-averaged measurements are written to file once `bin_size` measurements a
             make_measurements!(
                 measurement_container, 
                 detwf, 
+                spin_J_factor,
                 tight_binding_model, 
+                hubbard_model,
                 determinantal_parameters, 
                 spin_J_parameters,
-                spin_J_factor,
+                model_geometry,
                 optimize,
-                model_geometry, 
-                U,
                 Np, 
                 pht
             )
@@ -432,14 +424,14 @@ In this next section, we continue to sample particle configurations using `local
         detwf = get_determinantal_wavefunction(
             tight_binding_model, 
             determinantal_parameters, 
+            model_geometry,
             optimize, 
+            pconfig,
             Np, 
             nup, 
             ndn, 
-            model_geometry, 
             rng,
-            pht,
-            pconfig
+            pht
         )  
 
         # Initialize spin-spin Jastrow factor.
@@ -458,15 +450,15 @@ In this next section, we continue to sample particle configurations using `local
                 (acceptance_rate, detwf, spin_J_factor) = local_fermion_update!(
                     detwf, 
                     spin_J_factor,
+                    model_geometry,
                     spin_J_parameters,
                     Np, 
-                    model_geometry, 
-                    pht,
-                    n_stab_W,
-                    n_stab_T,
                     δW, 
                     δT,
-                    rng
+                    n_stab_W,
+                    n_stab_T,
+                    rng,
+                    pht
                 )
 
                 # Record acceptance rate.
@@ -477,11 +469,11 @@ In this next section, we continue to sample particle configurations using `local
             make_measurements!(
                 measurement_container, 
                 detwf, 
-                tight_binding_model, 
-                spin_J_parameters,
                 spin_J_factor,
+                tight_binding_model, 
+                hubbard_model,
+                spin_J_parameters,
                 model_geometry, 
-                U,
                 Np, 
                 pht
             )

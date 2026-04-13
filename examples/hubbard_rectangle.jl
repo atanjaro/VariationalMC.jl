@@ -36,33 +36,33 @@ function run_hubbard_square_simulation(;
 )
     # Select which parameters in the variational wavefunction will be optimized.
     optimize = (
-        # local s-wave pairing
+        # Uniform s-wave pairing
         Δ_0 = false,
-        # site-dependent s-wave pairing (Larkin-Ovchinnikov-type)
+        # Site-dependent s-wave pairing (Larkin-Ovchinnikov)
         Δ_slo = false,
-        # site-dependent s-wave pairing (Fulde-Ferrell-type)
+        # Site-dependent s-wave pairing (Fulde-Ferrell)
         Δ_sff = false,
-        # local d-wave pairing
+        # Uniform d-wave pairing
         Δ_d = false,
-        # site-dependent d-wave pairing (Larkin-Ovchinnikov-type)
+        # Site-dependent d-wave pairing (Larkin-Ovchinnikov)
         Δ_dlo = false,
-        # site-dependent d-wave pairing (Fulde-Ferrell-type)
+        # Site-dependent d-wave pairing (Fulde-Ferrell)
         Δ_dff = false,     
-        # spin-x (in-plane magnetization)
+        # In-plane magnetization
         Δ_sx = false,
-        # spin-z (out-of-plane magnetization)
-        Δ_sz = true,
-        # site-dependent spin density
-        Δ_ssd = false,
-        # (BCS) chemical potential
-        μ = false,
-        # uniform charge density 
+        # Out-of-plane magnetization
+        Δ_sz = false,
+        # Site-dependent magnetization
+        Δ_ssd = true,
+        # Chemical potential
+        μ = flase,
+        # Charge density wave
         Δ_cdw = false,
-        # site-dependent charge density
-        Δ_csd = false,
-        # density-density Jastrow pseudopotential
+        # Site-dependent charge density
+        Δ_csd = true,
+        # Density-density Jastrow pseudopotentials
         density_J = true,
-        # spin-spin Jastrow pseudopotentials
+        # Spin-spin Jastrow pseudopotentials
         spin_J = true
     )
 
@@ -188,7 +188,7 @@ function run_hubbard_square_simulation(;
     t = 1.0
 
     # Define the next-nearest neighbor hopping amplitude.
-    tp = 0.0
+    tp = -0.25
 
     # Define the third-nearest neighbor hopping amplitude.
     tpd = 0.0
@@ -196,11 +196,14 @@ function run_hubbard_square_simulation(;
     # Define the non-interacting tight binding model.
     tight_binding_model = TightBindingModel(t, tp, tpd)
 
+    # Define a Hubbard model.
+    hubbard_model = HubbardModel(U, 0.0)
+
     # Initialize determinantal variational parameters.
     determinantal_parameters = DeterminantalParameters(
-        optimize, 
-        tight_binding_model, 
+        tight_binding_model,
         model_geometry, 
+        optimize,
         Ne, 
         pht
     )
@@ -233,13 +236,13 @@ function run_hubbard_square_simulation(;
     # Write model summary TOML file specifying the Hamiltonian that will be simulated.
     model_summary(
         simulation_info, 
+        tight_binding_model,
+        hubbard_model,
         determinantal_parameters, 
         density_J_parameters, 
-        spin_J_parameters,
-        pht, 
+        spin_J_parameters, 
         model_geometry, 
-        tight_binding_model, 
-        U
+        pht
     )
 
     # Initialize the (fermionic) particle configuration.
@@ -252,14 +255,14 @@ function run_hubbard_square_simulation(;
 
     # Initialize the container that measurements will be accumulated into.
     measurement_container = initialize_measurement_container(
-        N_opt, 
-        opt_bin_size, 
-        N_sim, 
-        sim_bin_size,
         determinantal_parameters,
         density_J_parameters,
         spin_J_parameters,
-        model_geometry
+        model_geometry,
+        N_opt, 
+        opt_bin_size, 
+        N_sim, 
+        sim_bin_size
     )
 
     # add measurement of site-dependent Sz
@@ -298,14 +301,14 @@ function run_hubbard_square_simulation(;
         detwf = get_determinantal_wavefunction(
             tight_binding_model, 
             determinantal_parameters, 
+            model_geometry,
             optimize, 
+            pconfig,
             Np, 
             nup, 
             ndn, 
-            model_geometry, 
             rng,
-            pht,
-            pconfig
+            pht
         )  
 
         # Initialize density-density Jastrow factor.
@@ -333,16 +336,16 @@ function run_hubbard_square_simulation(;
                     detwf, 
                     density_J_factor,
                     spin_J_factor,
+                    model_geometry,
                     density_J_parameters,
                     spin_J_parameters,
                     Np, 
-                    model_geometry, 
-                    pht,
-                    n_stab_W,
-                    n_stab_T,
                     δW, 
                     δT,
-                    rng
+                    n_stab_W,
+                    n_stab_T,
+                    rng,
+                    pht
                 )
 
                 # Record acceptance rate.
@@ -353,15 +356,15 @@ function run_hubbard_square_simulation(;
             make_measurements!(
                 measurement_container, 
                 detwf, 
+                density_J_factor,
+                spin_J_factor,
                 tight_binding_model, 
+                hubbard_model,
                 determinantal_parameters, 
                 density_J_parameters,
                 spin_J_parameters,
-                density_J_factor,
-                spin_J_factor,
+                model_geometry,
                 optimize,
-                model_geometry, 
-                U,
                 Np, 
                 pht
             )
@@ -413,14 +416,14 @@ function run_hubbard_square_simulation(;
         detwf = get_determinantal_wavefunction(
             tight_binding_model, 
             determinantal_parameters, 
+            model_geometry,
             optimize, 
+            pconfig,
             Np, 
             nup, 
             ndn, 
-            model_geometry, 
             rng,
-            pht,
-            pconfig
+            pht
         )  
 
         # Initialize density-density Jastrow factor.
@@ -448,16 +451,16 @@ function run_hubbard_square_simulation(;
                     detwf, 
                     density_J_factor,
                     spin_J_factor,
+                    model_geometry,
                     density_J_parameters,
                     spin_J_parameters,
                     Np, 
-                    model_geometry, 
-                    pht,
-                    n_stab_W,
-                    n_stab_T,
                     δW, 
                     δT,
-                    rng
+                    n_stab_W,
+                    n_stab_T,
+                    rng,
+                    pht
                 )
 
                 # Record acceptance rate.
@@ -468,13 +471,13 @@ function run_hubbard_square_simulation(;
             make_measurements!(
                 measurement_container, 
                 detwf, 
-                tight_binding_model, 
-                density_J_parameters,
-                spin_J_parameters,
                 density_J_factor,
                 spin_J_factor,
-                model_geometry, 
-                U,
+                tight_binding_model, 
+                hubbard_model,
+                density_J_parameters,
+                spin_J_parameters,
+                model_geometry,
                 Np, 
                 pht
             )

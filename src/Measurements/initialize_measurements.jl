@@ -1,32 +1,34 @@
 @doc raw"""
 
-    initialize_measurement_container( N_opt::I, 
-                                      opt_bin_size::I, 
-                                      N_sim::I, 
-                                      sim_bin_size::I,
-                                      determinantal_parameters::DeterminantalParameters{I}, 
-                                      model_geometry::ModelGeometry ) where {I<:Integer}
+    initialize_measurement_container(   determinantal_parameters::DeterminantalParameters{I}, 
+                                        model_geometry::ModelGeometry,
+                                        N_opt::I, 
+                                        opt_bin_size::I, 
+                                        N_sim::I, 
+                                        sim_bin_size::I ) where {I<:Integer}
 
 Initializes a set of dictionaries containing generic arrays for storing measurements.
     
+- `determinantal_parameters::DeterminantalParameters{I}`: set of determinantal variational parameters.
+- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 - `N_opt::I`: number of optimization updates.
 - `opt_bin_size::I`: length of an optimization bin.
 - `N_sim::I`: number of simulation bins.
 - `sim_bin_size::I`: length of a simulation bin. 
-- `determinantal_parameters::DeterminantalParameters{I}`: set of determinantal variational parameters.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 
 """
 function initialize_measurement_container(
+    determinantal_parameters::DeterminantalParameters{I}, 
+    model_geometry::ModelGeometry,
     N_opt::I, 
     opt_bin_size::I, 
     N_sim::I, 
-    sim_bin_size::I,
-    determinantal_parameters::DeterminantalParameters{I}, 
-    model_geometry::ModelGeometry
+    sim_bin_size::I
 ) where {I<:Integer}
     # total number of lattice sites
-    N = model_geometry.lattice.N
+    Norbs = model_geometry.unit_cell.n
+    Ncells = model_geometry.lattice.N
+    N = Norbs * Ncells
     
     # dimensions of the lattice
     L = model_geometry.lattice.L
@@ -80,36 +82,38 @@ end
 
 @doc raw"""
 
-    initialize_measurement_container( N_opt::I, 
-                                      opt_bin_size::I, 
-                                      N_sim::I, 
-                                      sim_bin_size::I,
-                                      determinantal_parameters::DeterminantalParameters{I}, 
-                                      jastrow_parameters::JastrowParameters{S, K, V, I},
-                                      model_geometry::ModelGeometry ) where {I<:Integer, S<:AbstractString, K, V}
+    initialize_measurement_container(   determinantal_parameters::DeterminantalParameters{I}, 
+                                        jastrow_parameters::JastrowParameters{S, K, V, I}, 
+                                        model_geometry::ModelGeometry,
+                                        N_opt::I, 
+                                        opt_bin_size::I, 
+                                        N_sim::I, 
+                                        sim_bin_size::I ) where {I<:Integer, S<:AbstractString, K, V}
 
 Initializes a set of dictionaries containing generic arrays for storing measurements.
     
+- `determinantal_parameters::DeterminantalParameters{I}`: set of determinantal variational parameters.
+- `jastrow_parameters::JastrowParameters{S, K, V, I}`: set of Jastrow variational parameters.
+- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 - `N_opt::I`: number of optimization updates.
 - `opt_bin_size::I`: length of an optimization bin.
 - `N_sim::I`: number of simulation bins.
 - `sim_bin_size::I`: length of a simulation bin. 
-- `determinantal_parameters::DeterminantalParameters{I}`: set of determinantal variational parameters.
-- `jastrow_parameters::JastrowParameters{S, K, V, I}`: set of Jastrow variational parameters.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 
 """
 function initialize_measurement_container(
+    determinantal_parameters::DeterminantalParameters{I}, 
+    jastrow_parameters::JastrowParameters{S, K, V, I}, 
+    model_geometry::ModelGeometry,
     N_opt::I, 
     opt_bin_size::I, 
     N_sim::I, 
-    sim_bin_size::I,
-    determinantal_parameters::DeterminantalParameters{I}, 
-    jastrow_parameters::JastrowParameters{S, K, V, I}, 
-    model_geometry::ModelGeometry
+    sim_bin_size::I
 ) where {I<:Integer, S<:AbstractString, K, V}
     # total number of lattice sites
-    N = model_geometry.lattice.N
+    Norbs = model_geometry.unit_cell.n
+    Ncells = model_geometry.lattice.N
+    N = Norbs * Ncells
     
     # one side of the lattice
     L = model_geometry.lattice.L
@@ -168,39 +172,41 @@ end
 
 @doc raw"""
 
-    initialize_measurement_container( N_opt::I, 
-                                      opt_bin_size::I, 
-                                      N_sim::I, 
-                                      sim_bin_size::I,
-                                      determinantal_parameters::DeterminantalParameters{I}, 
-                                      jastrow_parameters_1::JastrowParameters{S, K, V, I},
-                                      jastrow_parameters_2::JastrowParameters{S, K, V, I},
-                                      model_geometry::ModelGeometry ) where {I<:Integer, S<:AbstractString, K, V}
+    initialize_measurement_container(   determinantal_parameters::DeterminantalParameters{I}, 
+                                        jastrow_parameters_1::JastrowParameters{S, K, V, I}, 
+                                        jastrow_parameters_2::JastrowParameters{S, K, V, I}, 
+                                        model_geometry::ModelGeometry,
+                                        N_opt::I, 
+                                        opt_bin_size::I, 
+                                        N_sim::I, 
+                                        sim_bin_size::I ) where {I<:Integer, S<:AbstractString, K, V}
 
 Initializes a set of dictionaries containing generic arrays for storing measurements.
-    
-- `N_opt::I`: number of optimization updates.
-- `opt_bin_size::I`: length of an optimization bin.
-- `N_sim::I`: number of simulation bins.
-- `sim_bin_size::I`: length of a simulation bin. 
+ 
 - `determinantal_parameters::DeterminantalParameters{I}`: set of determinantal variational parameters.
 - `jastrow_parameters_1::JastrowParameters{S, K, V, I}`: first set of Jastrow variational parameters.
 - `jastrow_parameters_2::JastrowParameters{S, K, V, I}`: second set of Jastrow variational parameters.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
+- `N_opt::I`: number of optimization updates.
+- `opt_bin_size::I`: length of an optimization bin.
+- `N_sim::I`: number of simulation bins.
+- `sim_bin_size::I`: length of a simulation bin. 
 
 """
 function initialize_measurement_container(
-    N_opt::I, 
-    opt_bin_size::I, 
-    N_sim::I, 
-    sim_bin_size::I,
     determinantal_parameters::DeterminantalParameters{I}, 
     jastrow_parameters_1::JastrowParameters{S, K, V, I}, 
     jastrow_parameters_2::JastrowParameters{S, K, V, I}, 
-    model_geometry::ModelGeometry
+    model_geometry::ModelGeometry,
+    N_opt::I, 
+    opt_bin_size::I, 
+    N_sim::I, 
+    sim_bin_size::I
 ) where {I<:Integer, S<:AbstractString, K, V}
     # total number of lattice sites
-    N = model_geometry.lattice.N
+    Norbs = model_geometry.unit_cell.n
+    Ncells = model_geometry.lattice.N
+    N = Norbs * Ncells
     
     # one side of the lattice
     L = model_geometry.lattice.L
@@ -278,7 +284,9 @@ function initialize_correlation_measurement!(
     @assert correlation_type == "density" || correlation_type == "spin"
 
     # number of lattice sites
-    N = model_geometry.lattice.N
+    Norbs = model_geometry.unit_cell.n
+    Ncells = model_geometry.lattice.N
+    N = Norbs * Ncells
 
     # add to measurement container
     measurement_container.correlation_measurements[correlation_type] = zeros(N, N)
@@ -311,7 +319,9 @@ function initialize_simulation_measurement!(
     @assert type == "local" || type == "site-dependent"
 
     # number of lattice sites
-    N = model_geometry.lattice.N
+    Norbs = model_geometry.unit_cell.n
+    Ncells = model_geometry.lattice.N
+    N = Norbs * Ncells
 
     if type == "local"
         @assert observable == "spin-z" || "density" || observable == "spin"

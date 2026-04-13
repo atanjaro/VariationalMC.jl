@@ -1,18 +1,18 @@
 @doc raw"""
 
-    get_local_energy( detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                      tight_binding_model::TightBindingModel{E}, 
+    get_local_energy( detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+                      tight_binding_model::TightBindingModel{E2}, 
+                      hubbard_model::HubbardModel{E2},
                       model_geometry::ModelGeometry, 
-                      U::E,
                       Np::I, 
-                      pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+                      pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
 
-Calculates the local variational energy ``E_{\mathrm{var}}`` per site for a Hubbard model.
+Calculates the local variational energy per site ``E_{\mathrm{var}}/N`` for a Hubbard model.
 
-- `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
+- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current variational wavefunction.
 - `tight_binding_model::TightBindingModel{E}`: parameters for a non-interacting tight-binding model. 
+- `hubbard_model::HubbardModel{E2}`: Hubbard interaction parameters.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `U::E`: Hubbard interaction.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether model is particle-hole transformed.
 
@@ -20,13 +20,15 @@ Calculates the local variational energy ``E_{\mathrm{var}}`` per site for a Hubb
 function get_local_energy(
     detwf::DeterminantalWavefunction{T, Q, E1, I}, 
     tight_binding_model::TightBindingModel{E2}, 
+    hubbard_model::HubbardModel{E2},
     model_geometry::ModelGeometry, 
-    U::E2,
     Np::I, 
     pht::Bool
 ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
     # number of lattice sites
-    N = model_geometry.lattice.N
+    Norbs = model_geometry.unit_cell.n
+    Ncells = model_geometry.lattice.N
+    N = Norbs * Ncells
 
     # calculate kinetic energy
     E_k = get_local_kinetic_energy(
@@ -37,16 +39,28 @@ function get_local_energy(
         pht
     )
 
-    # calculate Hubbard energy
-    E_hubb = get_local_hubbard_energy(
-        U, 
+    # calculate on-site Hubbard energy
+    E_hubb = get_local_hubbard_energy( 
         detwf, 
+        hubbard_model.U₀,
         model_geometry, 
         pht
     )
 
+    # calculate extended Hubbard energy
+    if hubbard_model.U₁ != 0.0
+        E_ext_hubb = get_extended_hubbard_energy(
+            detwf,  
+            hubbard_model.U₁,
+            model_geometry,
+            pht
+        )
+    else
+        E_ext_hubb = 0.0
+    end
+
     # calculate total local energy
-    E_loc = E_k + E_hubb
+    E_loc = E_k + E_hubb + E_ext_hubb
     
     return E_loc / N
 end
@@ -54,56 +68,75 @@ end
 
 @doc raw"""
 
-    get_local_energy( detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                      tight_binding_model::TightBindingModel{E},
+    get_local_energy( detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+                      jastrow_factor::JastrowFactor{E2},
+                      tight_binding_model::TightBindingModel{E2},
+                      hubbard_model::HubbardModel{E2},
                       jastrow_parameters::JastrowParameters{S, K, V, I}, 
-                      jastrow_factor::JastrowFactor{E},
                       model_geometry::ModelGeometry,
-                      U::E,
                       Np::I,
-                      pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+                      pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
 
 Calculates the local variational energy ``E_{\mathrm{var}}`` per site for a Hubbard model.
 
-- `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
-- `tight_binding_model::TightBindingModel{E}`: parameters for a non-interacting tight-binding model. 
+- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current variational wavefunction.
+- `jastrow_factor::JastrowFactor{E2}`: current Jastrow factor.
+- `tight_binding_model::TightBindingModel{E2}`: parameters for a non-interacting tight-binding model. 
+- `hubbard_model::HubbardModel{E2}`: Hubbard interaction parameters.
 - `jastrow_parameters::JastrowParameters{S, K, V, I}`: current set of Jastrow variational parameters.
-- `jastrow_factor::JastrowFactor{E}`: current Jastrow factor.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `U::E`: Hubbard interaction.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether model is particle-hole transformed.
 
 """
 function get_local_energy(
     detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    jastrow_factor::JastrowFactor{E2},
     tight_binding_model::TightBindingModel{E2}, 
+    hubbard_model::HubbardModel{E2},
     jastrow_parameters::JastrowParameters{S, K, V, I},
-    jastrow_factor::JastrowFactor{E2}, 
     model_geometry::ModelGeometry, 
-    U::E2,
     Np::I, 
     pht::Bool
 ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
     # number of lattice sites
-    N = model_geometry.lattice.N
+    Norbs = model_geometry.unit_cell.n
+    Ncells = model_geometry.lattice.N
+    N = Norbs * Ncells
 
     # calculate kinetic energy
     E_k = get_local_kinetic_energy(
         detwf, 
+        jastrow_factor, 
         tight_binding_model, 
         jastrow_parameters,
-        jastrow_factor, 
         model_geometry, 
         Np, 
         pht
     )
 
-    # calculate Hubbard energy
-    E_hubb = get_local_hubbard_energy(U, detwf, model_geometry, pht)
+    # calculate on-site Hubbard energy
+    E_hubb = get_local_hubbard_energy( 
+        detwf, 
+        hubbard_model.U₀,
+        model_geometry, 
+        pht
+    )
+
+    # calculate extended Hubbard energy
+    if hubbard_model.U₁ != 0.0
+        E_ext_hubb = get_extended_hubbard_energy(
+            detwf,
+            hubbard_model.U₁,
+            model_geometry, 
+            pht
+        )
+    else
+        E_ext_hubb = 0.0
+    end
 
     # calculate total local energy
-    E_loc = E_k + E_hubb
+    E_loc = E_k + E_hubb + E_ext_hubb
     
     return E_loc / N
 end
@@ -111,64 +144,83 @@ end
 
 @doc raw"""
 
-    get_local_energy( detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                      tight_binding_model::TightBindingModel,
+    get_local_energy( detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+                      jastrow_factor_1::JastrowFactor{E2},
+                      jastrow_factor_2::JastrowFactor{E2},
+                      tight_binding_model::TightBindingModel{E2},
+                      hubbard_model::HubbardModel{E2},
                       jastrow_parameters_1::JastrowParameters{S, K, V, I},
                       jastrow_parameters_2::JastrowParameters{S, K, V, I}, 
-                      jastrow_factor_1::JastrowFactor{E},
-                      jastrow_factor_2::JastrowFactor{E},
                       model_geometry::ModelGeometry,
-                      U::E,
                       Np::I,
-                      pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+                      pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
 
 Calculates the local variational energy ``E_{\mathrm{var}}`` per site for a Hubbard model.
 
-- `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
-- `tight_binding_model::TightBindingModel{E}`: parameters for a non-interacting tight-binding model. 
+- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current variational wavefunction.
+- `jastrow_factor_1::JastrowFactor{E2}`: first Jastrow factor.
+- `jastrow_factor_2::JastrowFactor{E2}`: second Jastrow factor.
+- `tight_binding_model::TightBindingModel{E2}`: parameters for a non-interacting tight-binding model. 
+- `hubbard_model::HubbardModel{E2}`: Hubbard interaction parameters.
 - `jastrow_parameters_1::JastrowParameters{S, K, V, I}`: first set of Jastrow variational parameters.
 - `jastrow_parameters_2::JastrowParameters{S, K, V, I}`: second set of Jastrow variational parameters.
-- `jastrow_factor_1::JastrowFactor{E}`: first Jastrow factor.
-- `jastrow_factor_2::JastrowFactor{E}`: second Jastrow factor.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `U::E`: Hubbard interaction.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether model is particle-hole transformed.
 
 """
 function get_local_energy(
     detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-    tight_binding_model::TightBindingModel{E2}, 
-    jastrow_parameters_1::JastrowParameters{S, K, V, I},
-    jastrow_parameters_2::JastrowParameters{S, K, V, I},
     jastrow_factor_1::JastrowFactor{E2},
     jastrow_factor_2::JastrowFactor{E2}, 
+    tight_binding_model::TightBindingModel{E2}, 
+    hubbard_model::HubbardModel{E2},
+    jastrow_parameters_1::JastrowParameters{S, K, V, I},
+    jastrow_parameters_2::JastrowParameters{S, K, V, I},
     model_geometry::ModelGeometry, 
-    U::E2,
     Np::I, 
     pht::Bool
 ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
     # number of lattice sites
-    N = model_geometry.lattice.N
+    Norbs = model_geometry.unit_cell.n
+    Ncells = model_geometry.lattice.N
+    N = Norbs * Ncells
 
     # calculate kinetic energy
     E_k = get_local_kinetic_energy(
         detwf, 
+        jastrow_factor_1, 
+        jastrow_factor_2, 
         tight_binding_model, 
         jastrow_parameters_1,
         jastrow_parameters_2,
-        jastrow_factor_1, 
-        jastrow_factor_2, 
         model_geometry, 
         Np, 
         pht
     )
 
-    # calculate Hubbard energy
-    E_hubb = get_local_hubbard_energy(U, detwf, model_geometry, pht)
+    # calculate on-site Hubbard energy
+    E_hubb = get_local_hubbard_energy( 
+        detwf, 
+        hubbard_model.U₀,
+        model_geometry, 
+        pht
+    )
+
+    # calculate extended Hubbard energy
+    if hubbard_model.U₁ != 0.0
+        E_ext_hubb = get_extended_hubbard_energy( 
+            detwf, 
+            hubbard_model.U₁,
+            model_geometry, 
+            pht
+        )
+    else
+        E_ext_hubb = 0.0
+    end
 
     # calculate total local energy
-    E_loc = E_k + E_hubb
+    E_loc = E_k + E_hubb + E_ext_hubb
     
     return E_loc / N
 end
@@ -176,16 +228,16 @@ end
 
 @doc raw"""
 
-    get_local_kinetic_energy( detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                              tight_binding_model::TightBindingModel{E}, 
+    get_local_kinetic_energy( detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+                              tight_binding_model::TightBindingModel{E2}, 
                               model_geometry::ModelGeometry, 
                               Np::I
-                              pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+                              pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
 
 Calculates the local kinetic energy ``E_{\mathrm{kin}}`` . 
 
-- `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
-- `tight_binding_model::TightBindingModel{E}`: parameters for a non-interacting tight-binding model. 
+- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current variational wavefunction.
+- `tight_binding_model::TightBindingModel{E2}`: parameters for a non-interacting tight-binding model. 
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether model is particle-hole transformed.
@@ -243,7 +295,7 @@ function get_local_kinetic_energy(
         # spindex of particle
         k = findfirst(x -> x == β, detwf.pconfig)
 
-        # real position position 
+        # real position 
         ksite = get_index_from_spindex(k, model_geometry) 
 
         # check spin of particle  
@@ -309,20 +361,20 @@ end
 
 @doc raw"""
 
-    get_local_kinetic_energy( detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                              tight_binding_model::TightBindingModel{E}, 
+    get_local_kinetic_energy( detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+                              jastrow_factor::JastrowFactor{E2},
+                              tight_binding_model::TightBindingModel{E2}, 
                               jastrow_parameters::JastrowParameters{S, K, V, I},
-                              jastrow_factor::JastrowFactor{E}, 
                               model_geometry::ModelGeometry, 
                               Np::I,
-                              pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+                              pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
 
 Calculates the local kinetic energy ``E_{\mathrm{kin}}`` . 
 
-- `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
-- `tight_binding_model::TightBindingModel{E}`: parameters for a non-interacting tight-binding model. 
+- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current variational wavefunction.
+- `jastrow_factor::JastrowFactor{E2}`: current Jastrow factor.
+- `tight_binding_model::TightBindingModel{E2}`: parameters for a non-interacting tight-binding model. 
 - `jastrow_parameters::JastrowParameters{S, K, V, I}`: current set of Jastrow variational parameters.
-- `jastrow_factor::JastrowFactor{E}`: current Jastrow factor.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether model is particle-hole transformed.
@@ -330,9 +382,9 @@ Calculates the local kinetic energy ``E_{\mathrm{kin}}`` .
 """
 function get_local_kinetic_energy(
     detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    jastrow_factor::JastrowFactor{E2},
     tight_binding_model::TightBindingModel{E2}, 
     jastrow_parameters::JastrowParameters{S, K, V, I}, 
-    jastrow_factor::JastrowFactor{E2},
     model_geometry::ModelGeometry, 
     Np::I, 
     pht::Bool
@@ -382,7 +434,7 @@ function get_local_kinetic_energy(
         # spindex of particle
         k = findfirst(x -> x == β, detwf.pconfig)
 
-        # real position position 
+        # real position 
         ksite = get_index_from_spindex(k, model_geometry) 
 
         # check spin of particle  
@@ -469,24 +521,24 @@ end
 
 @doc raw"""
 
-    get_local_kinetic_energy( detwf::DeterminantalWavefunctionT, Q, E, I}, 
-                              tight_binding_model::TightBindingModel{E}, 
+    get_local_kinetic_energy( detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+                              jastrow_factor_1::JastrowFactor{E2},
+                              jastrow_factor_2::JastrowFactor{E2}, 
+                              tight_binding_model::TightBindingModel{2E}, 
                               jastrow_parameters_1::JastrowParameters{S, K, V, I},
                               jastrow_parameters_2::JastrowParameters{S, K, V, I},
-                              jastrow_factor_1::JastrowFactor{E},
-                              jastrow_factor_2::JastrowFactor{E}, 
                               model_geometry::ModelGeometry, 
                               Np::I,
-                              pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+                              pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
 
 Calculates the local kinetic energy ``E_{\mathrm{kin}}`` . 
 
-- `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
-- `tight_binding_model::TightBindingModel{E}`: parameters for a non-interacting tight-binding model. 
+- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current variational wavefunction.
+- `jastrow_factor_1::JastrowFactor{E2}`: first Jastrow factor.
+- `jastrow_factor_2::JastrowFactor{E2}`: second Jastrow factor.
+- `tight_binding_model::TightBindingModel{E2}`: parameters for a non-interacting tight-binding model. 
 - `jastrow_parameters_1::JastrowParameters{S, K, V, I}`: first set of Jastrow variational parameters.
 - `jastrow_parameters_2::JastrowParameters{S, K, V, I}`: second set of Jastrow variational parameters.
-- `jastrow_factor_1::JastrowFactor{E}`: first Jastrow factor.
-- `jastrow_factor_2::JastrowFactor{E}`: second Jastrow factor.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether model is particle-hole transformed.
@@ -494,11 +546,11 @@ Calculates the local kinetic energy ``E_{\mathrm{kin}}`` .
 """
 function get_local_kinetic_energy(
     detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    jastrow_factor_1::JastrowFactor{E2},
+    jastrow_factor_2::JastrowFactor{E2},
     tight_binding_model::TightBindingModel{E2}, 
     jastrow_parameters_1::JastrowParameters{S, K, V, I},
     jastrow_parameters_2::JastrowParameters{S, K, V, I}, 
-    jastrow_factor_1::JastrowFactor{E2},
-    jastrow_factor_2::JastrowFactor{E2},
     model_geometry::ModelGeometry, 
     Np::I, 
     pht::Bool
@@ -548,7 +600,7 @@ function get_local_kinetic_energy(
         # spindex of particle
         k = findfirst(x -> x == β, detwf.pconfig)
 
-        # real position position 
+        # real position 
         ksite = get_index_from_spindex(k, model_geometry) 
 
         # check spin of particle  
@@ -656,31 +708,33 @@ end
 
 @doc raw"""
 
-    get_local_hubbard_energy( U::E, 
-                              detwf::DeterminantalWavefunction{T, Q, E, I}, 
+    get_local_hubbard_energy( detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+                              U₀::E2,
                               model_geometry::ModelGeometry, 
-                              pht::Bool ) where {E<:AbstractFloat, T<:Number, Q, I<:Integer}
+                              pht::Bool ) where {E1<:AbstractFloat, T<:Number, Q, E2<:Number, I<:Integer}
 
 Calculates the energy due to on-site Hubbard interaction ``U``.  
 
-- `U::E`: Hubbard interaction.
-- `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
+- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current variational wavefunction.
+- `U₀::E2`: on-site Hubbard interaction strength.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 - `pht::Bool`: whether model is particle-hole transformed.
 
 """
-function get_local_hubbard_energy(
-    U::E1, 
-    detwf::DeterminantalWavefunction{T, Q, E2, I}, 
+function get_local_hubbard_energy( 
+    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    U₀::E2,
     model_geometry::ModelGeometry, 
     pht::Bool
 ) where {E1<:AbstractFloat, T<:Number, Q, E2<:Number, I<:Integer}
     # number of sites
-    N = model_geometry.lattice.N
+    Norbs = model_geometry.unit_cell.n
+    Ncells = model_geometry.lattice.N
+    N = Norbs * Ncells
         
     hubbard_sum = 0.0
     for i in 1:N
-        occ_up, occ_dn, occ_e = get_onsite_fermion_occupation(i, detwf.pconfig, N)
+        occ_up, occ_dn, _ = get_onsite_fermion_occupation(i, detwf.pconfig, N)
         if pht
             hubbard_sum += occ_up .* (1 .- occ_dn)
         else
@@ -688,9 +742,62 @@ function get_local_hubbard_energy(
         end
     end
 
-    E_loc_hubbard = U * hubbard_sum
+    E_loc_hubbard = U₀ * hubbard_sum
 
     return E_loc_hubbard
+end
+
+
+@doc raw"""
+
+    get_extended_hubbard_energy( detwf::DeterminantalWavefunction{T, Q, E1, I},
+                                 U₁::E2,
+                                 model_geometry::ModelGeometry,
+                                 pht::Bool ) where {E1<:AbstractFloat, T<:Number, Q, E2<:Number, I<:Integer}
+
+Calculates the energy due to the extended Hubbard interaction ``V``.  
+
+- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current variational wavefunction.
+- `U₁::E2`: extended Hubbard interaction strength.
+- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
+- `pht::Bool`: whether model is particle-hole transformed.
+
+"""
+function get_extended_hubbard_energy(
+    detwf::DeterminantalWavefunction{T, Q, E1, I},
+    U₁::E2,
+    model_geometry::ModelGeometry,
+    pht::Bool
+) where {E1<:AbstractFloat, T<:Number, Q, E2<:Number, I<:Integer}
+    # number of sites
+    Norbs = model_geometry.unit_cell.n
+    Ncells = model_geometry.lattice.N
+    N = Norbs * Ncells
+
+    # generate neighbor map
+    nbr_map0 = map_neighbor_table(nbr_table0)
+
+    ext_hubbard_sum = 0.0
+    for i in 1:N
+        # get occupations for site i
+        occ_upᵢ, occ_dnᵢ, occ_eᵢ = get_onsite_fermion_occupation(i, detwf.pconfig, N)
+
+        # get neighboring occupations for site j
+        for j in nbr_map0[i][2]
+            occ_upⱼ, occ_dnⱼ, occ_eⱼ = get_onsite_fermion_occupation(j, detwf.pconfig, N)
+            
+            # add to the energy sum
+            if pht
+                hubbard_sum += (occ_upᵢ - occ_dnᵢ) * (occ_upⱼ - occ_dnⱼ)
+            else
+                hubbard_sum += occ_eᵢ * occ_eⱼ
+            end
+        end
+    end
+
+    E_ext_hubbard = U₁ * ext_hubbard_sum
+
+    return E_ext_hubbard
 end
 
 
@@ -712,7 +819,9 @@ function get_double_occ(
     model_geometry::ModelGeometry, 
     pht::Bool
 ) where {T<:Number, Q, E<:Number, I<:Integer}
-    N = model_geometry.lattice.N
+    Norbs = model_geometry.unit_cell.n
+    Ncells = model_geometry.lattice.N
+    N = Norbs * Ncells
 
     nup_ndn = 0.0
     for site in 1:N
@@ -747,7 +856,9 @@ function get_n(
     pht::Bool
 ) where {T<:Number, Q, E<:Number, I<:Integer}
     total_occ = 0.0
-    N = model_geometry.lattice.N
+    Norbs = model_geometry.unit_cell.n
+    Ncells = model_geometry.lattice.N
+    N = Norbs * Ncells
 
     for i in 1:N
         occ_up, occ_dn, _ = get_onsite_fermion_occupation(i, detwf.pconfig, N)
@@ -783,7 +894,9 @@ function get_Sz(
     pht::Bool
 ) where {T<:Number, Q, E<:Number, I<:Integer}
     total_Sz = 0.0
-    N = model_geometry.lattice.N
+    Norbs = model_geometry.unit_cell.n
+    Ncells = model_geometry.lattice.N
+    N = Norbs * Ncells
 
     for i in 1:N
         occ_up, occ_dn, _ = get_onsite_fermion_occupation(i, detwf.pconfig, N)

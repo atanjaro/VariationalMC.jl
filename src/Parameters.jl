@@ -82,9 +82,37 @@ end
 
 @doc raw"""
 
-    DeterminantalParameters( optimize::NamedTuple, 
-                             tight_binding_model::TightBindingModel{E}, 
+    HubbardModel{E<:AbstractFloat}
+
+A type defining a Hubbard model with on-site and next nearest neighbor interactions.
+
+"""
+struct HubbardModel{E<:AbstractFloat}
+    # on-site Hubbard interaction
+    U₀::E
+
+    # next nearest Hubbard interaction
+    U₁::E
+end
+
+# show struct info as TOML formatted string
+function Base.show(io::IO, ::MIME"text/plain", hbm::HubbardModel) 
+
+    @printf io "[HubbardModel]\n\n"
+    @printf io "[[HubbardModel.U₀]]\n\n"
+    @printf io "U_0       = %.2f\n\n" hbm.U₀
+     @printf io "[[HubbardModel.U₁]]\n\n"
+    @printf io "U_1       = %.2f\n\n" hbm.U₁
+
+    return nothing
+end
+###
+
+@doc raw"""
+
+    DeterminantalParameters( tight_binding_model::TightBindingModel{E}, 
                              model_geometry::ModelGeometry, 
+                             optimize::NamedTuple,
                              Ne::I, 
                              pht::Bool;
                              vpar_overrides::NT = NamedTuple() ) where {E<:AbstractFloat, I<:Integer}
@@ -92,18 +120,19 @@ end
 Given an intial set of tight-binding and determinantal parameters, and optimization flags, 
 generates a set of determinantal variational parameters.
 
-- `optimize::NamedTuple`: field of optimization flags.
+
 - `tight_binding_model::TightBindingModel{E}`: parameters for a non-interacting tight-binding model. 
 - `model_geometry::ModelGeometry`: contains unit cell and lattice qunatities.
+- `optimize::NamedTuple`: field of optimization flags.
 - `Ne::I`: total number of electrons.
 - `pht::Bool`: whether model is particle-hole transformed. 
 - `vpar_overrides::NamedTuple = NamedTuple()`: user-defined overrides for initial variational parameters values.
 
 """
 function DeterminantalParameters(
-    optimize::NamedTuple, 
     tight_binding_model::TightBindingModel{E}, 
     model_geometry::ModelGeometry, 
+    optimize::NamedTuple, 
     Ne::I, 
     pht::Bool;
     vpar_overrides::NamedTuple= NamedTuple()
@@ -115,7 +144,9 @@ function DeterminantalParameters(
     Lx = model_geometry.lattice.L[1]
 
     # number of lattice sites
-    N = model_geometry.lattice.N
+    N_orbs = model_geometry.unit_cell.n
+    N_cells = model_geometry.lattice.N
+    N = N_orbs * N_cells
 
     if dims > 1
         if pht
@@ -123,13 +154,9 @@ function DeterminantalParameters(
                 Δ_0 = 0.001,
                 Δ_slo = fill(0.001, N),
                 Δ_sff = fill(0.001, N),
-                # Δ_spd = fill(0.001, N),
-                # q_ps = fill(0.0, dims), ====> move externally 
                 Δ_d = 0.001,
-                # Δ_dpd = fill(0.001, N),
                 Δ_dlo = fill(0.001, N),
                 Δ_dff = fill(0.001, N),
-                # q_pd = fill(0.0, dims), ====> move externally 
                 Δ_sx = 0.001,
                 Δ_sz = 0.001,
                 Δ_ssd = fill(0.001, Lx),
@@ -192,23 +219,24 @@ end
 
 @doc raw"""
 
-    DeterminantalParameters( optimize::NamedTuple, 
-                             model_geometry::ModelGeometry, 
+    DeterminantalParameters( model_geometry::ModelGeometry, 
+                             optimize::NamedTuple,
                              pht::Bool, 
                              path_to_parameter_file::S ) where {S<:AbstractString}
 
 Given an intial set of determinantal parameters from file, and optimization flags,
 generates a set of determinantal variational parameters
 
-- `optimize::NamedTuple`: field of optimization flags
+
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
+- `optimize::NamedTuple`: field of optimization flags
 - `pht::Bool`: whether model is particle-hole transformed.
 - `path_to_parameter_file::S`: filepath to initial parameter file.
 
 """
 function DeterminantalParameters(
-    optimize::NamedTuple, 
     model_geometry::ModelGeometry, 
+    optimize::NamedTuple, 
     pht::Bool, 
     path_to_parameter_file::S
 ) where {S<:AbstractString}
@@ -312,23 +340,23 @@ end
 @doc raw"""
 
     JastrowParameters( jastrow_type::S, 
-                       optimize::NamedTuple,
                        model_geometry::ModelGeometry,
+                       optimize::NamedTuple,
                        rng::AbstractRNG ) where {S<:AbstractString}
 
 Given a type of Jastrow factor and optimization flags, generates a random initial set of 
 Jastrow variational parameters.
 
-- `jastrow_type::S`: type of Jastrow factor: "e-den-den", "e-spn-spn". TBA: "eph-den-den", "ph-den-den"
-- `optimize::NamedTuple`: field of optimization flags.
+- `jastrow_type::S`: type of Jastrow factor: "e-den-den", "e-spn-spn".
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
+- `optimize::NamedTuple`: field of optimization flags.
 - `rng:AbstractRNG`: random number generator.
 
 """
 function JastrowParameters(
     jastrow_type::S, 
-    optimize::NamedTuple,
     model_geometry::ModelGeometry,
+    optimize::NamedTuple,
     rng::AbstractRNG
 ) where {S<:AbstractString}
     # create map of Jastrow parameters
@@ -362,23 +390,23 @@ end
 @doc raw"""
 
     JastrowParameters( jastrow_type::S, 
-                       optimize::NamedTuple,
                        model_geometry::ModelGeometry,
+                       optimize::NamedTuple,
                        path_to_parameter_file::S ) where {S<:AbstractString}
 
 Given a type of Jastrow factor, an initial set of Jastrow parameters from file, and optimization 
 flags, generates an initial set of Jastrow variational.
 
 - `jastrow_type::S`: type of Jastrow factor: "e-den-den", "e-spn-spn".
-- `optimize::NamedTuple`: field of optimization flags.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
+- `optimize::NamedTuple`: field of optimization flags.
 - `path_to_parameter_file::S`: filepath to initial parameters.
 
 """
 function JastrowParameters(
     jastrow_type::S, 
-    optimize::NamedTuple,
     model_geometry::ModelGeometry,
+    optimize::NamedTuple,
     path_to_parameter_file::S
 ) where {S<:AbstractString}
     # get parameters from file
@@ -483,8 +511,9 @@ end
 @doc raw"""
 
     update_parameters!( measurement_container::NamedTuple,
-                        new_vpars::AbstractVector, 
+                        new_vpars::AbstractVector ) where {I<:Integer}
                         determinantal_parameters::DeterminantalParameters{I} ) where {I<:Integer}
+                        
 
 Updates variational parameters after Stochastic Reconfiguration.
 

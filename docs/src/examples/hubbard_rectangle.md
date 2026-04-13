@@ -71,14 +71,29 @@ For a recatngle, we will define a charge and spin stripe wavefunction in which t
     )
 ````
 
-To setup the VMC simulation, we define all of the parameters that will be used to build our variational wavefunction. We create an initialize an instance of determinantal parameters before overriding them with a set of initial values using the `manual_input_parameters!` method. Since we want to use both types of Jastrow factor in our wavefunction, we initialize the density-density and spin-spin parameters seperately. Note that we also add both types of Jastrow parameters to the `model_summary`. The rest of the simulation set-up remains unchanged from Example 2. 
+To setup the VMC simulation, we define all of the parameters that will be used to build our variational wavefunction. In this case, we introduce a finite value of the next nearest neighbor hopping amplitide ``t^\prime``. We create an initialize an instance of determinantal parameters before overriding them with a set of initial values using the `manual_input_parameters!` method. Since we want to use both types of Jastrow factor in our wavefunction, we initialize the density-density and spin-spin parameters seperately. Note that we also add both types of Jastrow parameters to the `model_summary`. The rest of the simulation set-up remains unchanged from Example 2. 
 
 ```julia
+    # Define the nearest neighbor hopping amplitude, setting the energy scale of the system. 
+    t = 1.0
+
+    # Define the next-nearest neighbor hopping amplitude.
+    tp = -0.25
+
+    # Define the third-nearest neighbor hopping amplitude.
+    tpd = 0.0
+
+    # Define the non-interacting tight binding model.
+    tight_binding_model = TightBindingModel(t, tp, tpd)
+
+    # Define a Hubbard model.
+    hubbard_model = HubbardModel(U, 0.0)
+
     # Initialize determinantal variational parameters.
     determinantal_parameters = DeterminantalParameters(
-        optimize, 
-        tight_binding_model, 
+        tight_binding_model,
         model_geometry, 
+        optimize,
         Ne, 
         pht
     )
@@ -111,18 +126,34 @@ To setup the VMC simulation, we define all of the parameters that will be used t
     # Write model summary TOML file specifying the Hamiltonian that will be simulated.
     model_summary(
         simulation_info, 
+        tight_binding_model,
+        hubbard_model,
         determinantal_parameters, 
         density_J_parameters, 
-        spin_J_parameters,
-        pht, 
+        spin_J_parameters, 
         model_geometry, 
-        tight_binding_model, 
-        U
+        pht
     )
 
     # Initialize the (fermionic) particle configuration.
     # Will start with a random initial configuration unless provided a starting configuration.
     pconfig = Int[]
+```
+
+Both types of Jastrow parameters need to be added to the measurement container. The rest of the measurement set-up remains the same as Example 2. 
+
+```julia
+    # Initialize the container that measurements will be accumulated into.
+    measurement_container = initialize_measurement_container(
+        determinantal_parameters,
+        density_J_parameters,
+        spin_J_parameters,
+        model_geometry,
+        N_opt, 
+        opt_bin_size, 
+        N_sim, 
+        sim_bin_size
+    )
 ```
 
 In addition to the standard measurements, we add site-dependent spin and density measurements.
@@ -145,22 +176,6 @@ In addition to the standard measurements, we add site-dependent spin and density
     )
 ```
 
-Further, both types of Jastrow parameters need to be added to the measurement container. The rest of the measurement set-up remains the same as Example 2. 
-
-```julia
-    # Initialize the container that measurements will be accumulated into.
-    measurement_container = initialize_measurement_container(
-        N_opt, 
-        opt_bin_size, 
-        N_sim, 
-        sim_bin_size,
-        determinantal_parameters,
-        density_J_parameters,
-        spin_J_parameters,
-        model_geometry
-    )
-```
-
 The only modifications to the optimization steps are the seperate initialization of each Jastrow factor with the wavefunction at the start of every bin as well as the addition of both types of Jastrow factor in the arguments of the updating functions. 
 
 ```julia
@@ -171,14 +186,14 @@ The only modifications to the optimization steps are the seperate initialization
         detwf = get_determinantal_wavefunction(
             tight_binding_model, 
             determinantal_parameters, 
+            model_geometry,
             optimize, 
+            pconfig,
             Np, 
             nup, 
             ndn, 
-            model_geometry, 
             rng,
-            pht,
-            pconfig
+            pht
         )  
 
         # Initialize density-density Jastrow factor.
@@ -206,16 +221,16 @@ The only modifications to the optimization steps are the seperate initialization
                     detwf, 
                     density_J_factor,
                     spin_J_factor,
+                    model_geometry,
                     density_J_parameters,
                     spin_J_parameters,
                     Np, 
-                    model_geometry, 
-                    pht,
-                    n_stab_W,
-                    n_stab_T,
                     δW, 
                     δT,
-                    rng
+                    n_stab_W,
+                    n_stab_T,
+                    rng,
+                    pht
                 )
 
                 # Record acceptance rate.
@@ -226,15 +241,15 @@ The only modifications to the optimization steps are the seperate initialization
             make_measurements!(
                 measurement_container, 
                 detwf, 
+                density_J_factor,
+                spin_J_factor,
                 tight_binding_model, 
+                hubbard_model,
                 determinantal_parameters, 
                 density_J_parameters,
                 spin_J_parameters,
-                density_J_factor,
-                spin_J_factor,
+                model_geometry,
                 optimize,
-                model_geometry, 
-                U,
                 Np, 
                 pht
             )
@@ -277,14 +292,14 @@ This is done similarly for the simulation steps.
         detwf = get_determinantal_wavefunction(
             tight_binding_model, 
             determinantal_parameters, 
+            model_geometry,
             optimize, 
+            pconfig,
             Np, 
             nup, 
             ndn, 
-            model_geometry, 
             rng,
-            pht,
-            pconfig
+            pht
         )  
 
         # Initialize density-density Jastrow factor.
@@ -312,16 +327,16 @@ This is done similarly for the simulation steps.
                     detwf, 
                     density_J_factor,
                     spin_J_factor,
+                    model_geometry,
                     density_J_parameters,
                     spin_J_parameters,
                     Np, 
-                    model_geometry, 
-                    pht,
-                    n_stab_W,
-                    n_stab_T,
                     δW, 
                     δT,
-                    rng
+                    n_stab_W,
+                    n_stab_T,
+                    rng,
+                    pht
                 )
 
                 # Record acceptance rate.
@@ -332,13 +347,13 @@ This is done similarly for the simulation steps.
             make_measurements!(
                 measurement_container, 
                 detwf, 
-                tight_binding_model, 
-                density_J_parameters,
-                spin_J_parameters,
                 density_J_factor,
                 spin_J_factor,
-                model_geometry, 
-                U,
+                tight_binding_model, 
+                hubbard_model,
+                density_J_parameters,
+                spin_J_parameters,
+                model_geometry,
                 Np, 
                 pht
             )

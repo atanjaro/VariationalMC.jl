@@ -1,30 +1,30 @@
 @doc raw"""
 
-    local_fermion_update!( detwf::DeterminantalWavefunction{T, V, E, I},
-                           Np::I, 
-                           model_geometry::ModelGeometry, 
-                           n_stab_W::I,
-                           δW::E, 
-                           rng::AbstractRNG ) where {T<:Number, V, E<:AbstractFloat, I<:Integer}
+    local_fermion_update!(  detwf::DeterminantalWavefunction{T, V, E1, I},
+                            model_geometry::ModelGeometry,
+                            Np::I,  
+                            δW::E2,
+                            n_stab_W::I,
+                            rng::AbstractRNG    ) where {T<:Number, V, E1<:Number, I<:Integer, E2<:AbstractFloat}
 
 Performs a local update to the fermionic sector by attempting to move a particle ``\beta`` at a randomly 
 selected lattice site ``k`` to another random site ``l``, with the move accepted or rejected
 by the Meteropolis algorithm.
 
 - `detwf::DeterminantalWavefunction{T, V, E, I}`: current determinantal variational wavefunction.
-- `Np::I`: total number of particles in the system.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `n_stab_W::I`: frequency of Green's function stabilization steps.
+- `Np::I`: total number of particles in the system.
 - `δW::E`: error threshold for the Green's function.
+- `n_stab_W::I`: frequency of Green's function stabilization steps.
 - `rng::AbstractRNG`: random number generator.
 
 """
 function local_fermion_update!(
     detwf::DeterminantalWavefunction{T, V, E1, I},
-    Np::I, 
-    model_geometry::ModelGeometry, 
+    model_geometry::ModelGeometry,
+    Np::I,  
+    δW::E2,
     n_stab_W::I,
-    δW::E2, 
     rng::AbstractRNG
 ) where {T<:Number, V, E1<:Number, I<:Integer, E2<:AbstractFloat}
     acceptances = 0.0
@@ -35,15 +35,13 @@ function local_fermion_update!(
     Starting new Monte Carlo step!
     """
 
-    # TODO: perform number of Metropolis steps equal to number of electrons?
-    #       This would give each electron a chance to move.
-
+    # attempt configuration update
     acceptance = metropolis_step(
         detwf, 
+        model_geometry,
         Np, 
-        n_stab_W, 
         δW, 
-        model_geometry, 
+        n_stab_W, 
         rng
     )
 
@@ -67,17 +65,17 @@ end
 
 @doc raw"""
 
-    local_fermion_update!( detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                           jastrow_factor::JastrowFactor{E}, 
-                           jastrow_parameters::JastrowParameters{S, K, V, I},
-                           Np::I, 
-                           model_geometry::ModelGeometry, 
-                           pht::Bool, 
-                           n_stab_W::I,
-                           n_stab_T::Int,
-                           δW::E, 
-                           δT::E, 
-                           rng::AbstractRNG ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, K, V}
+    local_fermion_update!(  detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+                            jastrow_factor::JastrowFactor{E2}, 
+                            model_geometry::ModelGeometry, 
+                            jastrow_parameters::JastrowParameters{S, K, V, I}, 
+                            Np::I, 
+                            δW::E2, 
+                            δT::E2, 
+                            n_stab_W::I,
+                            n_stab_T::I,
+                            rng::AbstractRNG,
+                            pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
 
 Performs a local update to the fermionic sector by attempting to move a particle ``\beta`` at a randomly 
 selected lattice site ``k`` to another random site ``l``, with the move accepted or rejected
@@ -99,15 +97,15 @@ by the Meteropolis algorithm.
 function local_fermion_update!(
     detwf::DeterminantalWavefunction{T, Q, E1, I}, 
     jastrow_factor::JastrowFactor{E2}, 
+    model_geometry::ModelGeometry, 
     jastrow_parameters::JastrowParameters{S, K, V, I}, 
     Np::I, 
-    model_geometry::ModelGeometry, 
-    pht::Bool, 
-    n_stab_W::I,
-    n_stab_T::I,
     δW::E2, 
     δT::E2, 
-    rng::AbstractRNG
+    n_stab_W::I,
+    n_stab_T::I,
+    rng::AbstractRNG,
+    pht::Bool
 ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
     acceptances = 0.0
     rejections = 0.0
@@ -117,21 +115,19 @@ function local_fermion_update!(
     Starting new Monte Carlo step!
     """
 
-    # TODO: perform number of Metropolis steps equal to number of electrons?
-    #       This would give each electron a chance to move.
-
+    # attempt configuration update
     acceptance = metropolis_step(
         detwf, 
         jastrow_factor, 
+        model_geometry,
         jastrow_parameters, 
         Np, 
-        n_stab_W, 
-        n_stab_T, 
         δW, 
-        δT, 
-        model_geometry, 
-        pht, 
-        rng
+        δT,
+        n_stab_W, 
+        n_stab_T,
+        rng,
+        pht
     )
 
     if acceptance == "accepted"
@@ -154,19 +150,19 @@ end
 
 @doc raw"""
 
-    local_fermion_update!( detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                           jastrow_factor_1::JastrowFactor{E}, 
-                           jastrow_factor_2::JastrowFactor{E}, 
-                           jastrow_parameters_1::JastrowParameters{S, K, V, I},
-                           jastrow_parameters_2::JastrowParameters{S, K, V, I},
-                           Np::I, 
-                           model_geometry::ModelGeometry, 
-                           pht::Bool, 
-                           n_stab_W::I,
-                           n_stab_T::I,
-                           δW::E, 
-                           δT::E, 
-                           rng::Xoshiro ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, K, V}
+    local_fermion_update!(  detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+                            jastrow_factor_1::JastrowFactor{E2}, 
+                            jastrow_factor_2::JastrowFactor{E2},
+                            model_geometry::ModelGeometry, 
+                            jastrow_parameters_1::JastrowParameters{S, K, V, I},  
+                            jastrow_parameters_2::JastrowParameters{S, K, V, I}, 
+                            Np::I, 
+                            δW::E2, 
+                            δT::E2,
+                            n_stab_W::I,
+                            n_stab_T::I,
+                            rng::AbstractRNG,
+                            pht::Bool   ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
 
 Performs a local update to the fermionic sector by attempting to move a particle ``\beta`` at a randomly 
 selected lattice site ``k`` to another random site ``l``, with the move accepted or rejected
@@ -175,31 +171,32 @@ by the Meteropolis algorithm.
 - `detwf::DeterminantalWavefunction{T, Q, E, I}`: current determinantal variational wavefunction.
 - `jastrow_factor_1::Jastrow{E}`: first Jastrow factor.
 - `jastrow_factor_2::Jastrow{E}`: second Jastrow factor.
+- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 - `jastrow_parameters_1::JastrowParameters{S, K, V, I}`: first set of Jastrow variational parameters.
 - `jastrow_parameters_2::JastrowParameters{S, K, V, I}`: second set of Jastrow variational parameters.
 - `Np::I`: total number of particles in the system.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `n_stab_W::I`: frequency of Green's function stabilization steps.
-- `n_stab_T::I`: frequency of T vector stabilization steps.
 - `δW::E`: error threshold for the Green's function.
 - `δT::E`: error treshold for the Jastrow T vector.
+- `n_stab_W::I`: frequency of Green's function stabilization steps.
+- `n_stab_T::I`: frequency of T vector stabilization steps.
 - `rng::AbstractRNG`: random number generator.
+- `pht::Bool`: whether model is particle-hole tranformed.
 
 """
 function local_fermion_update!(
     detwf::DeterminantalWavefunction{T, Q, E1, I}, 
     jastrow_factor_1::JastrowFactor{E2}, 
     jastrow_factor_2::JastrowFactor{E2},
+    model_geometry::ModelGeometry, 
     jastrow_parameters_1::JastrowParameters{S, K, V, I},  
     jastrow_parameters_2::JastrowParameters{S, K, V, I}, 
     Np::I, 
-    model_geometry::ModelGeometry, 
-    pht::Bool, 
+    δW::E2, 
+    δT::E2,
     n_stab_W::I,
     n_stab_T::I,
-    δW::E2, 
-    δT::E2, 
-    rng::AbstractRNG
+    rng::AbstractRNG,
+    pht::Bool
 ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
     acceptances = 0.0
     rejections = 0.0
@@ -209,23 +206,21 @@ function local_fermion_update!(
     Starting new Monte Carlo step!
     """
 
-    # TODO: perform number of Metropolis steps equal to number of electrons?
-    #       This would give each electron a chance to move.
-
+    # attempt configuration update
     acceptance = metropolis_step(
         detwf, 
         jastrow_factor_1,  
         jastrow_factor_2, 
+        model_geometry,
         jastrow_parameters_1,
         jastrow_parameters_2, 
         Np, 
-        n_stab_W, 
-        n_stab_T, 
         δW, 
-        δT, 
-        model_geometry, 
-        pht, 
-        rng
+        δT,
+        n_stab_W, 
+        n_stab_T,  
+        rng,
+        pht
     )
 
     if acceptance == "accepted"
@@ -248,29 +243,29 @@ end
 
 @doc raw"""
 
-    metropolis_step( detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                     Np::I, 
-                     n_stab_W::I, 
-                     δW::E,
-                     model_geometry::ModelGeometry, 
-                     rng::AbstractRNG ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+    metropolis_step(    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+                        model_geometry::ModelGeometry,
+                        Np::I, 
+                        δW::E2,
+                        n_stab_W::I, 
+                        rng::AbstractRNG    ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
 
-Attempts to move particle ``\beta`` at lattice site ``k`` to a randomly selected site ``l``.
+Determines the acceptance criterion for a particle ``\beta`` at lattice site ``k`` moving to a randomly selected site ``l``.
 
 - `detwf::DeterminantalWavefunction{T, Q, E, I}`: current determinantal variational wavefunction.
-- `Np::I`: total number of particles in the system.
-- `n_stab_W::I`: frequency of Green's function stabilization steps.
-- `δW::E`: error threshold for the Green's function.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
+- `Np::I`: total number of particles in the system.
+- `δW::E`: error threshold for the Green's function.
+- `n_stab_W::I`: frequency of Green's function stabilization steps.
 - `rng::AbstractRNG`: random number generator.
 
 """
 function metropolis_step(
     detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    model_geometry::ModelGeometry,
     Np::I, 
-    n_stab_W::I, 
     δW::E2,
-    model_geometry::ModelGeometry, 
+    n_stab_W::I, 
     rng::AbstractRNG
 ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
     # propose a random move
@@ -289,12 +284,6 @@ function metropolis_step(
 
         return "impossible"
     else
-        # # check particle spin
-        # spin = get_spindex_type(
-        #     markov_move.k, 
-        #     model_geometry
-        # )
-
         # get wavefunction ratio (element of the equal-time Green's function)
         Rₛ = real(detwf.W[markov_move.l, markov_move.particle])
 
@@ -345,45 +334,45 @@ end
 
 @doc raw"""
 
-    metropolis_step( detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                     jastrow_factor::JastrowFactor{E}, 
-                     jastrow_parameters::JastrowParameters{S, K, V, I},
-                     Np::I, 
-                     n_stab_W::I, 
-                     n_stab_T::I, 
-                     δW::E, 
-                     δT::E, 
-                     model_geometry::ModelGeometry, 
-                     pht::Bool, 
-                     rng::AbstractRNG ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+    metropolis_step(    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+                        jastrow_factor::JastrowFactor{E2},  
+                        model_geometry::ModelGeometry,
+                        jastrow_parameters::JastrowParameters{S, K, V, I},
+                        Np::I, 
+                        δW::E2, 
+                        δT::E2,
+                        n_stab_W::I, 
+                        n_stab_T::I,  
+                        rng::AbstractRNG,
+                        pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
 
-Attempts to move particle ``\beta`` at lattice site ``k`` to a randomly selected site ``l``.
+Determines the acceptance criterion for a particle ``\beta`` at lattice site ``k`` moving to a randomly selected site ``l``.
 
 - `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
 - `jastrow_factor::JastrowFactor{E}`: current Jastrow factor.
+- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 - `jastrow_parameters::JastrowParameters{S, K, V, I}`: current set of Jastrow parameters.
 - `Np::I`: total number of particles in the system.
-- `n_stab_W::I`: frequency of Green's function stabilization steps.
-- `n_stab_T::I`: frequency of T vector stabilization steps.
 - `δW::E`: error threshold for the Green's function.
 - `δT::E`: error threshold for the T vector.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `pht::Bool`: whether model is particle-hole transformed.
+- `n_stab_W::I`: frequency of Green's function stabilization steps.
+- `n_stab_T::I`: frequency of T vector stabilization steps.
 - `rng::AbstractRNG`: random number generator.
+- `pht::Bool`: whether model is particle-hole transformed.
 
 """
 function metropolis_step(
     detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-    jastrow_factor::JastrowFactor{E2}, 
-    jastrow_parameters::JastrowParameters{S, K, V, I}, 
+    jastrow_factor::JastrowFactor{E2},  
+    model_geometry::ModelGeometry,
+    jastrow_parameters::JastrowParameters{S, K, V, I},
     Np::I, 
-    n_stab_W::I, 
-    n_stab_T::I, 
     δW::E2, 
-    δT::E2, 
-    model_geometry::ModelGeometry, 
-    pht::Bool, 
-    rng::AbstractRNG
+    δT::E2,
+    n_stab_W::I, 
+    n_stab_T::I,  
+    rng::AbstractRNG,
+    pht::Bool
 ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
     # propose a random move
     markov_move = propose_random_move(
@@ -478,51 +467,51 @@ end
 
 @doc raw"""
 
-    metropolis_step( detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                     jastrow_factor_1::JastrowFactor{E}, 
-                     jastrow_factor_2::JastrowFactor{E},
-                     jastrow_parameters_1::JastrowParameters{S, K, V, I}, 
-                     jastrow_parameters_2::JastrowParameters{S, K, V, I},
-                     Np::I, 
-                     n_stab_W::I, 
-                     n_stab_T::I, 
-                     δW::E, 
-                     δT::E, 
-                     model_geometry::ModelGeometry, 
-                     pht::Bool, 
-                     rng::Xoshiro ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+    metropolis_step(    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+                        jastrow_factor_1::JastrowFactor{E2},  
+                        jastrow_factor_2::JastrowFactor{E2}, 
+                        model_geometry::ModelGeometry,
+                        jastrow_parameters_1::JastrowParameters{S, K, V, I},
+                        jastrow_parameters_2::JastrowParameters{S, K, V, I}, 
+                        Np::I, 
+                        δW::E2, 
+                        δT::E2,
+                        n_stab_W::I, 
+                        n_stab_T::I, 
+                        rng::AbstractRNG,
+                        pht::Bool   ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
 
-Attempts to move particle ``\beta`` at lattice site ``k`` to a randomly selected site ``l``.
+Determines the acceptance criterion for a particle ``\beta`` at lattice site ``k`` moving to a randomly selected site ``l``.
 
 - `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
 - `jastrow_factor_1::JastrowFactor{E}`: first Jastrow factor.
 - `jastrow_factor_2::JastrowFactor{E}`: second Jastrow factor.
+- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 - `jastrow_parameters_1::JastrowParameters{S, K, V, I}`: first set of Jastrow parameters.
 - `jastrow_parameters_2::JastrowParameters{S, K, V, I}`: second set of Jastrow parameters.
+- `δW::E`: error threshold for the Green's function.
+- `δT::E`: error threshold for the T vector.
 - `Np::I`: total number of particles in the system.
 - `n_stab_W::I`: frequency of Green's function stabilization steps.
 - `n_stab_T::I`: frequency of T vector stabilization steps.
-- `δW::E`: error threshold for the Green's function.
-- `δT::E`: error threshold for the T vector.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `pht::Bool`: whether model is particle-hole transformed.
 - `rng::AbstractRNG`: random number generator.
+- `pht::Bool`: whether model is particle-hole transformed.
 
 """
 function metropolis_step(
     detwf::DeterminantalWavefunction{T, Q, E1, I}, 
     jastrow_factor_1::JastrowFactor{E2},  
     jastrow_factor_2::JastrowFactor{E2}, 
+    model_geometry::ModelGeometry,
     jastrow_parameters_1::JastrowParameters{S, K, V, I},
     jastrow_parameters_2::JastrowParameters{S, K, V, I}, 
     Np::I, 
+    δW::E2, 
+    δT::E2,
     n_stab_W::I, 
     n_stab_T::I, 
-    δW::E2, 
-    δT::E2, 
-    model_geometry::ModelGeometry, 
-    pht::Bool, 
-    rng::AbstractRNG
+    rng::AbstractRNG,
+    pht::Bool
 ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
     # propose a random move
     markov_move = propose_random_move(

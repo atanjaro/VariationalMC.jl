@@ -1,20 +1,20 @@
 @doc raw"""
 
     measure_local_energy!( measurement_container::NamedTuple, 
-                           detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                           tight_binding_model::TightBindingModel{E}, 
+                           detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+                           tight_binding_model::TightBindingModel{E2}, 
+                           hubbard_model::HubbardModel{E2},
                            model_geometry::ModelGeometry,
-                           U::E,
                            Np::I,
-                           pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+                           pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
 
-Measures the total local energy ``E_{\mathrm{loc}}`` for a Hubbard model and writes to the measurement container.
+Measures the total local energy per site ``E_{\mathrm{loc}}`` for a Hubbard model and writes to the measurement container.
 
 - `measurement_container::NamedTuple`: container where measurements are stored.
-- `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
-- `tight_binding_model::TightBindingModel{E}`: parameters for a non-interacting tight-binding model. 
+- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current variational wavefunction.
+- `tight_binding_model::TightBindingModel{E2}`: parameters for a non-interacting tight-binding model. 
+- `hubbard_model::HubbardModel{E2}`: Hubbard interaction parameters.
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `U::E`: Hubbard interaction.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether model is particle-hole transformed.
 
@@ -23,8 +23,8 @@ function measure_local_energy!(
     measurement_container::NamedTuple, 
     detwf::DeterminantalWavefunction{T, Q, E1, I}, 
     tight_binding_model::TightBindingModel{E2}, 
+    hubbard_model::HubbardModel{E2},
     model_geometry::ModelGeometry, 
-    U::E2,
     Np::I, 
     pht::Bool
 ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
@@ -32,8 +32,8 @@ function measure_local_energy!(
     E_loc_current = get_local_energy(
         detwf, 
         tight_binding_model, 
+        hubbard_model,
         model_geometry, 
-        U,
         Np, 
         pht
     )
@@ -48,24 +48,24 @@ end
 @doc raw"""
 
     measure_local_energy!( measurement_container::NamedTuple, 
-                           detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                           tight_binding_model::TightBindingModel{E}, 
-                           jastrow_parameters::JastrowParameters{S, K, V, I},
-                           jastrow_factor::JastrowFactor{E}, 
+                           detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+                           jastrow_factor::JastrowFactor{E2},
+                           tight_binding_model::TightBindingModel{E2}, 
+                           hubbard_model::HubbardModel{E2},
+                           jastrow_parameters::JastrowParameters{S, K, V, I}, 
                            model_geometry::ModelGeometry,
-                           U::E,
                            Np::I, 
-                           pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+                           pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
 
-Measures the total local energy ``E_{\mathrm{loc}}`` for a Hubbard model and writes to the measurement container.
+Measures the total local energy per site ``E_{\mathrm{loc}}`` for a Hubbard model and writes to the measurement container.
 
 - `measurement_container::NamedTuple`: container where measurements are stored.
-- `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
-- `tight_binding_model::TightBindingModel{E}`: parameters for a non-interacting tight-binding model. 
+- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current variational wavefunction.
+- `jastrow_factor::JastrowFactor{E2}`: current Jastrow factor. 
+- `tight_binding_model::TightBindingModel{E2}`: parameters for a non-interacting tight-binding model. 
+- `hubbard_model::HubbardModel`: Hubbard interaction parameters.
 - `jastrow_parameters::JastrowParameters{S, K, V, I}`: current set of Jastrow variational parameters.
-- `jastrow_factor::JastrowFactor{E}`: current Jastrow factor. 
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `U::E`: Hubbard interaction.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether model is particle-hole transformed.
 
@@ -73,22 +73,22 @@ Measures the total local energy ``E_{\mathrm{loc}}`` for a Hubbard model and wri
 function measure_local_energy!(
     measurement_container::NamedTuple, 
     detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-    tight_binding_model::TightBindingModel{E2}, 
-    jastrow_parameters::JastrowParameters{S, K, V, I},
     jastrow_factor::JastrowFactor{E2}, 
+    tight_binding_model::TightBindingModel{E2}, 
+    hubbard_model::HubbardModel{E2},
+    jastrow_parameters::JastrowParameters{S, K, V, I},
     model_geometry::ModelGeometry, 
-    U::E2,
     Np::I, 
     pht::Bool
 ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
    # calculate the current local energy
     E_loc_current = get_local_energy(
         detwf, 
-        tight_binding_model, 
-        jastrow_parameters, 
         jastrow_factor, 
+        tight_binding_model, 
+        hubbard_model,
+        jastrow_parameters, 
         model_geometry, 
-        U,
         Np, 
         pht
     )
@@ -103,28 +103,28 @@ end
 @doc raw"""
 
     measure_local_energy!( measurement_container::NamedTuple, 
-                           detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                           tight_binding_model::TightBindingModel{E}, 
+                           detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+                           jastrow_factor_1::JastrowFactor{E2},
+                           jastrow_factor_2::JastrowFactor{E2},
+                           tight_binding_model::TightBindingModel{E2}, 
+                           hubbard_model::HubbardModel{E2},
                            jastrow_parameters_1::JastrowParameters{S, K, V, I},
                            jastrow_parameters_2::JastrowParameters{S, K, V, I},
-                           jastrow_factor_1::JastrowFactor{E},
-                           jastrow_factor_2::JastrowFactor{E}, 
                            model_geometry::ModelGeometry,
-                           U::E,
                            Np::I, 
-                           pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+                           pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
 
-Measures the total local energy ``E_{\mathrm{loc}}`` for a Hubbard model and writes to the measurement container.
+Measures the total local energy per site ``E_{\mathrm{loc}}`` for a Hubbard model and writes to the measurement container.
 
 - `measurement_container::NamedTuple`: container where measurements are stored.
-- `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
-- `tight_binding_model::TightBindingModel{E}`: parameters for a non-interacting tight-binding model. 
+- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current variational wavefunction.
+- `jastrow_factor_1::JastrowFactor{E2}`: first Jastrow factor.
+- `jastrow_factor_2::JastrowFactor{E2}`: second Jastrow factor. 
+- `tight_binding_model::TightBindingModel{E2}`: parameters for a non-interacting tight-binding model. 
+- `hubbard_model::HubbardModel{E2}`: Hubbard interaction parameters.
 - `jastrow_parameters_1::JastrowParameters{S, K, V, I}`: first set of Jastrow variational parameters.
 - `jastrow_parameters_2::JastrowParameters{S, K, V, I}`: second set of Jastrow variational parameters.
-- `jastrow_factor_1::JastrowFactor{E}`: first Jastrow factor.
-- `jastrow_factor_2::JastrowFactor{E}`: second Jastrow factor. 
 - `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `U::E`: Hubbard interaction.
 - `Np::I`: total number of particles in the system.
 - `pht::Bool`: whether model is particle-hole transformed.
 
@@ -132,26 +132,26 @@ Measures the total local energy ``E_{\mathrm{loc}}`` for a Hubbard model and wri
 function measure_local_energy!(
     measurement_container::NamedTuple, 
     detwf::DeterminantalWavefunction{T, Q, E1, I}, 
+    jastrow_factor_1::JastrowFactor{E2},
+    jastrow_factor_2::JastrowFactor{E2},
     tight_binding_model::TightBindingModel{E2}, 
+    hubbard_model::HubbardModel{E2},
     jastrow_parameters_1::JastrowParameters{S, K, V, I},
     jastrow_parameters_2::JastrowParameters{S, K, V, I},
-    jastrow_factor_1::JastrowFactor{E2},
-    jastrow_factor_2::JastrowFactor{E2}, 
     model_geometry::ModelGeometry, 
-    U::E2,
     Np::I, 
     pht::Bool
 ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
    # calculate the current local energy
     E_loc_current = get_local_energy(
         detwf, 
-        tight_binding_model, 
-        jastrow_parameters_1,
-        jastrow_parameters_2, 
         jastrow_factor_1,
         jastrow_factor_2, 
+        tight_binding_model, 
+        hubbard_model,
+        jastrow_parameters_1,
+        jastrow_parameters_2, 
         model_geometry, 
-        U,
         Np, 
         pht
     )

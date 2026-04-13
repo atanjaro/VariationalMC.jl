@@ -129,7 +129,9 @@ function build_tight_binding_hamiltonian(
     pht::Bool
 ) where {E<:AbstractFloat}
     dims = length(model_geometry.lattice.L)
-    N    = model_geometry.unit_cell.n * model_geometry.lattice.N 
+    Norbs = model_geometry.unit_cell.n
+    Ncells = model_geometry.lattice.N
+    N = Norbs * Ncells
     Lx   = model_geometry.lattice.L[1]
     if dims != 1
         Ly = model_geometry.lattice.L[2]
@@ -291,7 +293,9 @@ function build_variational_hamiltonian(
     dims = size(model_geometry.lattice.L)[1]
 
     # number of sites
-    N = model_geometry.lattice.N
+    Norbs = model_geometry.unit_cell.n
+    Ncells = model_geometry.lattice.N
+    N = Norbs * Ncells
 
     # bonds of the lattice
     bonds = model_geometry.bond
@@ -1470,7 +1474,9 @@ function get_tb_chem_pot(
     model_geometry::ModelGeometry
 ) where {I<:Integer, E<:AbstractFloat}
     # number of lattice sites
-    N = model_geometry.lattice.N
+    N_orbs = model_geometry.unit_cell.n
+    N_cells = model_geometry.lattice.N
+    N = N_orbs * N_cells
 
     # bonds of the lattice
     bonds = model_geometry.bond
@@ -1495,13 +1501,13 @@ function get_tb_chem_pot(
     # add nearest neighbor hopping
     for (i,j) in eachcol(nbr0)
         H_t₀[i,j] += -t₀
-        if model_geometry.lattice.N > 2
+        if N > 2
             H_t₀[j,i] += -t₀
         end
     end
     for (i,j) in eachcol(nbr0 .+ N)    
         H_t₀[i,j] += -t₀
-        if model_geometry.lattice.N > 2
+        if N > 2
             H_t₀[j,i] += -t₀
         end
     end

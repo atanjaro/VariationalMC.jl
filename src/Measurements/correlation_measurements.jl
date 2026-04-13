@@ -85,7 +85,9 @@ function get_site_dependent_n(
     pht::Bool
 ) where {T<:Number, Q, E<:Number, I<:Integer}
     # number of lattice sites
-    N = model_geometry.lattice.N
+    Norbs = model_geometry.unit_cell.n
+    Ncells = model_geometry.lattice.N
+    N = Norbs * Ncells
 
     # current particle configuration
     pconfig = detwf.pconfig
@@ -123,7 +125,9 @@ function get_site_dependent_s(
     pht::Bool
 ) where {T<:Number, Q, E<:Number, I<:Integer}
     # number of lattice sites
-    N = model_geometry.lattice.N
+    Norbs = model_geometry.unit_cell.n
+    Ncells = model_geometry.lattice.N
+    N = Norbs * Ncells
 
     # current particle configuration
     pconfig = detwf.pconfig

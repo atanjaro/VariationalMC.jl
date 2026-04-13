@@ -1333,7 +1333,9 @@ function process_correlation_measurements(
 ) where {T<:AbstractString, I<:Integer}
     unit_cell = model_geometry.unit_cell
     lattice = model_geometry.lattice
-    N = model_geometry.lattice.N
+    Norbs = model_geometry.unit_cell.n
+    Ncells = model_geometry.lattice.N
+    N = Norbs * Ncells
 
     # compute q-points used in FT
     q_points = calc_k_points(unit_cell, lattice)
