@@ -25,7 +25,7 @@ include("ModelGeometry.jl")
 export ModelGeometry
 
 include("Parameters.jl")
-export TightBindingModel, SpinModel, DeterminantalParameters, JastrowParameters, manual_input_parameters!
+export TightBindingModel, SpinModel, HubbardModel, DeterminantalParameters, JastrowParameters, manual_input_parameters!
 
 include("Hamiltonian.jl")
 

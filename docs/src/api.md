@@ -32,12 +32,14 @@ VariationalMC.max_dist
 
 - [`TightBindingModel`](@ref)
 - [`SpinModel`](@ref)
+- [`HubbardModel`](@ref)
 - [`DeterminantalParameters`](@ref)
 - [`JastrowParameters`](@ref)
 
 ```@docs
 TightBindingModel
 SpinModel
+HubbardModel
 DeterminantalParameters
 JastrowParameters
 ```
