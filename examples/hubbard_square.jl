@@ -197,8 +197,8 @@ function run_hubbard_square_simulation(;
     # Initialize spin-spin Jastrow variational parameters.
     spin_J_parameters = JastrowParameters(
         "e-spn-spn",
-        optimize, 
         model_geometry,
+        optimize, 
         rng
     )
 

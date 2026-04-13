@@ -178,8 +178,8 @@ function run_hubbard_chain_simulation(;
     # Initialize density-density Jastrow variational parameters.
     density_J_parameters = JastrowParameters(
         "e-den-den",
-        optimize, 
         model_geometry,
+        optimize, 
         rng
     )
 

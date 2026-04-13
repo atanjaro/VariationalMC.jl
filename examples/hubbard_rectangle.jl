@@ -220,16 +220,16 @@ function run_hubbard_square_simulation(;
     # Initialize density-density Jastrow variational parameters.
     density_J_parameters = JastrowParameters(
         "e-den-den",
-        optimize, 
         model_geometry,
+        optimize, 
         rng
     )
 
     # Initialize spin-spin Jastrow variational parameters.
     spin_J_parameters = JastrowParameters(
         "e-spn-spn",
-        optimize, 
         model_geometry,
+        optimize, 
         rng
     )
 
