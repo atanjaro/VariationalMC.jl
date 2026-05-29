@@ -121,7 +121,7 @@ makedocs(;
 
 
 deploydocs(
-    repo = Documenter.Remotes.GitHub("atanjaro", "VariationalMC.jl"),
+    repo = "github.com/atanjaro/VariationalMC.jl.git",
     target = "build",
     branch = "gh-pages",
     devbranch = "main",
