@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Interacting Hubbard Ladders · VariationalMC.jl</title><meta name="title" content="Interacting Hubbard Ladders · VariationalMC.jl"/><meta property="og:title" content="Interacting Hubbard Ladders · VariationalMC.jl"/><meta property="twitter:title" content="Interacting Hubbard Ladders · VariationalMC.jl"/><meta name="description" content="Documentation for VariationalMC.jl."/><meta property="og:description" content="Documentation for VariationalMC.jl."/><meta property="twitter:description" content="Documentation for VariationalMC.jl."/><meta property="og:url" content="https://github.com/atanjaro/VariationalMC.jl/examples/hubbard_ladders/"/><meta property="twitter:url" content="https://github.com/atanjaro/VariationalMC.jl/examples/hubbard_ladders/"/><link rel="canonical" href="https://github.com/atanjaro/VariationalMC.jl/examples/hubbard_ladders/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">VariationalMC.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../simulation_output/">Simulation Output Overview</a></li><li><a class="tocitem" href="../../api/">API</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../../tutorials/hubbard_chain/">1) Hubbard Chain with an Antiferromagnetic Wavefunction</a></li><li><a class="tocitem" href="../../tutorials/hubbard_square/">2a) Square Hubbard Model with a Pairing Wavefunction</a></li><li><a class="tocitem" href="../../tutorials/hubbard_square_mpi/">2b) Square Hubbard Model with MPI Parallelization</a></li><li><a class="tocitem" href="../../tutorials/hubbard_ladders/">3) Interacting Hubbard Ladders with a Stripe Wavefunction</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../hubbard_chain/">Hubbard Chain</a></li><li><a class="tocitem" href="../hubbard_square/">Hubbard Square</a></li><li><a class="tocitem" href="../hubbard_square_mpi/">Hubbard Square with MPI Parallelization</a></li><li><a class="tocitem" href="../hubbard_ladder/">Hubbard Ladder</a></li><li><a class="tocitem" href="../hubbard_ladder_mpi/">Hubbard Ladder with MPI Parallelization</a></li><li class="is-active"><a class="tocitem" href>Interacting Hubbard Ladders</a></li><li><a class="tocitem" href="../hubbard_ladders_mpi/">Interacting Hubbard Ladders with MPI Parallelization</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Interacting Hubbard Ladders</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Interacting Hubbard Ladders</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/atanjaro/VariationalMC.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Interacting-Hubbard-Ladders"><a class="docs-heading-anchor" href="#Interacting-Hubbard-Ladders">Interacting Hubbard Ladders</a><a id="Interacting-Hubbard-Ladders-1"></a><a class="docs-heading-anchor-permalink" href="#Interacting-Hubbard-Ladders" title="Permalink"></a></h1><p>Download this example as a <a href="../../assets/scripts/examples/hubbard_ladders.jl">Julia script</a>.</p><p>This is a ready-to-run script for simulating a two-dimensional (2D) Hubbard model on a rectangular lattice goemetry (ladders) with a stripe wavefunction.</p><pre><code class="language-julia hljs"># Import the required packages
+using VariationalMC
+import VariationalMC.LatticeUtilities as lu
+
+using Random
+using Printf
+
+# Top-level function to run the simulation
+function run_simulation(;
+    # KEYWORD ARGUMENTS
+    sID,                    # Simulation ID.
+    Lx,                     # System size in the x-direction.
+    Ly,                     # System size in the y-direction.
+    t₁′,                    # Next-nearest neighbor hopping amplitude in ladder 1.
+    t₂′,                    # Next-nearest neighbor hopping amplitude in ladder 2.
+    U,                      # Hubbard interaction.
+    V,                      # Extended Hubbard interaction.
+    density,                # Density of Fermions.
+    ph_transform,           # Whether the model is particle-hole transformed.
+    N_equil,                # Number of equilibration/thermalization updates.
+    N_opt,                  # Number of optimization steps.
+    N_sim,                  # Number of simulation steps.
+    N_opt_bins,             # Number of optimization bins.
+    N_sim_bins,             # Number of simulation bins.
+    dt = 0.1,               # Optimization rate.
+    η = 1e-4,               # Optimization stablity factor.
+    n_stab_W = 50,          # Green&#39;s function stabilization frequency.
+    δW = 1e-3,              # Maximum allowed error in the Green&#39;s function.
+    n_stab_T = 50,          # Jastrow factor stabilization frequency.
+    δT = 1e-3,              # Maximum allowed error in the Jastrow factor.
+    seed = abs(rand(Int)),  # Seed for random number generator.
+    filepath=&quot;.&quot;            # Filepath to where data folder will be created.
+)
+    # Construct the foldername the data will be written to.
+    datafolder_prefix = @sprintf &quot;hubbard_ladder_n%.3f_tp1%.2f_tp2%.2f_U%.2f_V%.2f_Lx%d_Ly%d&quot; density t₁′ t₂′ U V Lx Ly
+
+    # Initialize simulation info.
+    simulation_info = SimulationInfo(
+        filepath = filepath,
+        datafolder_prefix = datafolder_prefix,
+        sID = sID
+    )
+
+    # Initialize the directory the data will be written to.
+    initialize_datafolder(simulation_info)
+
+    # Initialize a random number generator.
+    rng = Xoshiro(seed)
+
+    # Initialize the metadata dictionary.
+    metadata = Dict()
+
+    # Record simulation parameters.
+    metadata[&quot;N_equil&quot;] = N_equil
+    metadata[&quot;N_opt&quot;] = N_opt
+    metadata[&quot;N_sim&quot;] = N_sim
+    metadata[&quot;N_opt_bins&quot;] = N_opt_bins
+    metadata[&quot;N_sim_bins&quot;] = N_sim_bins
+    metadata[&quot;δW&quot;] = δW
+    metadata[&quot;δT&quot;] = δT
+    metadata[&quot;n_stab_W&quot;] = n_stab_W
+    metadata[&quot;n_stab_T&quot;] = n_stab_T
+    metadata[&quot;dt&quot;] = dt
+    metadata[&quot;acceptance_rate&quot;] = 0.0
+    metadata[&quot;seed&quot;] = seed
+
+    # Define the unit cell.
+    unit_cell = lu.UnitCell(
+        lattice_vecs = [[1.0, 0.0], [0.0, 1.0]],
+        basis_vecs   = [[0.0, 0.0], [1.0, 0.0]]
+    )
+
+    # Define a finite lattice with periodic boundary conditions in the x-direction.
+    lattice = lu.Lattice(
+        [Lx, Ly],
+        [true, true]
+    )
+
+    # Initialize model geometry.
+    model_geometry = ModelGeometry(
+        unit_cell, lattice
+    )
+
+    # Define the nearest-neighbor x-bond in ladder 1.
+    bond_x1 = lu.Bond(
+        orbitals = (1,1),
+        displacement = [1,0]
+    )
+    bond_x1_id = add_bond!(model_geometry, bond_x1)
+
+    # Define the nearest-neighbor y-bond in ladder 1.
+    bond_y1 = lu.Bond(
+        orbitals = (1,1),
+        displacement = [0,1]
+    )
+    bond_y1_id = add_bond!(model_geometry, bond_y1)
+
+    # Define the postive next-nearest neighbor in ladder 1.
+    bond_xy1 = lu.Bond(
+        orbitals = (1,1),
+        displacement = [1,1]
+    )
+    bond_xy1_id = add_bond!(model_geometry, bond_xy1)
+
+    # Define the negative next-nearest neighbor in ladder 1.
+    bond_yx1 = lu.Bond(
+        orbitals = (1,1),
+        displacement = [1,-1]
+    )
+    bond_yx1_id = add_bond!(model_geometry, bond_yx1)
+
+    # Define the nearest-neighbor x-bond in ladder 2.
+    bond_x2 = lu.Bond(
+        orbitals = (2,2),
+        displacement = [1,0]
+    )
+    bond_x2_id = add_bond!(model_geometry, bond_x2)
+
+    # Define the nearest-neighbor y-bond in ladder 2.
+    bond_y2 = lu.Bond(
+        orbitals = (2,2),
+        displacement = [0,1]
+    )
+    bond_y2_id = add_bond!(model_geometry, bond_y2)
+
+    # Define the postive next-nearest neighbor in ladder 2.
+    bond_xy2 = lu.Bond(
+        orbitals = (2,2),
+        displacement = [1,1]
+    )
+    bond_xy2_id = add_bond!(model_geometry, bond_xy2)
+
+    # Define the negative next-nearest neighbor in ladder 2.
+    bond_yx2 = lu.Bond(
+        orbitals = (2,2),
+        displacement = [1,-1]
+    )
+    bond_yx2_id = add_bond!(model_geometry, bond_yx2)
+
+    # Define a nearest-neighbor interaction bond between the ladders 1 and 2.
+    bond_int1 = lu.Bond(
+        orbitals = (1,2),
+        displacement = [-1,-1]
+    )
+    bond_int1_id = add_bond!(model_geometry, bond_int1)
+
+    # Define a nearest-neighbor interaction bond between the ladders 1 and 2.
+    bond_int2 = lu.Bond(
+        orbitals = (1,2),
+        displacement = [0,-1]
+    )
+    bond_int2_id = add_bond!(model_geometry, bond_int2)
+
+    # Determine the density and initialize the configuration of Fermions.
+    particle_configuration = ParticleConfiguration(
+        density,
+        model_geometry = model_geometry,
+        ph_transform = ph_transform
+    )
+
+    # Nearest-neighbor hopping amplitude for the first ladder.
+    t₁ = 1.0
+
+    # Nearest-neighbor hopping ampplitude for the second ladder.
+    t₂ = 1.0
+
+    # Define the non-interacting tight binding model.
+    tight_binding_model = TightBindingModel(
+        model_geometry = model_geometry,
+        μ       =  0., # set initial estimate for the chemical potential
+        t_bonds = [bond_x1, bond_y1, bond_x2, bond_y2, bond_xy1, bond_yx1, bond_xy2, bond_yx2], # defines hopping
+        t_mean  = [t₁, t₁, t₂, t₂, t₁′, t₁′, t₂′, t₂′] # defines corresponding mean hopping amplitude
+    )
+
+    # Define the Hubbard interaction in the model.
+    hubbard_model = HubbardModel(
+        U_orbital   = [1, 2],
+        U_mean      = [U, U]
+    )
+
+    # Define the Hubbard interaction between the ladders.
+    extended_hubbard_model = ExtendedHubbardModel(
+        model_geometry = model_geometry,
+        V_bond = [bond_int1, bond_int2],
+        V_mean = [V, V]
+    )
+
+    # Initialize tight-binding parameters.
+    tight_binding_parameters = TightBindingParameters(
+        tight_binding_model     = tight_binding_model,
+        particle_configuration  = particle_configuration,
+        model_geometry          = model_geometry
+    )
+
+    # Initialize Hubbard interaction parameters.
+    hubbard_parameters = HubbardParameters(
+        hubbard_model   = hubbard_model,
+        model_geometry  = model_geometry
+    )
+
+    # Initialize extended Hubbard interaction parameters.
+    extended_hubbard_parameters = ExtendedHubbardParameters(
+        extended_hubbard_model = extended_hubbard_model,
+        model_geometry = model_geometry
+    )
+
+    # Initialize variational parameters in the determinantal-part of the wavefunction.
+    determinantal_parameters = DeterminantalParameters(
+        tight_binding_parameters    = tight_binding_parameters,
+        model_geometry              = model_geometry,
+        rng                         = rng
+    )
+
+    # Add charge stripe parameters for optimization.
+    add_parameter!(
+        determinantal_parameters,
+        param_name  = &quot;density&quot;,
+        order_type  = &quot;charge&quot;,
+        symmetry    = &quot;site-dependent&quot;,
+        optimize    = true,
+        orbital     = [1, 2],
+        model_geometry = model_geometry
+    )
+
+    # Add spin stripe parameters for optimization.
+    add_parameter!(
+        determinantal_parameters,
+        param_name  = &quot;spin-z&quot;,
+        order_type  = &quot;spin&quot;,
+        symmetry    = &quot;site-dependent&quot;,
+        optimize    = true,
+        orbital     = [1, 2],
+        model_geometry = model_geometry
+    )
+
+    # Initialize variational parameters in the form of Jastrow pseudopotentials.
+    jastrow_parameters = JastrowParameters(
+        particle_pair   = &quot;electron-electron&quot;,
+        order_pair      = &quot;spin-spin&quot;,
+        orbitals        = [1, 2],
+        optimize        = true,
+        model_geometry  = model_geometry,
+        rng             = rng
+    )
+
+    # Write model summary TOML file specifying Hamiltonian that will be simulated.
+    model_summary(
+        simulation_info         = simulation_info,
+        model_geometry          = model_geometry,
+        particle_configuration  = particle_configuration,
+        tight_binding_model     = tight_binding_model,
+        interactions            = (hubbard_model, extended_hubbard_model,),
+        parameters              = (determinantal_parameters, jastrow_parameters,)
+    )
+
+    # Initialize the container where measurements will be accumulated.
+    measurement_container = initialize_measurement_container(
+        determinantal_parameters,
+        model_geometry,
+        (jastrow_parameters,)
+    )
+
+    # Initialize the tight-binding model related measurements, namely the hopping energy.
+    initialize_measurements!(measurement_container, tight_binding_model)
+
+    # Initialize the Hubbard interaction related measurements.
+    initialize_measurements!(measurement_container, hubbard_model)
+
+    # Initialize the extended Hubbard interaction related measurements.
+    initialize_measurements!(measurement_container, extended_hubbard_model)
+
+    # Initialize equal-time charge correlation measurements.
+    initialize_correlation_measurements!(
+        measurement_container = measurement_container,
+        model_geometry = model_geometry,
+        correlation = &quot;density&quot;,
+        pairs = [(1,2)]
+    )
+
+    # Initialize equal-time spin correlation measurements.
+    initialize_correlation_measurements!(
+        measurement_container = measurement_container,
+        model_geometry = model_geometry,
+        correlation = &quot;spin-z&quot;,
+        pairs = [(1,2)]
+    )
+
+    # Initialize the optimzer that will be used for Stochastic Reconfiguration.
+    optimizer = Optimizer(
+        determinantal_parameters = determinantal_parameters,
+        η = η, dt = dt,
+        jas_parameters = (jastrow_parameters,)
+    )
+
+    # Calculate the size of each optimization bin.
+    opt_bin_size = div(N_opt, N_opt_bins)
+
+    # Iterate over the optimization bins.
+    for bin in 1:N_opt_bins
+
+        # Construct the auxiliary/mean-field Hamiltonian.
+        hamiltonian = Hamiltonian(
+            tight_binding_parameters    = tight_binding_parameters,
+            determinantal_parameters    = determinantal_parameters,
+            particle_configuration      = particle_configuration,
+            model_geometry              = model_geometry
+        )
+
+        # Construct the determinantal/Slater wavefunction.
+        detwf = DeterminantalWavefunction(
+            determinantal_parameters    = determinantal_parameters,
+            hamiltonian                 = hamiltonian,
+            particle_configuration      = particle_configuration,
+            model_geometry              = model_geometry,
+            rng                         = rng
+        )
+
+        # Construct the Jastrow factor.
+        jfac = JastrowFactor(
+            jastrow_parameters      = jastrow_parameters,
+            particle_configuration  = particle_configuration,
+            model_geometry          = model_geometry
+        )
+
+        # Iterate over the length of the bin.
+        for n in 1:opt_bin_size
+            # Equilibrate/thermalize the system
+            for equil in 1:N_equil
+                # Attempt to update the fermion configuration.
+                accepted = local_fermion_update!(
+                    detwf = detwf, jas_factors = (jfac,),
+                    tight_binding_parameters = tight_binding_parameters, jas_parameters = (jastrow_parameters,),
+                    particle_configuration = particle_configuration,
+                    model_geometry = model_geometry,
+                    δW = δW, δT = δT,
+                    n_stab_W = n_stab_W, n_stab_T = n_stab_T, rng = rng
+                )
+
+                # Record the acceptance rate.
+                metadata[&quot;acceptance_rate&quot;] += accepted
+            end
+
+            # Make measurements
+            make_measurements!(
+                measurement_container,
+                detwf = detwf, jas_factors = (jfac,),
+                tight_binding_parameters = tight_binding_parameters,
+                determinantal_parameters = determinantal_parameters,
+                jas_parameters = (jastrow_parameters,),
+                coupling_parameters = (hubbard_parameters, extended_hubbard_parameters,),
+                particle_configuration = particle_configuration,
+                model_geometry = model_geometry, opt_step = true
+            )
+        end
+
+        # Attempt to update the variational parameters.
+        update_optimizer!(
+            optimizer = optimizer,
+            measurement_container = measurement_container,
+            bin_size = opt_bin_size,
+            determinantal_parameters = determinantal_parameters,
+            jas_parameters = (jastrow_parameters,)
+        )
+
+        # Write the measurements.
+        write_measurements!(
+            measurement_container = measurement_container,
+            simulation_info = simulation_info,
+            model_geometry = model_geometry,
+            bin = bin,
+            bin_size = opt_bin_size,
+            opt_step = true
+        )
+    end
+
+    # Calculate the size of each simulation bin.
+    sim_bin_size = div(N_sim, N_sim_bins)
+
+    # Iterate over the simulation bins.
+    for bin in 1:N_sim_bins
+
+        # Construct the auxiliary/mean-field Hamiltonian.
+        hamiltonian = Hamiltonian(
+            tight_binding_parameters    = tight_binding_parameters,
+            determinantal_parameters    = determinantal_parameters,
+            particle_configuration      = particle_configuration,
+            model_geometry              = model_geometry
+        )
+
+        # Construct the determinantal/Slater wavefunction.
+        detwf = DeterminantalWavefunction(
+            determinantal_parameters    = determinantal_parameters,
+            hamiltonian                 = hamiltonian,
+            particle_configuration      = particle_configuration,
+            model_geometry              = model_geometry,
+            rng                         = rng
+        )
+
+        # Construct the Jastrow factor.
+        jfac = JastrowFactor(
+            jastrow_parameters      = jastrow_parameters,
+            particle_configuration  = particle_configuration,
+            model_geometry          = model_geometry
+        )
+
+        # Iterate over the length of the bin.
+        for n in 1:opt_bin_size
+            # Equilibrate/thermalize the system
+            for equil in 1:N_equil
+                # Attempt to update the fermion configuration.
+                accepted = local_fermion_update!(
+                    detwf = detwf, jas_factors = (jfac,),
+                    tight_binding_parameters = tight_binding_parameters, jas_parameters = (jastrow_parameters,),
+                    particle_configuration = particle_configuration,
+                    model_geometry = model_geometry,
+                    δW = δW, δT = δT,
+                    n_stab_W = n_stab_W, n_stab_T = n_stab_T, rng = rng
+                )
+
+                # Record the acceptance rate.
+                metadata[&quot;acceptance_rate&quot;] += accepted
+            end
+
+            # Make measurements.
+            make_measurements!(
+                measurement_container,
+                detwf = detwf, jas_factors = (jfac,),
+                tight_binding_parameters = tight_binding_parameters,
+                determinantal_parameters = determinantal_parameters,
+                jas_parameters = (jastrow_parameters,),
+                coupling_parameters = (hubbard_parameters, extended_hubbard_parameters,),
+                particle_configuration = particle_configuration,
+                model_geometry = model_geometry
+            )
+        end
+
+        # Write the measurements.
+        write_measurements!(
+            measurement_container = measurement_container,
+            simulation_info = simulation_info,
+            model_geometry = model_geometry,
+            bin = bin,
+            bin_size = sim_bin_size
+        )
+    end
+
+    # Merge binned optimization data into a single HDF5 file.
+    merge_bins(simulation_info, opt = true)
+
+    # Merge binned simulation data into a single HDF5 file.
+    merge_bins(simulation_info)
+
+    # Normalize the acceptance rate.
+    metadata[&quot;acceptance_rate&quot;] /= N_equil * (N_opt + N_sim)
+
+    # Write the simulation summary TOML file.
+    save_simulation_info(simulation_info, metadata)
+
+    # Process the simulation results, calculating final error bars for all measurements.
+    # writing final statistics to CSV files.
+    process_measurements(
+        datafolder = simulation_info.datafolder,
+        n_bins = N_sim_bins,
+        export_to_csv = true,
+        scientific_notation = false,
+        decimals = 7,
+        delimiter = &quot; &quot;,
+        process_all_equal_time_measurements = true
+    )
+
+    return nothing
+end # end of `run_simulation` function
+
+
+# Only execute if the script is run directly from the command line.
+if abspath(PROGRAM_FILE) == @__FILE__
+
+    # Run the simulation, reading in command line arguments.
+    run_simulation(;
+        sID             = parse(Int,     ARGS[1]),
+        Lx              = parse(Int,     ARGS[2]),
+        Ly              = parse(Int,     ARGS[3]),
+        t₁′             = parse(Float64, ARGS[4]),
+        t₂′             = parse(Float64, ARGS[5]),
+        U               = parse(Float64, ARGS[6]),
+        V               = parse(Float64, ARGS[7]),
+        density         = parse(Float64, ARGS[8]),
+        ph_transform    = parse(Bool,    ARGS[9]),
+        N_equil         = parse(Int,     ARGS[10]),
+        N_opt           = parse(Int,     ARGS[11]),
+        N_sim           = parse(Int,     ARGS[12]),
+        N_opt_bins      = parse(Int,     ARGS[13]),
+        N_sim_bins      = parse(Int,     ARGS[14])
+    )
+end</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../hubbard_ladder_mpi/">« Hubbard Ladder with MPI Parallelization</a><a class="docs-footer-nextpage" href="../hubbard_ladders_mpi/">Interacting Hubbard Ladders with MPI Parallelization »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.11.4 on <span class="colophon-date" title="Friday 29 May 2026 15:58">Friday 29 May 2026</span>. Using Julia version 1.11.9.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

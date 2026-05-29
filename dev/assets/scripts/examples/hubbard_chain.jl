@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Hubbard Square · VariationalMC.jl</title><meta name="title" content="Hubbard Square · VariationalMC.jl"/><meta property="og:title" content="Hubbard Square · VariationalMC.jl"/><meta property="twitter:title" content="Hubbard Square · VariationalMC.jl"/><meta name="description" content="Documentation for VariationalMC.jl."/><meta property="og:description" content="Documentation for VariationalMC.jl."/><meta property="twitter:description" content="Documentation for VariationalMC.jl."/><meta property="og:url" content="https://github.com/atanjaro/VariationalMC.jl/examples/hubbard_square/"/><meta property="twitter:url" content="https://github.com/atanjaro/VariationalMC.jl/examples/hubbard_square/"/><link rel="canonical" href="https://github.com/atanjaro/VariationalMC.jl/examples/hubbard_square/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">VariationalMC.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../simulation_output/">Simulation Output Overview</a></li><li><a class="tocitem" href="../../api/">API</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../../tutorials/hubbard_chain/">1) Hubbard Chain with an Antiferromagnetic Wavefunction</a></li><li><a class="tocitem" href="../../tutorials/hubbard_square/">2a) Square Hubbard Model with a Pairing Wavefunction</a></li><li><a class="tocitem" href="../../tutorials/hubbard_square_mpi/">2b) Square Hubbard Model with MPI Parallelization</a></li><li><a class="tocitem" href="../../tutorials/hubbard_ladders/">3) Interacting Hubbard Ladders with a Stripe Wavefunction</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../hubbard_chain/">Hubbard Chain</a></li><li class="is-active"><a class="tocitem" href>Hubbard Square</a></li><li><a class="tocitem" href="../hubbard_square_mpi/">Hubbard Square with MPI Parallelization</a></li><li><a class="tocitem" href="../hubbard_ladder/">Hubbard Ladder</a></li><li><a class="tocitem" href="../hubbard_ladder_mpi/">Hubbard Ladder with MPI Parallelization</a></li><li><a class="tocitem" href="../hubbard_ladders/">Interacting Hubbard Ladders</a></li><li><a class="tocitem" href="../hubbard_ladders_mpi/">Interacting Hubbard Ladders with MPI Parallelization</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Hubbard Square</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Hubbard Square</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/atanjaro/VariationalMC.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Hubbard-Square"><a class="docs-heading-anchor" href="#Hubbard-Square">Hubbard Square</a><a id="Hubbard-Square-1"></a><a class="docs-heading-anchor-permalink" href="#Hubbard-Square" title="Permalink"></a></h1><p>Download this example as a <a href="../../assets/scripts/examples/hubbard_square.jl">Julia script</a>.</p><p>This is a ready-to-run script for simulating a two-dimensional (2D) Hubbard model on a square lattice with an onsite <span>$s$</span>-wave pairing wavefunction.</p><pre><code class="language-julia hljs"># Import the required packages
+# Import the required packages
 using VariationalMC
 import VariationalMC.LatticeUtilities as lu
 
@@ -12,7 +11,8 @@ function run_simulation(;
     sID,                    # Simulation ID.
     L,                      # System size.
     U,                      # Hubbard interaction.
-    density,                # Density of Fermions.
+    nup,                    # Number of spin-up Fermions.
+    ndn,                    # Number of spin-down Fermions.
     ph_transform,           # Whether the model is particle-hole transformed.
     N_equil,                # Number of equilibration/thermalization updates.
     N_opt,                  # Number of optimization steps.
@@ -21,15 +21,15 @@ function run_simulation(;
     N_sim_bins,             # Number of simulation bins.
     dt = 0.1,               # Optimization rate.
     η = 1e-4,               # Optimization stablity factor.
-    n_stab_W = 50,          # Green&#39;s function stabilization frequency.
-    δW = 1e-3,              # Maximum allowed error in the Green&#39;s function.
+    n_stab_W = 50,          # Green's function stabilization frequency.
+    δW = 1e-3,              # Maximum allowed error in the Green's function.
     n_stab_T = 50,          # Jastrow factor stabilization frequency.
     δT = 1e-3,              # Maximum allowed error in the Jastrow factor.
     seed = abs(rand(Int)),  # Seed for random number generator.
-    filepath=&quot;.&quot;            # Filepath to where data folder will be created.
+    filepath="."            # Filepath to where data folder will be created.
 )
     # Construct the foldername the data will be written to.
-    datafolder_prefix = @sprintf &quot;hubbard_square_n%.3f_U%.2f_L%d&quot; density U L
+    datafolder_prefix = @sprintf "hubbard_chain_nup%d_ndn%d_U%.2f_L%d" nup ndn U L
 
     # Initialize simulation info.
     simulation_info = SimulationInfo(
@@ -48,29 +48,29 @@ function run_simulation(;
     metadata = Dict()
 
     # Record simulation parameters.
-    metadata[&quot;N_equil&quot;] = N_equil
-    metadata[&quot;N_opt&quot;] = N_opt
-    metadata[&quot;N_sim&quot;] = N_sim
-    metadata[&quot;N_opt_bins&quot;] = N_opt_bins
-    metadata[&quot;N_sim_bins&quot;] = N_sim_bins
-    metadata[&quot;δW&quot;] = δW
-    metadata[&quot;δT&quot;] = δT
-    metadata[&quot;n_stab_W&quot;] = n_stab_W
-    metadata[&quot;n_stab_T&quot;] = n_stab_T
-    metadata[&quot;dt&quot;] = dt
-    metadata[&quot;acceptance_rate&quot;] = 0.0
-    metadata[&quot;seed&quot;] = seed
+    metadata["N_equil"] = N_equil
+    metadata["N_opt"] = N_opt
+    metadata["N_sim"] = N_sim
+    metadata["N_opt_bins"] = N_opt_bins
+    metadata["N_sim_bins"] = N_sim_bins
+    metadata["δW"] = δW
+    metadata["δT"] = δT
+    metadata["n_stab_W"] = n_stab_W
+    metadata["n_stab_T"] = n_stab_T
+    metadata["dt"] = dt
+    metadata["acceptance_rate"] = 0.0
+    metadata["seed"] = seed
 
     # Define the unit cell.
     unit_cell = lu.UnitCell(
-        lattice_vecs = [[1.0, 0.0], [0.0, 1.0]],
-        basis_vecs   = [[0.0, 0.0]]
+        lattice_vecs = [[1.0]],
+        basis_vecs   = [[0.0]]
     )
 
     # Define a finite lattice with periodic boundary conditions.
     lattice = lu.Lattice(
-        [L, L],
-        [true, true]
+        [L],
+        [true]
     )
 
     # Initialize model geometry.
@@ -81,24 +81,15 @@ function run_simulation(;
     # Define the nearest-neighbor bond in the x-direction.
     bond_x = lu.Bond(
         orbitals = (1,1),
-        displacement = [1,0]
+        displacement = [1]
     )
 
     # Add this bond definition to the model by adding it to the `model_geometry`.
-    bond_x_id = add_bond!(model_geometry, bond_x)
-
-    # Define the nearest-neighbor bond in the y-direction.
-    bond_y = lu.Bond(
-        orbitals = (1,1),
-        displacement = [0,1]
-    )
-
-    # Add this bond definition to the model by adding it to the `model_geometry`.
-    bond_y_id = add_bond!(model_geometry, bond_y)
+    add_bond!(model_geometry, bond_x)
 
     # Determine the density and initialize the configuration of Fermions.
     particle_configuration = ParticleConfiguration(
-        density,
+        nup = nup, ndn = ndn,
         model_geometry = model_geometry,
         ph_transform = ph_transform
     )
@@ -110,9 +101,9 @@ function run_simulation(;
     # Define the non-interacting tight binding model.
     tight_binding_model = TightBindingModel(
         model_geometry = model_geometry,
-        μ       =  0.,                    # set an initial estimate for the chemical potential.
-        t_bonds = [bond_x, bond_y],       # defines hopping.
-        t_mean  = [t, t]                  # defines corresponding mean hopping amplitude.
+        μ       =  0.,           # set an initial estimate for the chemical potential.
+        t_bonds = [bond_x],      # defines hopping.
+        t_mean  = [t]            # defines corresponding mean hopping amplitude.
     )
 
     # Define the Hubbard interaction in the model.
@@ -121,14 +112,14 @@ function run_simulation(;
         U_mean      = [U]
     )
 
-    # Initialize tight binding parameters.
+    # Initialize tight-binding parameters.
     tight_binding_parameters = TightBindingParameters(
         tight_binding_model     = tight_binding_model,
         particle_configuration  = particle_configuration,
         model_geometry          = model_geometry
     )
 
-    # Initialize Hubbard parameters.
+    # Initialize Hubbard interaction parameters.
     hubbard_parameters = HubbardParameters(
         hubbard_model   = hubbard_model,
         model_geometry  = model_geometry
@@ -141,20 +132,18 @@ function run_simulation(;
         rng                         = rng
     )
 
-    # Add an onsite s-wave variational parameter for optimization.
+    # Add the spin-z variational parameter for optimization.
     add_parameter!(
         determinantal_parameters,
-        param_name      = &quot;s-wave&quot;,
-        order_type      = &quot;pair&quot;,
-        symmetry        = &quot;uniform&quot;,
-        optimize        = true,
-        orbital         = [1]
+        param_name      = "spin-z",
+        order_type      = "spin",
+        symmetry        = "uniform"
     )
 
     # Initialize variational parameters in the form of Jastrow pseudopotentials.
     jastrow_parameters = JastrowParameters(
-        particle_pair   = &quot;electron-electron&quot;,
-        order_pair      = &quot;density-density&quot;,
+        particle_pair   = "electron-electron",
+        order_pair      = "density-density",
         orbitals        = [1],
         optimize        = true,
         model_geometry  = model_geometry,
@@ -236,7 +225,7 @@ function run_simulation(;
                 )
 
                 # Record the acceptance rate.
-                metadata[&quot;acceptance_rate&quot;] += accepted
+                metadata["acceptance_rate"] += accepted
             end
 
             # Make measurements.
@@ -317,7 +306,7 @@ function run_simulation(;
                 )
 
                 # Record the acceptance rate.
-                metadata[&quot;acceptance_rate&quot;] += accepted
+                metadata["acceptance_rate"] += accepted
             end
 
             # Make measurements.
@@ -350,7 +339,7 @@ function run_simulation(;
     merge_bins(simulation_info)
 
     # Normalize the acceptance rate.
-    metadata[&quot;acceptance_rate&quot;] /= N_equil * (N_opt + N_sim)
+    metadata["acceptance_rate"] /= N_equil * (N_opt + N_sim)
 
     # Write the simulation summary TOML file.
     save_simulation_info(simulation_info, metadata)
@@ -363,7 +352,7 @@ function run_simulation(;
         export_to_csv = true,
         scientific_notation = false,
         decimals = 7,
-        delimiter = &quot; &quot;
+        delimiter = " "
     )
 
     return nothing
@@ -373,17 +362,18 @@ end # end of `run_simulation` function
 # Only execute if the script is run directly from the command line.
 if abspath(PROGRAM_FILE) == @__FILE__
 
-    # Run the simulation, reading in command line arguments.
+    # Run the simulation.
     run_simulation(;
         sID             = parse(Int,     ARGS[1]),
         L               = parse(Int,     ARGS[2]),
         U               = parse(Float64, ARGS[3]),
-        density         = parse(Float64, ARGS[4]),
-        ph_transform    = parse(Bool,    ARGS[5]),
-        N_equil         = parse(Int,     ARGS[6]),
-        N_opt           = parse(Int,     ARGS[7]),
-        N_sim           = parse(Int,     ARGS[8]),
-        N_opt_bins      = parse(Int,     ARGS[9]),
-        N_sim_bins      = parse(Int,     ARGS[10])
+        nup             = parse(Int,     ARGS[4]),
+        ndn             = parse(Int,     ARGS[5]),
+        ph_transform    = parse(Bool,    ARGS[6]),
+        N_equil         = parse(Int,     ARGS[7]),
+        N_opt           = parse(Int,     ARGS[8]),
+        N_sim           = parse(Int,     ARGS[9]),
+        N_opt_bins      = parse(Int,     ARGS[10]),
+        N_sim_bins      = parse(Int,     ARGS[11])
     )
-end</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../hubbard_chain/">« Hubbard Chain</a><a class="docs-footer-nextpage" href="../hubbard_square_mpi/">Hubbard Square with MPI Parallelization »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.11.4 on <span class="colophon-date" title="Friday 29 May 2026 15:58">Friday 29 May 2026</span>. Using Julia version 1.11.9.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end
