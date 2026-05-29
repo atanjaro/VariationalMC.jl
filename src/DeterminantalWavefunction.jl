@@ -1,416 +1,123 @@
 @doc raw"""
 
-    DeterminantalWavefunction{T<:Number, Q, E<:AbstractFloat, I<:Integer} 
+    DeterminantalWavefunction{T<:Number, E<:AbstractMatrix{T}}
 
-A type defining quantities related to a determinantal wavefunction.
+A mutable struct containing all the parameters needed to characterize the determinantal part of the trial wavefunction.
 
-- `W::Matrix{T}`: equal-time Green's function matrix.
-- `D::Matrix{T}`: Slater matrix.
-- `M::AbstractMatrix{T}`: reduced U_aux matrix.
-- `U_aux::Matrix{T}`: unitary matrix that diagonalizes the auxiliary Hamiltonian.
-- `A::Vector{Q}`: variational parameter matrices.
-- `ε::Vector{E}`: vector of mean-field energies.
-- `pconfig::Vector{I}`: particle configuration.
-- `nq_updates_W::I`: tracker for the number for quick updates to the W matrix.
+# Fields
+
+- `W::E`: Equal-time Green's function matrix.
+- `D::E`: Slater matrix.
+- `M::E`: Reduced form of the unitary matrix `U`.
+- `A::Vector{E}`: Set of logarithmic derivative operator matrices for all parameters that will be optimized. 
+- `nq_updates_W::Int`: Tracker for the number of quick updates that have been performed on the equal-time Green's function.
 
 """
-mutable struct DeterminantalWavefunction{T<:Number, Q, E<:Number, I<:Integer}
+mutable struct DeterminantalWavefunction{T<:Number}
     # equal-time Green's function
-    W::Matrix{T}
+    W::AbstractMatrix{T}
 
     # Slater matrix
-    D::Matrix{T}
+    D::AbstractMatrix{T}
     
     # M matrix
     M::AbstractMatrix{T}
-    
-    # U matrix 
-    U_aux::Matrix{T}
-    
-    # variational parameter matrices
-    A::Vector{Q}
-    
-    # initial energies
-    ε::Vector{E}
 
-    # particle configuration
-    pconfig::Vector{I}
-
+    # logarithmic derivative matrices
+    A::Vector{Matrix{T}}
+    
     # number of W matrix quick updates
-    nq_updates_W::I
+    nq_updates_W::Int
 end
 
 
 @doc raw"""
 
-    DeterminantalWavefunctionTABC{T<:Number, Q, E<:AbstractFloat, I<:Integer} 
+    DeterminantalWavefunction(;
+        # KEYWORD ARGUMENTS
+        determinantal_parameters::DeterminantalParameters,
+        hamiltonian::Hamiltonian{T,E},
+        particle_configuration::ParticleConfiguration,
+        model_geometry::ModelGeometry
+    ) where {T, E}
 
-A type defining quantities related to a determinantal wavefunction over a range 
-of twist angles.
-
-- `W_θ::Vector{Matrix{T}}`: set of equal-time Green's function matrices.
-- `D_θ::Vector{Matrix{T}}`: set of Slater matrices.
-- `M_θ::Vector{AbstractMatrix{T}}`: set of reduced U_aux matrices.
-- `U_θ::Vector{Matrix{T}}`: set of unitary matrices that diagonalizes the auxiliary Hamiltonian.
-- `A_θ::Vector{Vector{Q}}`: set of variational parameter matrices.
-- `ε_θ::Vector{Vector{E}}`: vector of mean-field energies.
-- `pconfig::Vector{I}`: particle configuration.
-- `N_θ::I`: number of twist angles to average over.
-- `twist_angles::AbstractRange{E}`: set of twist angles.
-- `nq_updates_W::I`: tracker for the number for quick updates to the W matrix.
+Initialize and return an instance of `DeterminantalWavefunction`.
 
 """
-mutable struct DeterminantalWavefunctionTABC{T<:Number, Q, E<:Number, I<:Integer}
-    # equal-time Green's functions
-    W_θ::Vector{Matrix{T}}
-
-    # Slater matrices
-    D_θ::Vector{Matrix{T}}
-    
-    # M matrices
-    M_θ::Vector{AbstractMatrix{T}}
-    
-    # U matrices
-    U_θ::Vector{Matrix{T}}
-    
-    # sets variational parameter matrices
-    A_θ::Vector{Vector{Q}}
-    
-    # initial energies
-    ε_θ::Vector{Vector{E}}
-
-    # particle configuration
-    pconfig::Vector{I}
-
-    # number of twiste angles
-    N_θ::I
-    
-    # set of twist angles
-    twist_angles::AbstractRange{E}
-
-    # number of W matrix quick updates
-    nq_updates_W::I
-end
-
-
-@doc raw"""
-
-    get_determinantal_wavefunction( tight_binding_model::TightBindingModel{E}, 
-                                    determinantal_parameters::DeterminantalParameters{I}, 
-                                    model_geometry::ModelGeometry, 
-                                    optimize::NamedTuple, 
-                                    pconfig::Vector{I} = Int[],
-                                    Np::I, 
-                                    nup::I, 
-                                    ndn::I, 
-                                    rng::AbstractRNG, 
-                                    pht::Bool;
-                                    q_p = [0.0, 0.0] ) where {E<:AbstractFloat, I<:Integer, T<:Number}
-
-Constructs a variational wavefunction ``|\Phi_0\rangle`` based on parameters given by the tight-binding model 
-and determinantal parameter and returns an instance of the `DeterminantalWavefunction` type. If no initial 
-particle configuration is specified, a random configuration will be generated.                            
-
-- `tight_binding_model::TightBindingModel{E}`: parameters for a non-interacting tight-binding model. 
-- `determinantal_parameters::DeterminantalParameters{I}`: set of determinantal variational parameters.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `optimize::NamedTuple`: field of optimization flags.
-- `pconfig::Vector{I}`: initial particle configuration.
-- `Np::I`: total number of particles in the system.
-- `nup::I`: number of spin-up electrons.
-- `ndn::I`: number of spin-down electrons.
-- `rng::AbstractRNG`: random number generator. 
-- `pht::Bool`: whether model is particle-hole transformed.
-- `q_p::AbstractVector{T} = [0.0, 0.0]`: pairing momentum for density wave pairing.
-
-"""
-function get_determinantal_wavefunction(
-    tight_binding_model::TightBindingModel{E}, 
-    determinantal_parameters::DeterminantalParameters{I}, 
-    model_geometry::ModelGeometry, 
-    optimize::NamedTuple, 
-    pconfig::Vector{I},
-    Np::I, 
-    nup::I, 
-    ndn::I, 
-    rng::AbstractRNG, 
-    pht::Bool;
-    q_p = [0.0, 0.0]
-) where {E<:AbstractFloat, I<:Integer}
-    # number of lattice sites
+function DeterminantalWavefunction(;
+    # KEYWORD ARGUMENTS
+    determinantal_parameters::DeterminantalParameters{S,T},
+    hamiltonian::Hamiltonian{T,E},
+    particle_configuration::ParticleConfiguration,
+    model_geometry::ModelGeometry,
+    rng::AbstractRNG
+) where {S,T,E}
     Norbs = model_geometry.unit_cell.n
     Ncells = model_geometry.lattice.N
     N = Norbs * Ncells
 
-    # build auxiliary (mean-field) Hamiltonian and variational operators
-    (H, V) = build_auxiliary_hamiltonian(
-        tight_binding_model, 
-        determinantal_parameters, 
-        optimize, 
-        model_geometry, 
-        pht;
-        q_p = q_p
-    )
+    (; p, optimize) = determinantal_parameters
+    (; V_p, U, ε₀) = hamiltonian
+    (; Np, pconfig) = particle_configuration
 
-    # diagonalize Hamiltonian
-    (ε, U_aux) = diagonalize!(H)
+    # previously, only certain `V` matrices were calculated along with their associated `A` matrix.
+    # However, since the calculation of `V` is relatively cheap and is used to contruct `H`, now
+    # all `V` matrices are calculated and saved, while only optimized parameters receive an `A` matrix.
 
-    # check for open shell for debugging
-    @debug """
-    if is_openshell(ε, Np, pht) 
-        println("DeterminantalWavefunction::build_determinantal_wavefunction() :")
-        println("WARNING: Open shell is detected!")
-    else
-        println("DeterminantalWavefunction::build_determinantal_wavefunction() :")
-        println("Closed shell is detected! Forming shell...")
+    # allocate temporary matrices
+    Nt = size(U, 1)
+    T_buf   = Matrix{T}(undef, Nt, Np)
+    Q_buf   = Matrix{T}(undef, Nt-Np, Np)
+    Tmp_buf = Matrix{T}(undef, Nt, Np)
+    A_buf   = Matrix{T}(undef, Nt, Nt)
+
+    As = Matrix{T}[]
+
+    V_p_idx = 1
+    for (opt, params) in zip(optimize, p)
+        if opt
+            for _ in eachindex(params)
+                A = calculate_derivative_operator_matrix(V_p[V_p_idx], U, T_buf, Q_buf, Tmp_buf, A_buf, ε₀, Np)
+                push!(As, copy(A))
+                V_p_idx += 1
+            end
+        else
+            # skip over the matrices belonging to this parameter set
+            V_p_idx += length(params)
+        end
     end
-    """
 
-    # define mask for perturbation theory
-    ptmask = zeros(eltype(ε), 2*N, 2*N)
-
-    # initialize variational parameter matrices
-    A = get_variational_matrices(
-        ptmask,
-        V, 
-        U_aux, 
-        ε, 
-        Np,
-        N
-    )
-
-    # get M matrix
-    @views M = U_aux[:, 1:Np]
-    # M = Matrix{ComplexF64}(view(U_aux, 1:size(U_aux,1), 1:Np))
-
-    # initialize Slater matrix
-    D = zeros(ComplexF64, Np, Np)
-
-    # initialize W matrix
-    W = zeros(ComplexF64, 2*N, Np)
-
-    # vector to store configuration indices
-    config_indices = Vector{Int}(undef, Np)     
-
-    # helper matrices
-    Dt = zeros(ComplexF64, Np, Np)            
-    tmp = zeros(ComplexF64, Np, 2*N)     
-    
-    # generate a new configuration at random if none was provided
-    if isempty(pconfig)
-        resize!(pconfig, 2 * N)
-        generate_initial_fermion_configuration!(pconfig, nup, ndn, model_geometry, rng)
+    # generate a random particle configuration is one wasn't provided
+    if iszero(pconfig)
+        generate_random_fermion_configuration!(pconfig, particle_configuration.nup, particle_configuration.ndn, N, rng)
     end 
 
-    # initialize equal-time Green's function and Slater matrix
-    overlap = initialize_equal_time_greens!(
-        W, 
-        D, 
-        M, 
-        pconfig, 
-        Np,
-        config_indices,
-        Dt,
-        tmp
-    )
+    # get reduced unitary matrix
+    M = U[:, 1:Np]
 
-    # if starting configuration was used, check whether accepted
-    if !isempty(pconfig) && overlap
-        @debug """DeterminantalWavefunction::build_determinantal_wavefunction() : 
-        Initial configuration accepted!
-        """
-    elseif !isempty(pconfig) && !overlap
-        @debug """DeterminantalWavefunction::build_determinantal_wavefunction() : 
-        Initial configuration rejected!
-        """
-    end
+    # preallocate matrices for the Slater and Green's function matrices
+    D   = Matrix{T}(undef, Np, Np)
+    W   = Matrix{T}(undef, 2*N, Np)
+
+    # temporary storage
+    Dt  = Matrix{T}(undef, Np, Np)
+    tmp = Matrix{T}(undef, Np, 2*N)
+    config_indices = Vector{Int}(undef, Np)
+
+    overlap = calculate_equal_time_greens_function!(W, D, M, Dt, tmp, pconfig, config_indices, Np)
 
     while !overlap
-        @debug """
-        DeterminantalWavefunction::build_determinantal_wavefunction() : 
-        configuration does not have a finite overlap with the current determinantal wavefunction => 
-        generating a new configuration"
-        """
+        #@info "Proposed initial state has no overlap with the wavefunction. Retrying..."
 
-        # re-generate a random particle configuration
-        generate_initial_fermion_configuration!(
-            pconfig,
-            nup, 
-            ndn, 
-            model_geometry, 
-            rng
-        )
- 
-        # re-initialize equal-time Green's function
-        overlap = initialize_equal_time_greens!(
-            W, 
-            D, 
-            M, 
-            pconfig, 
-            Np,
-            config_indices,
-            Dt,
-            tmp
-        )
+        # get a new random configuration
+        generate_random_fermion_configuration!(pconfig, particle_configuration.nup, particle_configuration.ndn, N, rng)
+
+        # re-try getting Green's function
+        overlap = calculate_equal_time_greens_function!(W, D, M, Dt, tmp, pconfig, config_indices, Np)
     end
-
-    # intialize quick updating tracker
-    nq_updates_W = 0
-
-    return DeterminantalWavefunction(W, D, M, U_aux, A, ε, pconfig, nq_updates_W)
-end
-
-
-@doc raw"""
-
-    get_determinantal_wavefunction( tight_binding_model::TightBindingModel{E}, 
-                                    determinantal_parameters::DeterminantalParameters{I}, 
-                                    model_geometry::ModelGeometry, 
-                                    optimize::NamedTuple, 
-                                    pconfig::Vector{I},
-                                    Np::I, 
-                                    nup::I, 
-                                    ndn::I, 
-                                    N_θ::I,
-                                    twist_angles::AbstractRange{E},
-                                    rng::AbstractRNG, 
-                                    pht::Bool ) where {E<:AbstractFloat, I<:Integer}
-
-Constructs a variational wavefunction ``|\Phi_{0}^{\theta}\rangle`` for `N_\theta` twist angles based on parameters 
-given by the tight-binding model and determinantal parameter and returns an instance of the `DeterminantalWavefunctionTABC` 
-type. If no initial particle configuration is specified, a random configuration will be generated.                            
-
-- `tight_binding_model::TightBindingModel{E}`: parameters for a non-interacting tight-binding model. 
-- `determinantal_parameters::DeterminantalParameters{I}`: set of determinantal variational parameters.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `optimize::NamedTuple`: field of optimization flags.
-- `pconfig::Vector{I}`: optional initial particle configuration.
-- `Np::I`: total number of particles in the system.
-- `nup::I`: number of spin-up electrons.
-- `ndn::I`: number of spin-down electrons.
-- `N_θ::I`: number of twist angles.
-- `twist_angles::AbstractRange{E}`: list of twist angles.
-- `rng::AbstractRNG`: random number. 
-- `pht::Bool`: whether model is particle-hole transformed.
-
-"""
-function get_determinantal_wavefunction(
-    tight_binding_model::TightBindingModel{E}, 
-    determinantal_parameters::DeterminantalParameters{I}, 
-    model_geometry::ModelGeometry, 
-    optimize::NamedTuple, 
-    pconfig::Vector{I},
-    Np::I, 
-    nup::I, 
-    ndn::I, 
-    N_θ::I,
-    twist_angles::AbstractRange{E},
-    rng::AbstractRNG, 
-    pht::Bool
-) where {E<:AbstractFloat, I<:Integer}
-    Norbs = model_geometry.unit_cell.n
-    Ncells = model_geometry.lattice.N
-    N = Norbs * Ncells
-    ε_θ = Vector{Vector{AbstractFloat}}()
-    U_θ = Vector{Matrix{<:Number}}()
-    A_θ = Vector{Vector{Matrix{<:Number}}}()
-    D_θ = Vector{Matrix{<:Number}}()
-    W_θ = Vector{Matrix{<:Number}}()
-    M_θ = Vector{Matrix{<:Number}}()
-
-    # build auxiliary Hamiltonian matrices for each twist angle
-    H_θ, V = build_auxiliary_hamiltonian(
-        tight_binding_model, 
-        determinantal_parameters, 
-        optimize, 
-        model_geometry, 
-        twist_angles, 
-        pht
-    )
-
-    # select starting configuration 
-    config_indices = Vector{Int}(undef, Np)
-    if isempty(pconfig)
-        resize!(pconfig, 2 * N)
-        generate_initial_fermion_configuration!(pconfig, nup, ndn, model_geometry, rng)
-    end 
-
-    # get wavefunction quantities for each twist angle
-    for n in 1:N_θ
-        # get mean-field energy and unitary matrix
-        ε, U_aux = diagonalize!(H_θ[n])
-        push!(ε_θ, ε)
-        push!(U_θ, U_aux)
-
-        if is_openshell(ε, Np, pht)
-            @debug """
-            DeterminantalWavefunction::build_determinantal_wavefunction() : 
-            WARNING! Open shell detected!
-            """
-            # println("DeterminantalWavefunction::build_determinantal_wavefunction() :")
-            # println("WARNING! Open shell is detected in state $(n)!")
-        else
-            @debug """
-            DeterminantalWavefunction::build_determinantal_wavefunction() : 
-            Closed shell is detected! Forming shell..."""
-        end
-
-        # get variaitonal matrices
-        A = get_variational_matrices(
-            V, 
-            U_aux, 
-            ε, 
-            Np,
-            model_geometry
-        )
-        push!(A_θ, A)
-
-        # get M matrix
-        @views M = U_aux[:, 1:Np]
-        push!(M_θ, M)
-
-        D = zeros(ComplexF64, Np, Np)
-        W = zeros(ComplexF64, 2*N, Np)
-        Dt = zeros(ComplexF64, Np, Np)            
-        tmp = zeros(ComplexF64, Np, 2*N)     
-        
-        # get equal-time Green's function
-        overlap = initialize_equal_time_greens!(
-            W, 
-            D, 
-            M, 
-            pconfig, 
-            Np,
-            config_indices,
-            Dt,
-            tmp
-        )
-        push!(D_θ, D)
-        push!(W_θ, W)
-
-        # warn if there is no overlap
-        if !overlap
-            println("WARNING! Configuration has no overlap with wavefunction number $n.")
-        end
-        
-        # if starting configuration was used, check whether accepted
-        if !isempty(pconfig) && overlap
-            @debug """DeterminantalWavefunction::build_determinantal_wavefunction() : 
-            Initial configuration accepted!
-            """
-        elseif !isempty(pconfig) && !overlap
-            @debug """DeterminantalWavefunction::build_determinantal_wavefunction() : 
-            Initial configuration rejected!
-            """
-        end
-    end
-
-    # intialize quick updating tracker
-    nq_updates_W = 0
     
-    return DeterminantalWavefunctionTABC(W_θ, D_θ, M_θ, U_θ, A_θ, ε_θ, pconfig, N_θ, twist_angles, nq_updates_W)
+    # intialize tracker for quick updating of the Green's function
+    nq_updates_W = 0
 
+    return DeterminantalWavefunction(W, D, M, As, nq_updates_W)
 end
-
-
-

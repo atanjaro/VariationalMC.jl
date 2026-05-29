@@ -1,1005 +1,197 @@
 @doc raw"""
 
-    build_auxiliary_hamiltonian( tight_binding_model::TightBindingModel{E}, 
-                                 determinantal_parameters::DeterminantalParameters{I}, 
-                                 optimize::NamedTuple, 
-                                 model_geometry::ModelGeometry, 
-                                 pht::Bool;
-                                 q_p::AbstractVector{T} = [0.0, 0.0] ) where {E<:AbstractFloat, I<:Integer}
+    Hamiltonian{T<:Number}
 
-Constructs an auxiliary Hamiltonian matrix ``H_{\mathrm{aux}}`` by combining the non-interacting
-hopping matrix ``H_t`` with matrices of variational terms ``H_{\mathrm{var}}``.
+A mutable struct containing all the parameters needed to characterize an auxiliary Hamiltonian used to 
+construct a determinantal wavefunction. 
 
-- `tight_binding_model::TightBindingModel{E}`: parameters for a non-interacting tight-binding model.
-- `determinantal_parameters::DeterminantalParameters{I}`: set of determinantal variational parameters.
-- `optimize::NamedTuple`: field of optimization flags.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `pht::Bool`: whether model is particle-hol transformed.
-- `q_p::AbstractVector{T} = [0.0, 0.0]`: pairing momentum for density wave pairing. 
+# Fields
+
+- `V_t::AbstractMatrix{T}`: Hopping matrix constructed from the tight binding model.
+- `V_p::Vector{AbstractMatrix{T}}`: Contains all matrices constructed from the determinantal order parameters.
+- `U::AbstractMatrix{T}`: Matrix that diagonalizes the auxiliary Hamiltonian.
+- `ε₀::Vector{T}`: Initial energies from the diagnolization of the auxiliary Hamiltonian.
 
 """
-function build_auxiliary_hamiltonian(
-    tight_binding_model::TightBindingModel{E}, 
-    determinantal_parameters::DeterminantalParameters{I}, 
-    optimize::NamedTuple, 
-    model_geometry::ModelGeometry, 
-    pht::Bool;
-    q_p = [0.0, 0.0]
-) where {E<:AbstractFloat, I<:Integer}
+mutable struct Hamiltonian{T<:Number, M<:AbstractMatrix{T}}
     # hopping matrix
-    H_tb = build_tight_binding_hamiltonian(
-        tight_binding_model, 
-        model_geometry, 
-        pht
-    )
+    V_t::M
 
-    # variational matrices and operators
-    H_var, V = build_variational_hamiltonian(
-        determinantal_parameters, 
-        model_geometry,
-        optimize, 
-        pht;
-        q_p = q_p
-    )
+    # vector of variational matrices
+    V_p::Vector{M}
 
-    return H_tb + H_var, V
+    # unitary matrix that diagonalizes H
+    U::M
+
+    # auxiliary energies
+    ε₀::Vector{T}
 end
 
 
 @doc raw"""
 
-    build_auxiliary_hamiltonian( tight_binding_model::TightBindingModel{E}, 
-                                 determinantal_parameters::DeterminantalParameters{I}, 
-                                 optimize::NamedTuple, 
-                                 model_geometry::ModelGeometry, 
-                                 twist_angles::AbstractRange{E},
-                                 pht::Bool;
-                                 q_p::AbstractVector{T} = [0.0, 0.0] ) where {E<:AbstractFloat, I<:Integer}
+    Hamiltonian(
+        tight_binding_parameters::TightBindingParameters{T},
+        determinantal_parameters::DeterminantalParameters{S,T},
+        particle_configuration::ParticleConfiguration,
+        model_geometry::ModelGeometry
+    ) where {S,T}
 
-Constructs an auxiliary Hamiltonian matrix ``H_{\mathrm{aux}}^{\theta}`` for ``N_\theta`` twist angles
-by combining the non-interacting hopping matrix ``H_t`` with matrices of variational terms ``H_{\mathrm{var}}``.
-
-- `tight_binding_model::TightBindingModel{E}`: parameters for a non-interacting tight-binding model.
-- `determinantal_parameters::DeterminantalParameters{I}`: set of determinantal variational parameters.
-- `optimize::NamedTuple`: field of optimization flags.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `twist_angles::AbstractRange{E}`: set of twist angles.
-- `pht::Bool`: whether model is particle-hol transformed.
-- `q_p::AbstractVector{T} = [0.0, 0.0]`: pairing momentum for density wave pairing. 
+Initialize and return an instance of `Hamiltonian`.
 
 """
-function build_auxiliary_hamiltonian(
-    tight_binding_model::TightBindingModel{E}, 
-    determinantal_parameters::DeterminantalParameters{I}, 
-    optimize::NamedTuple, 
-    model_geometry::ModelGeometry, 
-    twist_angles::AbstractRange{E},
-    pht::Bool;
-    q_p = [0.0, 0.0]
-) where {E<:AbstractFloat, I<:Integer}
-    H_ts = []
+function Hamiltonian(;
+    # KEYWORD ARGUMENTS
+    tight_binding_parameters::TightBindingParameters{T},
+    determinantal_parameters::DeterminantalParameters{S, T},
+    particle_configuration::ParticleConfiguration,
+    model_geometry::ModelGeometry
+) where {S, T}
+    (; unit_cell, lattice) = model_geometry
+    (; neighbor_table, bond_slices, t) = tight_binding_parameters
+    (; order_type, param_name, symmetry, p, spdx_table) = determinantal_parameters
+    (; ph_transform) = particle_configuration
 
-    for θ_twist in twist_angles
-        # untwisted hopping matrix
-        H_tb = build_tight_binding_hamiltonian(
-            tight_binding_model, 
-            model_geometry, 
-            pht
-        )
+    Norbs = unit_cell.n
+    Ncells = lattice.N
+    N =  Norbs * Ncells
 
-        # apply twist phase
-        apply_twist_angle!(H_tb, θ_twist, model_geometry)
-        push!(H_ts, H_tb)
+    V_t = zeros(T, 2*N, 2*N)
+    V_p = Matrix{T}[]
+
+    # construct the hopping matrix
+    build_hopping_matrix!(V_t, neighbor_table, bond_slices, t, N, ph_transform)
+
+    # construct variational matrices, while preserving the order of the parameters as located in `determinantal_parameters`
+    for (otype, pname, sym) in zip(order_type, param_name, symmetry)
+        if otype == "charge"
+            if sym == "site-dependent"
+                nshifts = lattice.L[1]
+                for shift in 0:(nshifts - 1)
+                    V = zeros(T, 2*N, 2*N)
+                    build_charge_ordering_matrix!(V, pname, sym, spdx_table, lattice, N, ph_transform, shift=shift)
+                    push!(V_p, V)
+                end
+            else
+                V = zeros(T, 2*N, 2*N)
+                build_charge_ordering_matrix!(V, pname, sym, spdx_table, lattice, N, ph_transform)
+                push!(V_p, V)
+            end
+        elseif otype == "spin"
+            if sym == "site-dependent"
+                nshifts = lattice.L[1]
+                for shift in 0:(nshifts - 1)
+                    V = zeros(T, 2*N, 2*N)
+                    build_spin_ordering_matrix!(V, pname, sym, spdx_table, lattice, N, ph_transform, shift=shift)
+                    push!(V_p, V)
+                end
+            else
+                V = zeros(T, 2*N, 2*N)
+                build_spin_ordering_matrix!(V, pname, sym, spdx_table, lattice, N, ph_transform)
+                push!(V_p, V)
+            end
+        elseif otype == "pair"
+            @assert ph_transform == true """
+            ph_transform = $ph_transform. This must be enabled to add pairing matrices.
+            """
+            if sym == "site-dependent"
+                for s in 1:N
+                    # Fulde-Ferrell matrix for site s
+                    V = zeros(T, 2*N, 2*N)
+                    build_pairing_matrix!(V, pname, sym, neighbor_table, bond_slices, spdx_table, lattice, N,
+                        site        = s,
+                        qₚ          = determinantal_parameters.qₚ,
+                        sym_subtype = "FF")
+                    push!(V_p, V)
+                end
+                for s in 1:N
+                    # Larkin-Ovchinnikov matrix for site s
+                    V = zeros(T, 2*N, 2*N)
+                    build_pairing_matrix!(V, pname, sym, neighbor_table, bond_slices, spdx_table, lattice, N,
+                        site        = s,
+                        qₚ          = determinantal_parameters.qₚ,
+                        sym_subtype = "LO")
+                    push!(V_p, V)
+                end
+            else
+                V = zeros(T, 2*N, 2*N)
+                build_pairing_matrix!(V, pname, sym, neighbor_table, bond_slices, spdx_table, lattice, N)
+                push!(V_p, V)
+            end
+        else
+            @error "Unknown order_type: \"$otype\". Expected \"charge\", \"spin\", or \"pair\"."
+        end
     end
-    
-    # variational matrices and operators
-    H_var, V = build_variational_hamiltonian(
-        determinantal_parameters, 
-        model_geometry,
-        optimize, 
-        pht;
-        q_p = q_p
-    )
 
-    for H_t in H_ts
-        H_t .+= H_var
-    end 
+    # get full Hamiltonian
+    H = copy(V_t)
+    V_p_idx = 1
+    for params in p
+        for param in params
+            H .+= param .* V_p[V_p_idx]
+            V_p_idx += 1
+        end
+    end
 
-    return H_ts, V
-end
+    # solve for initial energies
+    ε₀, U = diagonalize!(H)
+
+    # check for open shell configuration
+    is_openshell!(ε₀, particle_configuration.Np, ph_transform)
+
+    return Hamiltonian(V_t, V_p, U, ε₀)
+end 
 
 
 @doc raw"""
 
-    build_tight_binding_hamiltonian( tight_binding_model::TightBindingModel{E},
-                                     model_geometry::ModelGeometry,
-                                     pht::Bool ) where {E<:AbstractFloat}
+    build_hopping_matrix!(
+        V_t::AbstractMatrix{T},
+        neighbor_table::Matrix{Int},
+        bond_slices::Vector{UnitRange{Int}},
+        t::Vector{E},
+        N::Int,
+        ph_transform::Bool
+    ) where {T<:Number, E<:AbstractFloat}
 
-Constructs a ``2N`` by ``2N`` tight-binding hopping matrix where ``N`` is the number of lattice sites, 
-given hopping parameters ``t``, ``t^{\prime}``, and ``t^{\prime\prime}``.
+Constructs the hopping matrix using parameters defined in `tight_binding_parameters`.
 
-- `tight_binding_model::TightBindingModel{E}`: parameters for a non-interacting tight-binding model. 
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `pht::Bool`: whether model is particle-hole transformed. 
+# ARGUMENTS
 
-"""
-function build_tight_binding_hamiltonian(
-    tight_binding_model::TightBindingModel{E}, 
-    model_geometry::ModelGeometry, 
-    pht::Bool
-) where {E<:AbstractFloat}
-    dims = length(model_geometry.lattice.L)
-    Norbs = model_geometry.unit_cell.n
-    Ncells = model_geometry.lattice.N
-    N = Norbs * Ncells
-    Lx   = model_geometry.lattice.L[1]
-    if dims != 1
-        Ly = model_geometry.lattice.L[2]
-    else
-        Ly = 1
-    end
-
-    # neighbor table
-    bonds = model_geometry.bond
-    nbr0 = build_neighbor_table(
-        bonds[1], 
-        model_geometry.unit_cell, 
-        model_geometry.lattice
-    )
-
-    # remove double counting if any lattice dimension equals 2
-    if Lx == 2 || Ly == 2
-        keep = trues(size(nbr0, 2))
-        seen = Set{Tuple{Int,Int}}()
-
-        for (j, col) in enumerate(eachcol(nbr0))
-            key = Tuple(sort(col))
-            if key in seen
-                keep[j] = false
-            else
-                push!(seen, key)
-            end
-        end
-
-        nbr0 = nbr0[:, keep]
-    end
-
-    # allocate Hamiltonian once
-    H_t = Matrix{Complex}(undef, 2N, 2N)
-    fill!(H_t, 0)
-
-    # hopping parameters
-    t₀, t₁, t₂ = tight_binding_model.t₀, tight_binding_model.t₁, tight_binding_model.t₂
-
-    if pht
-        # nearest neighbors
-        for col in axes(nbr0, 2)
-            i, j = nbr0[1, col], nbr0[2, col]
-            H_t[i, j] += -t₀
-            H_t[j, i] += -t₀
-
-            ip, jp = i + N, j + N
-            H_t[ip, jp] += t₀
-            H_t[jp, ip] += t₀
-        end
-        # next-nearest neighbors
-        if t₁ != 0
-            nbr1 = build_neighbor_table(
-                bonds[2], 
-                model_geometry.unit_cell, 
-                model_geometry.lattice
-            )
-            for col in axes(nbr1, 2)
-                i, j = nbr1[1, col], nbr1[2, col]
-                H_t[i, j]   += t₁
-                H_t[j, i]   += t₁
-                ip, jp = i + N, j + N
-                H_t[ip, jp] += -t₁
-                H_t[jp, ip] += -t₁
-            end
-        end
-        # third nearest neighbors
-        if t₂ != 0
-            nbr2 = build_neighbor_table(
-                bonds[3], 
-                model_geometry.unit_cell, 
-                model_geometry.lattice
-            )
-            for col in axes(nbr2, 2)
-                i, j = nbr2[1, col], nbr2[2, col]
-                H_t[i, j]   += t₂
-                H_t[j, i]   += t₂
-                ip, jp = i + N, j + N
-                H_t[ip, jp] += -t₂
-                H_t[jp, ip] += -t₂
-            end
-        end
-    else
-        # nearest neighbors
-        for col in axes(nbr0, 2)
-            i, j = nbr0[1, col], nbr0[2, col]
-            H_t[i, j] += -t₀
-            H_t[j, i] += -t₀
-
-            ip, jp = i + N, j + N
-            H_t[ip, jp] += -t₀
-            H_t[jp, ip] += -t₀
-        end
-        # next-nearest neighbors
-        if t₁ != 0
-            nbr1 = build_neighbor_table(
-                bonds[2], 
-                model_geometry.unit_cell, 
-                model_geometry.lattice
-            )
-            for col in axes(nbr1, 2)
-                i, j = nbr1[1, col], nbr1[2, col]
-                H_t[i, j]   += t₁
-                H_t[j, i]   += t₁
-                ip, jp = i + N, j + N
-                H_t[ip, jp] += t₁
-                H_t[jp, ip] += t₁
-            end
-        end
-        # third nearest neighbors
-        if t₂ != 0
-            nbr2 = build_neighbor_table(
-                bonds[3], 
-                model_geometry.unit_cell, 
-                model_geometry.lattice
-            )
-            for col in axes(nbr2, 2)
-                i, j = nbr2[1, col], nbr2[2, col]
-                H_t[i, j]   += t₂
-                H_t[j, i]   += t₂
-                ip, jp = i + N, j + N
-                H_t[ip, jp] += t₂
-                H_t[jp, ip] += t₂
-            end
-        end
-    end
-
-    return H_t
-end
-
-
-@doc raw"""
-
-    build_variational_hamiltonian( determinantal_parameters::DeterminantalParameters{I}, 
-                                   model_geometry::ModelGeometry,
-                                   optimize::NamedTuple, 
-                                   pht::Bool;
-                                   q_p::AbstractVector{T} = [0.0, 0.0] ) where {I<:Integer}
-
-Constructs a set of ``2N`` by ``2N`` matrices for each variational parameter, where `N` is the number of 
-lattice sites. Returns a total variational Hamiltonian matrix ``H_{\mathrm{var}}`` as well has a vector 
-of operators ``V``.
-
-- `determinantal_parameters::DeterminantalParameters{I}`: set of determinantal variational parameters.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `optimize::NamedTuple`: field of optimization flags.
-- `pht::Bool`: whether model is particle-hole transformed. 
-- `q_p::AbstractVector{T} = [0.0, 0.0]`: pairing momentum for density wave pairing. 
+- `V_t::AbstractMatrix{T}`: Empty hopping matrix.
+- `neighbor_table::Matrix{Int}`: Neighbor table containing all pairs of orbitals in the lattices connected by a bond, with a non-zero hopping energy between them.
+- `bond_slices::Vector{UnitRange{Int}}`: Slices of `neighbor_table` corresponding to given bond ID.
+- `t::Vector{E}`: The hopping energy ``t_{i,j}`` associated with each pair of neighboring orbitals connected by a bond in the lattice.
+- `N::Int`: Total number of lattice sites.
+- `ph_transform::Bool`: Whether the model is particle-hole transformed.
 
 """
-function build_variational_hamiltonian(
-    determinantal_parameters::DeterminantalParameters{I}, 
-    model_geometry::ModelGeometry,
-    optimize::NamedTuple, 
-    pht::Bool;
-    q_p = [0.0, 0.0]
-) where {I<:Integer}    
-    # dimensions
-    dims = size(model_geometry.lattice.L)[1]
+function build_hopping_matrix!(
+    V_t::AbstractMatrix{T},
+    neighbor_table::Matrix{Int},
+    bond_slices::Vector{UnitRange{Int}},
+    t::Vector{E},
+    N::Int,
+    ph_transform::Bool
+) where {T<:Number, E<:AbstractFloat}
+    for slice in bond_slices
+        # get slice of neighbor table
+        nbr_slice = neighbor_table[:,slice]
 
-    # number of sites
-    Norbs = model_geometry.unit_cell.n
-    Ncells = model_geometry.lattice.N
-    N = Norbs * Ncells
+        # get slice of hopping parameters
+        t_slice = t[slice]
 
-    # bonds of the lattice
-    bonds = model_geometry.bond
-   
-    # initialize Hamiltonian and operator matrices
-    H_vpars = Vector{Matrix{Complex}}()
-    V       = Vector{Matrix{Complex}}()
-
-    # get all determinantal parameters
-    pars = determinantal_parameters.det_pars
-
-    # Precompute mapping from spindex -> site index and site coordinates (one call each)
-    idxs = Vector{Int}(undef, 2*N)
-    if dims == 1
-        locs = Vector{Int}(undef, 2*N)
-        @inbounds for s in 1:2*N
-            idx = get_index_from_spindex(s, model_geometry)
-            idxs[s] = idx
-            loc = site_to_loc(idx, model_geometry.unit_cell, model_geometry.lattice)
-            locs[s] = loc[1][1]
-        end
-    else
-        locs = Vector{NTuple{2,Int}}(undef, 2*N)
-        @inbounds for s in 1:2*N
-            idx = get_index_from_spindex(s, model_geometry)
-            idxs[s] = idx
-            loc = site_to_loc(idx, model_geometry.unit_cell, model_geometry.lattice)
-            locs[s] = (loc[1][1], loc[1][2])
-        end
-    end 
-
-    if pht == true
-        # add s-wave pairing 
-        add_pairing_symmetry!(
-            "s", 
-            optimize, 
-            H_vpars, 
-            V, 
-            model_geometry,
-            dims,
-            bonds,
-            locs,
-            N,
-            pht;
-            q_p = q_p,
-        )
-
-        @debug """
-        Hamiltonian::build_variational_hamiltonian() :
-        adding s-wave pairing matrix =>
-        initial Δ_0 = $(pars.Δ_0)
-        """
-
-        if optimize.Δ_0
-            @debug """
-            Hamiltonian::build_variational_hamiltonian() :
-            optimize Δ_0 = true
-            """
-        else
-            @debug """
-            Hamiltonian::build_variational_hamiltonian() :
-            optimize Δ_0 = false
-            """
+        # spin-up sector
+        for ((i,j),t_hop) in zip(eachcol(nbr_slice),t_slice)
+            V_t[i,j] += -t_hop
+            V_t[j,i] += -t_hop
         end
 
-        if dims > 1
-            # add sLO pairing
-            add_pairing_symmetry!(
-                "sLO",
-                optimize,
-                H_vpars,
-                V,
-                model_geometry,
-                dims,
-                bonds,
-                locs,
-                N,
-                pht;
-                q_p = q_p
-            )
-
-            @debug """
-            Hamiltonian::build_variational_hamiltonian() :
-            adding site-dependent s-wave pairing (Larkin-Ovchinnikov-type) matrix =>
-            initial Δ_slo = $(pars.Δ_slo)
-            """
-
-            if optimize.Δ_slo
-                @debug """
-                Hamiltonian::build_variational_hamiltonian() :
-                optimize Δ_slo = true
-                """
-            else
-                @debug """
-                Hamiltonian::build_variational_hamiltonian() :
-                optimize Δ_slo = false
-                """
-            end
-
-            # add sFF pairing
-            add_pairing_symmetry!(
-                "sFF",
-                optimize,
-                H_vpars,
-                V,
-                model_geometry,
-                dims,
-                bonds,
-                locs,
-                N,
-                pht;
-                q_p = q_p
-            )
-
-            @debug """
-            Hamiltonian::build_variational_hamiltonian() :
-            adding site-dependent s-wave pairing (Fulde-Ferrell-type) matrix =>
-            initial Δ_sff = $(pars.Δ_sff)
-            """
-
-            if optimize.Δ_sff
-                @debug """
-                Hamiltonian::build_variational_hamiltonian() :
-                optimize Δ_sff = true
-                """
-            else
-                @debug """
-                Hamiltonian::build_variational_hamiltonian() :
-                optimize Δ_sff = false
-                """
-            end
-
-            # add d-wave pairing 
-            add_pairing_symmetry!(
-                "d", 
-                optimize, 
-                H_vpars, 
-                V, 
-                model_geometry,
-                dims,
-                bonds,
-                locs,
-                N,
-                pht;
-                q_p = q_p
-            )
-
-            @debug """
-            Hamiltonian::build_variational_hamiltonian() :
-            adding d-wave pairing matrix =>
-            initial Δ_d = $(pars.Δ_d)
-            """
-
-            if optimize.Δ_d
-                @debug """
-                Hamiltonian::build_variational_hamiltonian() :
-                optimize Δ_d = true
-                """
-            else
-                @debug """
-                Hamiltonian::build_variational_hamiltonian() :
-                optimize Δ_d = false
-                """
-            end
-
-            # add dLO pairing
-            add_pairing_symmetry!(
-                "dLO",
-                optimize,
-                H_vpars,
-                V,
-                model_geometry,
-                dims,
-                bonds,
-                locs,
-                N,
-                pht;
-                q_p = q_p
-            )
-
-            @debug """
-            Hamiltonian::build_variational_hamiltonian() :
-            adding site-dependent d-wave (Larkin-Ovchinnikov-type) pairing matrix =>
-            initial Δ_dlo = $(pars.Δ_dlo)
-            """
-
-            if optimize.Δ_dlo
-                @debug """
-                Hamiltonian::build_variational_hamiltonian() :
-                optimize Δ_dlo = true
-                """
-            else
-                @debug """
-                Hamiltonian::build_variational_hamiltonian() :
-                optimize Δ_dlo = false
-                """
-            end
-
-            # add dFF pairing
-            add_pairing_symmetry!(
-                "dFF",
-                optimize,
-                H_vpars,
-                V,
-                model_geometry,
-                dims,
-                bonds,
-                locs,
-                N,
-                pht;
-                q_p = q_p
-            )
-
-            @debug """
-            Hamiltonian::build_variational_hamiltonian() :
-            adding site-dependent d-wave (Fulde-Ferrell-type) pairing matrix =>
-            initial Δ_dff = $(pars.Δ_dff)
-            """
-
-            if optimize.Δ_dff
-                @debug """
-                Hamiltonian::build_variational_hamiltonian() :
-                optimize Δ_dff = true
-                """
-            else
-                @debug """
-                Hamiltonian::build_variational_hamiltonian() :
-                optimize Δ_dff = false
-                """
-            end
+        # spin-down sector
+        for ((i,j),t_hop) in zip(eachcol(nbr_slice),t_slice)
+            V_t[i+ N,j+ N] += ph_transform ? t_hop : -t_hop
+            V_t[j+ N,i+ N] += ph_transform ? t_hop : -t_hop
         end
-    end
-
-    # add in-plane magnetization term
-    add_spin_order!(
-        "spin-x",
-        optimize,
-        H_vpars,
-        V,
-        model_geometry,
-        locs,
-        dims,
-        N,
-        pht
-    )
-
-    @debug """
-    Hamiltonian::build_variational_hamiltonian() :
-    adding spin-x matrix =>
-    initial Δ_sx = $(pars.Δ_sx)
-    """
-
-    if optimize.Δ_sx
-        @debug """
-        Hamiltonian::build_variational_hamiltonian() :
-        optimize Δ_sx = true
-        """
-    else
-        @debug """
-        Hamiltonian::build_variational_hamiltonian() :
-        optimize Δ_sx = false
-        """
-    end
-
-    # add antiferromagnetic (Neél) term
-    add_spin_order!(
-        "spin-z", 
-        optimize, 
-        H_vpars, 
-        V, 
-        model_geometry,
-        locs,
-        dims,
-        N, 
-        pht
-    )
-
-    @debug """
-    Hamiltonian::build_variational_hamiltonian() :
-    adding spin-z matrix =>
-    initial Δ_sz = $(pars.Δ_sz)
-    """
-
-    if optimize.Δ_sz
-        @debug """
-        Hamiltonian::build_variational_hamiltonian() :
-        optimize Δ_sz = true
-        """
-    else
-        @debug """
-        Hamiltonian::build_variational_hamiltonian() :
-        optimize Δ_sz = false
-        """
-    end
-
-    # add site-dependent spin term
-    if dims > 1
-        add_spin_order!(
-            "site-dependent", 
-            optimize, 
-            H_vpars, 
-            V, 
-            model_geometry,
-            locs,
-            dims,
-            N, 
-            pht
-        )
-
-        @debug """
-        Hamiltonian::build_variational_hamiltonian() :
-        adding site-dependent spin matrix =>
-        initial Δ_ssd = $(pars.Δ_ssd)
-        """
-
-        if optimize.Δ_ssd
-            @debug """
-            Hamiltonian::build_variational_hamiltonian() :
-            optimize Δ_ssd = true
-            """
-        else
-            @debug """
-            Hamiltonian::build_variational_hamiltonian() :
-            optimize Δ_ssd = false
-            """
-        end
-    end
-
-    # add chemical potential term
-    add_chemical_potential!(
-        optimize, 
-        H_vpars, 
-        V, 
-        N,
-        pht
-    )
-
-    @debug """
-    Hamiltonian::build_variational_hamiltonian() :
-    adding chemical potential matrix =>
-    initial μ = $(pars.μ)
-    """
-
-    if optimize.μ
-        @debug """
-        Hamiltonian::build_variational_hamiltonian() :
-        optimize μ = true
-        """
-    else
-        @debug """
-        Hamiltonian::build_variational_hamiltonian() :
-        optimize μ = false
-        """
-    end
-
-    # add charge-density-wave term
-    add_charge_order!(
-        "density wave", 
-        optimize, 
-        H_vpars, 
-        V, 
-        model_geometry,
-        locs,
-        dims,
-        N,
-        pht
-    )
-
-    @debug """
-    Hamiltonian::build_variational_hamiltonian() :
-    adding charge density wave matrix =>
-    initial Δ_cdw = $(pars.Δ_cdw)
-    """
-
-    if optimize.Δ_cdw
-        @debug """
-        Hamiltonian::build_variational_hamiltonian() :
-        optimize Δ_cdw = true
-        """
-    else
-        @debug """
-        Hamiltonian::build_variational_hamiltonian() :
-        optimize Δ_cdw = false
-        """
-    end
-
-    # add site-dependent charge term
-    if dims > 1
-        add_charge_order!(
-            "site-dependent", 
-            optimize, 
-            H_vpars,
-            V, 
-            model_geometry,
-            locs,
-            dims,
-            N, 
-            pht
-        )
-
-        @debug """
-        Hamiltonian::build_variational_hamiltonian() :
-        adding site-dependent charge matrix =>
-        initial Δ_csd = $(pars.Δ_csd)
-        """
-
-        if optimize.Δ_csd
-            @debug """
-            Hamiltonian::build_variational_hamiltonian() :
-            optimize Δ_csd = true
-            """
-        else
-            @debug """
-            Hamiltonian::build_variational_hamiltonian() :
-            optimize Δ_csd = false
-            """
-        end
-    end
-
-    # allocate final Hamiltonian
-    H_par = zero(H_vpars[1])
-
-    # apply each variational parameter 
-    hidx = 1
-    @inbounds for p in pars
-        if p isa AbstractVector
-            for α in p
-                H_par += α * H_vpars[hidx]
-                hidx += 1
-            end
-        else
-            H_par += p * H_vpars[hidx]
-            hidx += 1
-        end
-    end 
-
-    return H_par, V
-end
-
-
-@doc raw"""
-
-    add_pairing_symmetry!( symmetry::S, 
-                           optimize::NamedTuple, 
-                           H_vpars::Vector{Matrix{T}}, 
-                           V::Vector{Matrix{T}}, 
-                           model_geometry::ModelGeometry,
-                           bonds,
-                           dims::I,
-                           N::I, 
-                           pht::Bool;
-                           q_p::AbstractVector{T} = [0.0, 0.0],
-                           locs::Vector{Tuple{I, I}} = Tuple{I,I}[] ) where {S<:AbstractString, I<:Integer, T<:Number}
-
-Adds a pairing term to the auxiliary Hamiltonian along with its perturbative operator. 
-
-- `symmetry::S`: type of pairing symmetry: "s", "d", "sLO", "sFF", "dLO", or "dFF".
-- `optimize::NamedTuple`: field of optimization flags.
-- `H_vpars::Vector{Matrix{T}}`: vector of variational Hamiltonian matrices.
-- `V::Vector{Matrix{T}}`: vector of variational operators.
-- `model_geometry::ModelGeometry`: contains lattice and unit cell quantities.
-- `dims::I`: dimensions of the lattice. 
-- `bonds`: lattice bonds.
-- `N::I`: number of sites in the lattice. 
-- `pht::Bool`: whether model is particle-hole transformed.
-- `q_p::AbstractVector{T} = [0.0, 0.0]`: pairing momentum for density wave pairing.
-- `locs::Vector{Tuple{I, I}} = Tuple{I,I}[]`: contains all positions (or locations) of each lattice site.
-
-"""
-function add_pairing_symmetry!(
-    symmetry::S,
-    optimize::NamedTuple,
-    H_vpars::Vector{Matrix{T}},
-    V::Vector{Matrix{T}},
-    model_geometry::ModelGeometry,
-    dims::I,
-    bonds,
-    locs,
-    N::I,
-    pht::Bool;
-    q_p = [0.0, 0.0]
-) where {S<:AbstractString, I<:Integer, T<:Number} 
-    @assert pht == true
-
-    twoN = 2 * N
-
-    if symmetry == "s"
-        V_s = zeros(T, twoN, twoN)
-
-        @inbounds for r in 1:twoN
-            c = get_linked_spindex(r - 1, N) + 1
-            V_s[r, c] = one(T)
-        end
-
-        push!(H_vpars, V_s)
-        if optimize.Δ_0
-            push!(V, V_s)
-        end
-    elseif symmetry == "d"
-        @assert dims > 1
-
-        unit_cell = model_geometry.unit_cell
-        lattice = model_geometry.lattice
-
-        # cache spin indices
-        sp_up = Vector{Int}(undef, N)
-        sp_dn = Vector{Int}(undef, N)
-        @inbounds for i in 1:N
-            up, dn = get_spindices_from_index(i, model_geometry)
-            sp_up[i] = up
-            sp_dn[i] = dn
-        end
-
-        # build neighbor table
-        nbr_table = build_neighbor_table(bonds[1], unit_cell, lattice)
-        ncols = size(nbr_table, 2)
-        
-        V_dwave = zeros(T, twoN, twoN)
-
-        @inbounds for col in 1:ncols
-            i = nbr_table[1, col]
-            j = nbr_table[2, col]
-
-            # convert sites to displacement
-            disp = sites_to_displacement(i, j, unit_cell, lattice)
-            dx = disp[1]
-            dy = disp[2]
-
-            # d-wave phase: +1 for x-bonds, -1 for y-bonds
-            dsgn = (dx != 0) - (dy != 0)
-            dsgn == 0 && continue
-
-            si_up = sp_up[i]
-            si_dn = sp_dn[i]
-            sj_up = sp_up[j]
-            sj_dn = sp_dn[j]
-
-            V_dwave[si_up, sj_dn] += T(dsgn)
-            V_dwave[sj_up, si_dn] += T(dsgn)
-            V_dwave[sj_dn, si_up] += T(dsgn)
-            V_dwave[si_dn, sj_up] += T(dsgn)
-        end
-
-        push!(H_vpars, V_dwave)
-        if optimize.Δ_d
-            push!(V, V_dwave)
-        end
-    elseif symmetry == "sLO" || symmetry == "sFF"
-        @assert dims > 1
-
-        unit_cell = model_geometry.unit_cell
-        lattice = model_geometry.lattice
-
-        # build neighbor table
-        nbr_table = build_neighbor_table(bonds[1], unit_cell, lattice)
-
-        # cache spin indices
-        sp_up = Vector{Int}(undef, N)
-        sp_dn = Vector{Int}(undef, N)
-        @inbounds for i in 1:N
-            up, dn = get_spindices_from_index(i, model_geometry)
-            sp_up[i] = up
-            sp_dn[i] = dn
-        end
-
-        Vspdw = [zeros(T, twoN, twoN) for _ in 1:N]
-
-        @inbounds for col in axes(nbr_table, 2)
-            i = nbr_table[1, col]
-            j = nbr_table[2, col]
-
-            up_i = sp_up[i]
-            dn_i = sp_dn[i]
-            up_j = sp_up[j]
-            dn_j = sp_dn[j]
-
-            Vspdw[i][up_i, dn_j] += one(T)
-            Vspdw[i][up_j, dn_i] += one(T)
-            Vspdw[i][dn_j, up_i] += one(T)
-            Vspdw[i][dn_i, up_j] += one(T)
-        end
-
-        # apply the appropriate phase for either the LO or FF state
-        V_phase = Vector{Matrix{eltype(Vspdw[1])}}(undef, length(Vspdw))
-        V_sign  = Vector{Matrix{eltype(Vspdw[1])}}(undef, length(Vspdw))
-
-        for i in eachindex(Vspdw)
-            V_phase[i] = similar(Vspdw[i])
-            V_sign[i]  = similar(Vspdw[i])
-        end
-
-        @inbounds for i in 1:N
-            r = locs[i]
-            θ = q_p[1]*r[1] + q_p[2]*r[2]
-
-            phase = if symmetry == "sLO"
-                cis(θ) + cis(-θ)
-            elseif symmetry == "sFF"
-                cis(θ)
-            end
-
-            amp = abs(phase)
-            sgn = iszero(amp) ? zero(phase) : phase / amp
-
-            A  = Vspdw[i]
-            Bp = V_phase[i]
-            Bs = V_sign[i]
-
-            @inbounds @simd for k in eachindex(A)
-                a = A[k]
-                Bp[k] = a * phase   # full phase for H_vpars
-                Bs[k] = a * sgn     # unit phase for V
-            end
-        end
-
-        append!(H_vpars, V_phase)
-
-        if optimize.Δ_slo && symmetry == "sLO"
-            append!(V, V_sign)
-        end
-        if optimize.Δ_sff && symmetry == "sFF"
-            append!(V, V_sign)
-        end
-    elseif symmetry == "dLO" || symmetry == "dFF"
-        @assert dims > 1
-
-        unit_cell = model_geometry.unit_cell
-        lattice = model_geometry.lattice
-
-        # build neighbor table
-        nbr_table = build_neighbor_table(bonds[1], unit_cell, lattice)
-
-        # cache spin indices
-        sp_up = Vector{Int}(undef, N)
-        sp_dn = Vector{Int}(undef, N)
-        @inbounds for i in 1:N
-            up, dn = get_spindices_from_index(i, model_geometry)
-            sp_up[i] = up
-            sp_dn[i] = dn
-        end
-
-        Vdpdw = [zeros(T, twoN, twoN) for _ in 1:N]
-
-        nbonds = size(nbr_table, 2)
-
-        @inbounds for col in 1:nbonds
-            i = nbr_table[1, col]
-            j = nbr_table[2, col]
-
-            sgn = col ≤ N ? one(T) : -one(T)
-
-            up_i = sp_up[i]; dn_i = sp_dn[i]
-            up_j = sp_up[j]; dn_j = sp_dn[j]
-
-            Vi = Vdpdw[i]
-            Vj = Vdpdw[j]
-
-            Vi[up_i, dn_j] += sgn
-            Vj[up_j, dn_i] += sgn
-            Vi[dn_j, up_i] += sgn
-            Vj[dn_i, up_j] += sgn
-        end
-
-        # apply the appropriate phase for either the LO or FF state
-        V_phase = Vector{Matrix{eltype(Vdpdw[1])}}(undef, length(Vdpdw))
-        V_sign  = Vector{Matrix{eltype(Vdpdw[1])}}(undef, length(Vdpdw))
-
-        for i in eachindex(Vdpdw)
-            V_phase[i] = similar(Vdpdw[i])
-            V_sign[i]  = similar(Vdpdw[i])
-        end
-
-        @inbounds for i in 1:N
-            r = locs[i]
-            θ = q_p[1]*r[1] + q_p[2]*r[2]
-
-            phase = if symmetry == "dLO"
-                cis(θ) + cis(-θ)
-            elseif symmetry == "dFF"
-                cis(θ)
-            end
-
-            amp = abs(phase)
-            sgn = iszero(amp) ? zero(phase) : phase / amp
-
-            A  = Vdpdw[i]
-            Bp = V_phase[i]
-            Bs = V_sign[i]
-
-            @inbounds @simd for k in eachindex(A)
-                a = A[k]
-                Bp[k] = a * phase   # full phase for H_vpars
-                Bs[k] = a * sgn     # unit phase for V
-            end
-        end
-
-        append!(H_vpars, V_phase)
-
-        if optimize.Δ_dlo && symmetry == "dLO"
-            append!(V, V_sign)
-        end
-        if optimize.Δ_dff && symmetry == "dFF"
-            append!(V, V_sign)
-        end    
     end
 
     return nothing
@@ -1008,122 +200,62 @@ end
 
 @doc raw"""
 
-    add_spin_order!( order::S, 
-                     optimize::NamedTuple, 
-                     H_vpars::Vector{Matrix{T}}, 
-                     V::Vector{Matrix{T}}, 
-                     model_geometry::ModelGeometry,
-                     locs::,
-                     dims::I,
-                     N::I, 
-                     pht::Bool )::Nothing
+    build_charge_ordering_matrix!(
+        V::AbstractMatrix{T},
+        pname::AbstractString,
+        sym::AbstractString,
+        spdx_table::Matrix{Int},
+        lattice::Lattice,
+        N::Int,
+        ph_transform::Bool
+    ) where {T}
 
-Adds a spin ordering term to the auxiliary Hamiltonian along with its perturbative operator. 
+Constructs a matrix representing a charge ordering operator in an auxiliary Hamiltonian.
 
-- `order::String`: type of spin order: "spin-x", "spin-z", or "site-dependent"
-- `optimize::NamedTuple`: field of optimization flags.
-- `H_vpars::Vector{Any}`: vector of variational Hamiltonian matrices.
-- `V::Vector{Any}`: vector of variational operators.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `locs::`: preallocated 
-- `dims::I`: dimensions of the lattice. 
-- `N::I`: number of sites in the lattice. 
-- `pht::Bool`: whether model if particle-hole transformed.
+# ARGUMENTS
+
+- `V::AbstractMatrix{T}`: Temporary storage matrix.
+- `pname::AbstractString`: Name of the charge order parameter.
+- `sym::AbstractString`: Symmetry of the charge order.
+- `spdx_table::Matrix{Int}`: Table of spindex pairs.
+- `lattice::Lattice`: Instance of the `Lattice` type.
+- `N::Int`: Total number of sites on the lattice.
+- `ph_transform::Bool`: Whether the model is particle-hole transformed.
+
+# KEYWORD ARGUMENTS
+
+- `shift::Int = 0`: Accounts for the necessary shift required to `site-dependent` parameters such that each parameter will receive its own `V` matrix.
 
 """
-function add_spin_order!(
-    order::S,
-    optimize::NamedTuple,
-    H_vpars::Vector{Matrix{T}},
-    V::Vector{Matrix{T}},
-    model_geometry::ModelGeometry,
-    locs,
-    dims::I,
-    N::I,
-    pht::Bool
-) where {S<:AbstractString, I<:Integer, T<:Number}
-    twoN = 2 * N
-
-    if order == "spin-z"
-        afm_vec = Vector{Int8}(undef, twoN)
-
-        if dims == 1
-            @inbounds for s in 1:N
-                ix = locs[s]
-                v = isodd(ix) ? Int8(-1) : Int8(1)
-
-                afm_vec[s]     = v
-                afm_vec[s + N] = pht ? -v : v
-            end
-        else
-            @inbounds for s in 1:N
-                (ix, iy) = locs[s]
-                v = isodd(ix + iy) ? Int8(-1) : Int8(1)
-
-                afm_vec[s]     = v
-                afm_vec[s + N] = pht ? -v : v
-            end
-        end
-
-        V_afm = LinearAlgebra.Diagonal(afm_vec)
-        push!(H_vpars, V_afm)
-
-        if optimize.Δ_sz
-            push!(V, V_afm)
-        end
-    elseif order == "spin-x"
-        row = Vector{Int}(undef, 2N)
-        col = Vector{Int}(undef, 2N)
-        val = Vector{Float64}(undef, 2N)
-
+function build_charge_ordering_matrix!(
+    V::AbstractMatrix{T},
+    pname::AbstractString,
+    sym::AbstractString,
+    spdx_table::Matrix{Int},
+    lattice::Lattice,
+    N::Int,
+    ph_transform::Bool;
+    shift::Int = 0
+) where {T}
+    if (pname, sym) == ("density", "uniform")
+        dims = length(lattice.L)
         @inbounds for s in 1:N
-            row[2s-1] = s
-            col[2s-1] = s + N
-            val[2s-1] = 1.0 # apply the 0.5 when the parameters are applied
-
-            row[2s]   = s + N
-            col[2s]   = s
-            val[2s]   = 1.0
+            parity = sum(spdx_table[d, s] for d in 1:dims)
+            v = T(isodd(parity) ? -1 : 1)
+            V[s, s]     +=  v
+            V[s+N, s+N] += ph_transform ? v : -v
         end
-        H_sx =  SparseArrays.sparse(row, col, val, twoN, twoN)
-
-        push!(H_vpars, H_sx)                   
-        if optimize.Δ_sx
-            push!(V, H_sx)
+    elseif (pname, sym) == ("density", "site-dependent")
+        @inbounds for idx in (1 + shift):lattice.L[1]:N
+            V[idx, idx]     += -one(T)
+            V[idx+N, idx+N] += ph_transform ? one(T) : -one(T)
         end
-    elseif order == "site-dependent"
-        L = model_geometry.lattice.L
-        nshifts = L[1]
-
-        for shift in 0:(nshifts - 1)
-
-            ssd_vec = Vector{Int8}(undef, twoN)
-            fill!(ssd_vec, 0)
-
-            ## stride-based index fill
-            @inbounds for idx in (1 + shift):L[1]:twoN
-                ssd_vec[idx] = 1
-            end
-
-            # change sign for the spin-down sector
-            if pht == false
-                ssd_vec[N+1:twoN] *= -1.0                
-            end
-
-            # apply phase shift
-            # @inbounds for s in 1:twoN
-            #     (ix, iy) = locs[s]
-            #     v = isodd(ix + iy) ? Int8(-1) : Int8(1)
-
-            #     ssd_vec[s]     *= v
-            # end
-
-            V_ssd = LinearAlgebra.Diagonal(ssd_vec)
-            push!(H_vpars, V_ssd)
-            if optimize.Δ_ssd
-                push!(V, V_ssd)
-            end
+    elseif (pname, sym) == ("μ", "uniform")
+        @inbounds for s in 1:2*N
+            V[s, s] += ph_transform && s > N ? one(T) : -one(T)
         end
+    else
+        @error "Parameter = \"$pname\" and symmetry = \"$sym\" combination not recognized."
     end
 
     return nothing
@@ -1132,105 +264,187 @@ end
 
 @doc raw"""
 
-    add_charge_order!( order::S, 
-                       optimize::NamedTuple, 
-                       H_vpars::Vector{Matrix{T}}, 
-                       V::Vector{Matrix{T}}, 
-                       model_geometry::ModelGeometry,
-                       locs::,
-                       dims::I,
-                       N::I, 
-                       pht::Bool ) where {S<:AbstractString, I<:Integer, T<:Number}
+    build_spin_ordering_matrix!(
+        V::AbstractMatrix{T},
+        pname::AbstractString,
+        sym::AbstractString,
+        spdx_table::Matrix{Int},
+        lattice::Lattice,
+        N::Int,
+        ph_transform::Bool
+    ) where {T}
 
-Adds a charge ordering term to the auxiliary Hamiltonian along with its perturbative operator.
+Constructs a matrix representing a charge ordering operator in an auxiliary Hamiltonian.
 
-- `order::S`: type of spin order: "density wave" or "site-dependent"
-- `optimize::NamedTuple`: field of optimization flags.
-- `H_vpars::Vector{Matrix{T}}`: vector of variational Hamiltonian matrices.
-- `V::Vector{Matrix{T}}`: vector of variational operators.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `locs::`:
-- `dims::I`: dimensions of the lattice. 
-- `N::I`: number of sites in the lattice. 
-- `pht::Bool`: whether model if particle-hole transformed.
+# ARGUMENTS
+
+- `V::AbstractMatrix{T}`: Temporary storage matrix.
+- `pname::AbstractString`: Name of the spin order parameter.
+- `sym::AbstractString`: Symmetry of the spin order.
+- `spdx_table::Matrix{Int}`: Table of spindex pairs.
+- `lattice::Lattice`: Instance of the `Lattice` type.
+- `N::Int`: Total number of sites on the lattice.
+- `ph_transform::Bool`: Whether the model is particle-hole transformed.
+
+# KEYWORD ARGUMENTS
+
+- `shift::Int = 0`: Accounts for the necessary shift required to `site-dependent` parameters such that each parameter will receive its own `V` matrix.
 
 """
-function add_charge_order!(
-    order::S,
-    optimize::NamedTuple,
-    H_vpars::Vector{Matrix{T}},
-    V::Vector{Matrix{T}},
-    model_geometry::ModelGeometry,
-    locs,
-    dims::I,
-    N::I,
-    pht::Bool
-) where {S<:AbstractString, I<:Integer, T<:Number}
-    twoN = 2 * N
+function build_spin_ordering_matrix!(
+    V::AbstractMatrix{T},
+    pname::AbstractString,
+    sym::AbstractString,
+    spdx_table::Matrix{Int},
+    lattice::Lattice,
+    N::Int,
+    ph_transform::Bool;
+    shift::Int = 0
+) where {T}
+    if (pname, sym) == ("spin-x", "uniform")
+        @inbounds for s in 1:N
+            V[s, s + N] += one(T)
+            V[s + N, s] += one(T)
+        end
+    elseif (pname, sym) == ("spin-z", "uniform")
+        dims = length(lattice.L)
+        @inbounds for s in 1:N
+            parity = sum(spdx_table[d, s] for d in 1:dims)
+            v = T(isodd(parity) ? -1 : 1)
+            V[s, s]     +=  v
+            V[s+N, s+N] += ph_transform ? -v : v
+        end
+    elseif (pname, sym) == ("spin-z", "site-dependent")
+        @inbounds for idx in (1 + shift):lattice.L[1]:N
+            V[idx, idx]     +=  one(T)
+            V[idx+N, idx+N] += ph_transform ? -one(T) : one(T)
+        end
+    else
+        @error "Combination of parameter \"$pname\" and symmetry \"$sym\" not recognized."
+    end
 
-    if order == "density wave"
-        cdw_vec = Vector{Int8}(undef, twoN)
+    return nothing
+end
 
-        if dims == 1
-            if pht
-                @inbounds for s in 1:twoN
-                    ix = locs[s]
-                    cdw_vec[s] = isodd(ix) ? Int8(-1) : Int8(1)
-                end
-            else
-                @inbounds for s in 1:N
-                    ix = locs[s]
-                    v = isodd(ix) ? Int8(-1) : Int8(1)
-                    cdw_vec[s]     = v
-                    cdw_vec[s + N] = -v
-                end
-            end
+
+@doc raw"""
+
+    function build_pairing_matrix!(
+        V::AbstractMatrix{T},
+        pname::AbstractString,
+        sym::AbstractString,
+        neighbor_table::Matrix{Int},
+        bond_slices::Vector{UnitRange{Int}},
+        spdx_table::Matrix{Int},
+        lattice::Lattice,
+        N::Int;
+        qₚ::Vector{<:AbstractFloat} = [0.0, 0.0],
+        sym_subtype::Union{AbstractString, Nothing} = nothing
+    ) where {T}
+
+Constructs a matrix representing a charge ordering operator in an auxiliary Hamiltonian.
+
+# ARGUMENTS
+
+- `V::AbstractMatrix{T}`: Temporary storage matrix.
+- `pname::AbstractString`: Name of the charge order parameter.
+- `sym::AbstractString`: Symmetry of the charge order.
+- `neighbor_table::Matrix{Int}`: Table of neighbor pairs.
+- `bond_slices::Vector{UnitRange{Int}}`: Slices of `neighbor_table`.
+- `spdx_table::Matrix{Int}`: Table of spindex pairs.
+- `lattice::Lattice`: Instance of the `Lattice` type.
+- `N::Int`: Total number of sites on the lattice.
+
+# KEYWORD ARGUMENTS
+
+- `site::Union{Int, Nothing} = nothing`: Site where the pair-density-wave parameter applies.
+- `qₚ::Vector{<:AbstractFloat} = [0.0, 0.0]`: Center-of-mass pairing momentum.
+- `sym_subtype::Union{AbstractString, Nothing} = nothing`: Symmetry type corresponding to pair-density-wave order, being either `FF` for Fulde-Furrell and `LO` for Larkin-Ovchinnikov.
+
+"""
+function build_pairing_matrix!(
+    V::AbstractMatrix{T},
+    pname::AbstractString,
+    sym::AbstractString,
+    neighbor_table::Matrix{Int},
+    bond_slices::Vector{UnitRange{Int}},
+    spdx_table::Matrix{Int},
+    lattice::Lattice,
+    N::Int;
+    site::Union{Int, Nothing} = nothing,
+    qₚ::Vector{<:AbstractFloat} = [0.0, 0.0],
+    sym_subtype::Union{AbstractString, Nothing} = nothing
+) where {T}
+    dims = length(lattice.L)
+
+    if (pname, sym) == ("s-wave", "uniform")
+        @inbounds for r in 1:2*N
+            c = get_linked_spindex(r - 1, N) + 1
+            V[r, c] = one(T)
+        end
+
+    elseif (pname, sym) == ("s-wave", "site-dependent")
+        @assert site !== nothing "site must be provided for site-dependent s-wave"
+        θ = sum(qₚ[d] * spdx_table[d, site] for d in 1:dims)
+
+        phase = if sym_subtype == "LO"
+            cis(θ) + cis(-θ)
+        elseif sym_subtype == "FF"
+            cis(θ)
         else
-            if pht
-                @inbounds for s in 1:twoN
-                    (ix, iy) = locs[s]
-                    cdw_vec[s] = isodd(ix + iy) ? Int8(-1) : Int8(1)
-                end
-            else
-                @inbounds for s in 1:N
-                    (ix, iy) = locs[s]
-                    v = isodd(ix + iy) ? Int8(-1) : Int8(1)
-                    cdw_vec[s]     = v
-                    cdw_vec[s + N] = -v
-                end
+            error("Symmetry sub-type \"$sym_subtype\" not recognized. Expected \"LO\" or \"FF\".")
+        end
+
+        si_up, si_dn = get_spindices_from_index(site, N)
+        V[si_up, si_dn] += phase
+        V[si_dn, si_up] += phase
+
+    elseif (pname, sym) == ("d-wave", "uniform")
+        for (slice, dsgn) in zip(bond_slices[1:2], (one(T), -one(T)))
+            @inbounds for col in slice
+                i = neighbor_table[1, col]
+                j = neighbor_table[2, col]
+
+                si_up, si_dn = get_spindices_from_index(i, N)
+                sj_up, sj_dn = get_spindices_from_index(j, N)
+
+                V[si_up, sj_dn] += dsgn
+                V[sj_up, si_dn] += dsgn
+                V[sj_dn, si_up] += dsgn
+                V[si_dn, sj_up] += dsgn
             end
         end
 
-        V_cdw = LinearAlgebra.Diagonal(cdw_vec)
-        push!(H_vpars, V_cdw)
-        if optimize.Δ_cdw
-            push!(V, V_cdw)
+    elseif (pname, sym) == ("d-wave", "site-dependent")
+        @assert site !== nothing "site must be provided for site-dependent d-wave"
+        θ = sum(qₚ[d] * spdx_table[d, site] for d in 1:dims)
+
+        phase = if sym_subtype == "LO"
+            cis(θ) + cis(-θ)
+        elseif sym_subtype == "FF"
+            cis(θ)
+        else
+            error("Symmetry sub-type \"$sym_subtype\" not recognized. Expected \"LO\" or \"FF\".")
         end
-    elseif order == "site-dependent"
-        L = model_geometry.lattice.L
-        nshifts = L[1]
 
-        for shift in 0:(nshifts - 1)
+        for (slice, dsgn) in zip(bond_slices[1:2], (one(T), -one(T)))
+            @inbounds for col in slice
+                i = neighbor_table[1, col]
+                j = neighbor_table[2, col]
+                (i == site || j == site) || continue
 
-            csd_vec = Vector{Int8}(undef, twoN)
-            fill!(csd_vec, 0)
+                si_up, si_dn = get_spindices_from_index(i, N)
+                sj_up, sj_dn = get_spindices_from_index(j, N)
 
-            # stride-based index fill
-            @inbounds for idx in (1 + shift):L[1]:twoN
-                csd_vec[idx] = -1.0
-            end
-
-            # change sign for the spin-down sector
-            if pht == true
-                csd_vec[N+1:twoN] *= -1.0                
-            end
-
-            V_csd = LinearAlgebra.Diagonal(csd_vec)
-            push!(H_vpars, V_csd)
-            if optimize.Δ_csd
-                push!(V, V_csd)
+                V[si_up, sj_dn] += dsgn * phase
+                V[sj_dn, si_up] += dsgn * phase
+                V[sj_up, si_dn] += dsgn * phase
+                V[si_dn, sj_up] += dsgn * phase
             end
         end
+
+    else
+        error("Combination of parameter \"$pname\" and symmetry \"$sym\" not recognized.")
     end
 
     return nothing
@@ -1239,334 +453,115 @@ end
 
 @doc raw"""
 
-    add_chemical_potential!( optimize::NamedTuple, 
-                             H_vpars::Vector{Matrix{T}}, 
-                             V::Vector{Matrix{T}}, 
-                             N::I, 
-                             pht::Bool ) where {T<:Number, I<:Integer}
+    is_openshell!(ε₀::Vector{E}, Np::Int, ph_transform::Bool) where {E<:AbstractFloat}
 
-Adds a chemical potential term to the auxiliary Hamiltonian.
-
-- `optimize::NamedTuple`: field of optimization flags.
-- `H_vpars::Vector{Matrix{T}}`: vector of variational Hamiltonian matrices.
-- `V::Vector{Matrix{T}}`: vector of variational operators.
-- `N::I`: number of sites in the lattice. 
-- `pht::Bool`: whether model if particle-hole transformed.
+Checks whether auxiliary energy configuration is open shell. If detected, will warn the user.
 
 """
-function add_chemical_potential!(
-    optimize::NamedTuple, 
-    H_vpars::Vector{Matrix{T}}, 
-    V::Vector{Matrix{T}}, 
-    N::I, 
-    pht::Bool
-) where {T<:Number, I<:Integer}
-    μ_vec = fill(-1,2*N)
-    if pht
-        # account for minus sign 
-        μ_vec_neg = copy(μ_vec)
-        μ_vec_neg[N+1:2*N] .= -μ_vec_neg[N+1:2*N]
-
-        # add chemical potential matrix
-        H_μ = zeros(Number, 2*N, 2*N)
-        V_μ_neg = LinearAlgebra.Diagonal(μ_vec_neg)
-        H_μ += V_μ_neg
-        push!(H_vpars, H_μ)
-
-        # if μ is being optimized, save Vμ matrix
-        if optimize.μ
-            push!(V, V_μ_neg)
-        end
+function is_openshell!(ε₀::Vector{E}, Np::Int, ph_transform::Bool) where {E<:AbstractFloat}
+    if ph_transform
+        if ε₀[Np] - ε₀[Np - 1] < 1e-4
+            @warn "Open shell detected!"
+        end  
     else
-        # add chemical potential matrix
-        H_μ = zeros(Number, 2*N, 2*N)
-        V_μ = LinearAlgebra.Diagonal(μ_vec)
-        H_μ += V_μ
-        push!(H_vpars,H_μ)
-
-        # if μ is being optimized, save Vμ matrix
-        if optimize.μ
-            push!(V, V_μ)
-        end
-    end
-
-    return nothing
-end
-
-
-@doc raw"""
-
-    diagonalize!( H::Matrix{T} ) where {T<:Number}
-
-Returns all eigenenergies ``\varepsilon`` and all eigenstates ``\phi`` of the 
-auxiliary Hamiltonian matrix. All eigenstates are stored in the columns of a 
-unitary matrix `U_aux`. 
-
-- `H::Matrix{T}`: auxiliary Hamiltonian matrix.
-
-"""
-function diagonalize!(
-    H::Matrix{T}
-) where {T<:Number}
-    # # check if Hamiltonian is Hermitian
-    # @assert ishermitian(H) 
-
-    if T <: Real
-        # in-place path exists
-        F = eigen!(H)
-    else
-        # Complex Hermitian must use non-mutating eigen
-        F = eigen(H)
-    end
-
-    return F.values, F.vectors  
-end
-
-
-@doc raw"""
-
-    is_openshell( ε::Vector{E},  
-                  Np::I,
-                  pht::Bool ) where {E<:AbstractFloat, I<:Integer}
-
-Checks whether a mean-field energy configuration is open shell.
-
-- `ε::Vector{E}`: vector of mean-field energies.
-- `Np::I`: total number of particles in the system.
-- `pht::Bool`: whether the model is particle-hole transformed.
-
-"""
-function is_openshell(
-    ε::Vector{E}, 
-    Np::I,
-    pht::Bool
-) where {E<:AbstractFloat, I<:Integer}
-    if pht
-        return ε[Np] - ε[Np - 1] < 1e-4 
-    else
-        return ε[Np + 1] - ε[Np] < 1e-4 
+        if ε₀[Np + 1] - ε₀[Np] < 1e-4 
+            @warn "Open shell detected!"
+        end 
     end 
+    return nothing
 end
 
 
 @doc raw"""
 
-    get_variational_matrices( V::Vector{Matrix{T1}}, 
-                              U_aux::Matrix{T2}, 
-                              ε::Vector{E}, 
-                              Np::I
-                              N::I ) where {T1<:Number, T2<:Number, E<:AbstractFloat, I<:Integer}
-    
-Returns a set of variational parameter matrices ``A_k`` constructed from each variational operator ``V_k`` by computing 
-```math
-Q_k = \frac{(U^{\dagger}V_{k}U)_{\eta\nu}}{(\varepsilon_{\eta} - \varepsilon_{\nu})},
-```
-where ``\eta > N_p`` and ``\nu \leq N_p``.
+    calculate_derivative_operator_matrix(
+        v::M,
+        U::M,
+        T::M,      
+        Q::M,
+        Tmp::M,
+        A::M,
+        ε::Vector{E},
+        Np::Int
+    ) where {E<:Number, M<:AbstractMatrix{E}}
 
-- `V::Vector{Matrix{T1}`: vector of variational operators. 
-- `U_aux::Matrix{T2}`: matrix which diagonalizes the auxiliary Hamiltonian.
-- `ε::Vector{E}`: initial energies.
-- `Np::I`: number of particles in the system. 
-- `N::I`: number of lattice sites.
+Computes the relevant lograithmic derivative operator matrix `A` from a variational parameter matrix `v`.
 
 """
-function get_variational_matrices(
-    ptmask::Matrix{T1},
-    V::Vector{Matrix{T2}}, 
-    U_aux::Matrix{T3}, 
-    ε::Vector{T4}, 
-    Np::I,
-    N::I
-) where {T1<:Number, T2<:Number, T3<:Number, T4<:Number, I<:Integer}
-    # ### OLD ALGORTHIM ###
-    # # populate perturbation mask
-    # for η in 1:2*N
-    #     for ν in 1:2*N
-    #         if η > Np && ν <= Np
-    #             ptmask[η, ν] = 1.0 / (ε[ν] - ε[η])
-    #         end
-    #     end
-    # end
-    #
-    # # compute A matrices
-    # As = Vector{Matrix{<:Number}}()
-    # for v in V
-    #     A = U_aux * ((U_aux' * v * U_aux) .* ptmask) * U_aux'
-    #     push!(As, A)
-    # end
-
-    ### NEW ALGORITHM ###
-    # populate perturbation theory mask
-    @inbounds for ν in 1:Np
-        εν = ε[ν]
-        for η in (Np+1):(2*N)
-            ptmask[η, ν] = inv(εν - ε[η])
-        end
-    end
-
-    Nt  = size(U_aux, 1)
+function calculate_derivative_operator_matrix(
+    v::AbstractMatrix{E},
+    U::AbstractMatrix{E},
+    T::AbstractMatrix{E},      
+    Q::AbstractMatrix{E},
+    Tmp::AbstractMatrix{E},
+    A::AbstractMatrix{E},
+    ε::Vector{E},
+    Np::Int
+) where {E<:Number}
+    Nt  = size(U, 1)
     Np1 = Np + 1
 
-    Uocc  = @view U_aux[:, 1:Np]
-    Uvirt = @view U_aux[:, Np1:Nt]
+    Uocc  = @view U[:, 1:Np]
+    Uvirt = @view U[:, Np1:Nt]
 
-    As = Vector{Matrix{eltype(U_aux)}}(undef, length(V))
+    mul!(T, v, Uocc)                  # T   = v * Uocc        [Nt × Np]
+    mul!(Q, Uvirt', T)                # Q   = Uvirt' * T      [Nt-Np × Np]
 
-    T   = Matrix{eltype(U_aux)}(undef, Nt, Np)
-    Q   = Matrix{eltype(U_aux)}(undef, Nt-Np, Np)
-    Tmp = Matrix{eltype(U_aux)}(undef, Nt, Np)
-    A   = Matrix{eltype(U_aux)}(undef, Nt, Nt)
-
-    # # version 1
-    # for (k, v) in pairs(V)
-    #     mul!(T, v, Uocc)          # T = v * Uocc
-    #     mul!(Q, Uvirt', T)        # Q = Uvirt' * T
-
-    #     @inbounds for i in axes(Q,1), j in axes(Q,2)
-    #         Q[i,j] /= (ε[j] - ε[i+Np])
-    #     end
-
-    #     mul!(Tmp, Uvirt, Q)       # Tmp = Uvirt * Q
-    #     mul!(A, Tmp, Uocc')       # A = Tmp * Uocc'
-
-    #     As[k] = copy(A)
-    # end
-
-    for (k, v) in pairs(V)
-        mul!(T, v, Uocc)              # T = v * Uocc
-        mul!(Q, Uvirt', T)            # Q = Uvirt' * T
-
-        @inbounds for i in axes(Q,1), j in axes(Q,2)
-            Q[i,j] /= (ε[j] - ε[i+Np])
-        end
-
-        mul!(Tmp, Uvirt, Q)           # Tmp = Uvirt * Q
-        mul!(A, Tmp, Uocc')           # A = Tmp * Uocc'
-
-        @inbounds @simd for i in eachindex(A)
-            A[i] += conj(A[i])        # in-place symmetrization
-        end
-
-        As[k] = copy(A)               
+    # apply ptmask: zero out degenerate pairs, divide by energy difference otherwise
+    @inbounds for j in axes(Q,2), i in axes(Q,1)
+        εν = ε[j]
+        εη = ε[i+Np]
+        Q[i,j] = εν == εη ? zero(E) : Q[i,j] / (εν - εη)
     end
 
-    return As
+    mul!(Tmp, Uvirt, Q)               # Tmp = Uvirt * Q       [Nt × Np]
+    mul!(A, Tmp, Uocc')               # A   = Tmp * Uocc'     [Nt × Nt]
+
+    @inbounds @simd for i in eachindex(A)
+        A[i] += conj(A[i])
+    end
+
+    return A
 end
 
 
-@doc raw"""
 
-    get_tb_chem_pot( Ne::I, 
-                     tight_binding_model::TightBindingModel{E}, 
-                     model_geometry::ModelGeometry ) where {I<:Integer, E<:AbstractFloat}
 
-Computes the appropriate chemical potential ``\mu`` for a non-interacting tight-binding model
-on a finite lattice.
 
-- `Ne::I`: total number of electrons.
-- `tight_binding_model::TightBindingModel{E}`: parameters for a non-interacting tight-binding model.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
 
-"""
-function get_tb_chem_pot(
-    Ne::I, 
-    tight_binding_model::TightBindingModel{E}, 
-    model_geometry::ModelGeometry
-) where {I<:Integer, E<:AbstractFloat}
-    # number of lattice sites
-    N_orbs = model_geometry.unit_cell.n
-    N_cells = model_geometry.lattice.N
-    N = N_orbs * N_cells
 
-    # bonds of the lattice
-    bonds = model_geometry.bond
-    
-    # preallocate matrices
-    H_t₀ = zeros(Complex, 2*N, 2*N)
-    H_t₁ = zeros(Complex, 2*N, 2*N)
-    H_t₂ = zeros(Complex, 2*N, 2*N)
 
-    # hopping amplitudes
-    t₀ = tight_binding_model.t₀
-    t₁ = tight_binding_model.t₁
-    t₂ = tight_binding_model.t₂
 
-    # add nearest neighbor hopping
-    nbr0 = build_neighbor_table(
-        bonds[1],
-        model_geometry.unit_cell,
-        model_geometry.lattice
-    )
 
-    # add nearest neighbor hopping
-    for (i,j) in eachcol(nbr0)
-        H_t₀[i,j] += -t₀
-        if N > 2
-            H_t₀[j,i] += -t₀
-        end
-    end
-    for (i,j) in eachcol(nbr0 .+ N)    
-        H_t₀[i,j] += -t₀
-        if N > 2
-            H_t₀[j,i] += -t₀
-        end
-    end
 
-    if t₁ != 0.0
-        # build next-nearest neighbor table
-        nbr1 = build_neighbor_table(
-            bonds[2],
-            model_geometry.unit_cell,
-            model_geometry.lattice
-        )
 
-        # add next-nearest neighbor hopping
-        for (i,j) in eachcol(nbr1)
-            H_t₁[i,j] += t₁
-            H_t₁[j,i] += t₁
-        end
-        for (i,j) in eachcol(nbr1 .+ N)    
-            H_t₁[i,j] += t₁
-            H_t₁[j,i] += t₁
-        end
-    end
 
-    if t₂ != 0.0
-        # build third nearest neighbor table
-        nbr2 = build_neighbor_table(
-            bonds[3],
-            model_geometry.unit_cell,
-            model_geometry.lattice
-        )
 
-        # add third nearest neighbor hopping
-        for (i,j) in eachcol(nbr2)
-            H_t₂[i,j] += t₂
-            H_t₂[j,i] += t₂
-        end
-        for (i,j) in eachcol(nbr2 .+ N)    
-            H_t₂[i,j] += t₂
-            H_t₂[j,i] += t₂
-        end
-    end
 
-    # full tight-binding Hamiltonian
-    H_tb = H_t₀ + H_t₁ + H_t₂
 
-    # solve for eigenvalues
-    ε_F, _ = diagonalize!(H_tb)
 
-    # tight-binding chemical potential
-    μ = 0.5 * (ε_F[Ne + 1] + ε_F[Ne])
 
-    @debug """
-    Hamiltonian::get_tb_chem_pot() :
-    tight-binding chemical potential =>
-    μ = $(μ)
-    """
 
-    return μ
-end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

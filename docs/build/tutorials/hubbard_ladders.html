@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>3) Interacting Hubbard Ladders with a Stripe Wavefunction · VariationalMC.jl</title><meta name="title" content="3) Interacting Hubbard Ladders with a Stripe Wavefunction · VariationalMC.jl"/><meta property="og:title" content="3) Interacting Hubbard Ladders with a Stripe Wavefunction · VariationalMC.jl"/><meta property="twitter:title" content="3) Interacting Hubbard Ladders with a Stripe Wavefunction · VariationalMC.jl"/><meta name="description" content="Documentation for VariationalMC.jl."/><meta property="og:description" content="Documentation for VariationalMC.jl."/><meta property="twitter:description" content="Documentation for VariationalMC.jl."/><meta property="og:url" content="https://github.com/atanjaro/VariationalMC.jl/tutorials/hubbard_ladders.html"/><meta property="twitter:url" content="https://github.com/atanjaro/VariationalMC.jl/tutorials/hubbard_ladders.html"/><link rel="canonical" href="https://github.com/atanjaro/VariationalMC.jl/tutorials/hubbard_ladders.html"/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../index.html">VariationalMC.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../index.html">Home</a></li><li><a class="tocitem" href="../simulation_output.html">Simulation Output Overview</a></li><li><a class="tocitem" href="../api.html">API</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="hubbard_chain.html">1) Hubbard Chain with an Antiferromagnetic Wavefunction</a></li><li><a class="tocitem" href="hubbard_square.html">2a) Square Hubbard Model with a Pairing Wavefunction</a></li><li><a class="tocitem" href="hubbard_square_mpi.html">2b) Square Hubbard Model with MPI Parallelization</a></li><li class="is-active"><a class="tocitem" href="hubbard_ladders.html">3) Interacting Hubbard Ladders with a Stripe Wavefunction</a><ul class="internal"><li><a class="tocitem" href="#hubbard_square_import_packages"><span>Import packages</span></a></li><li><a class="tocitem" href="#Specify-simulation-parameters"><span>Specify simulation parameters</span></a></li><li><a class="tocitem" href="#hubbard_square_initialize_simulation"><span>Initialize simulation</span></a></li><li><a class="tocitem" href="#Initialize-simulation-metadata"><span>Initialize simulation metadata</span></a></li><li><a class="tocitem" href="#Initialize-model"><span>Initialize model</span></a></li><li><a class="tocitem" href="#Initialize-model-parameters"><span>Initialize model parameters</span></a></li><li><a class="tocitem" href="#hubbard_square_initialize_measurements"><span>Initialize measurements</span></a></li><li><a class="tocitem" href="#hubbard_square_setup_vmc"><span>Set up VMC simulation</span></a></li><li><a class="tocitem" href="#hubbard_square_optimize"><span>Optimize the parameters</span></a></li><li><a class="tocitem" href="#hubbard_square_simulate_system"><span>Simulate the system</span></a></li><li><a class="tocitem" href="#Merge-binned-data"><span>Merge binned data</span></a></li><li><a class="tocitem" href="#Record-simulation-metadata"><span>Record simulation metadata</span></a></li><li><a class="tocitem" href="#hubbard_square_process_results"><span>Post-process results</span></a></li><li><a class="tocitem" href="#Execute-script"><span>Execute script</span></a></li></ul></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../examples/hubbard_chain.html">Hubbard Chain</a></li><li><a class="tocitem" href="../examples/hubbard_square.html">Hubbard Square</a></li><li><a class="tocitem" href="../examples/hubbard_square_mpi.html">Hubbard Square with MPI Parallelization</a></li><li><a class="tocitem" href="../examples/hubbard_ladder.html">Hubbard Ladder</a></li><li><a class="tocitem" href="../examples/hubbard_ladder_mpi.html">Hubbard Ladder with MPI Parallelization</a></li><li><a class="tocitem" href="../examples/hubbard_ladders.html">Interacting Hubbard Ladders</a></li><li><a class="tocitem" href="../examples/hubbard_ladders_mpi.html">Interacting Hubbard Ladders with MPI Parallelization</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href="hubbard_ladders.html">3) Interacting Hubbard Ladders with a Stripe Wavefunction</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href="hubbard_ladders.html">3) Interacting Hubbard Ladders with a Stripe Wavefunction</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/atanjaro/VariationalMC.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="3)-Interacting-Hubbard-Ladders-with-a-Stripe-Wavefunction"><a class="docs-heading-anchor" href="#3)-Interacting-Hubbard-Ladders-with-a-Stripe-Wavefunction">3) Interacting Hubbard Ladders with a Stripe Wavefunction</a><a id="3)-Interacting-Hubbard-Ladders-with-a-Stripe-Wavefunction-1"></a><a class="docs-heading-anchor-permalink" href="#3)-Interacting-Hubbard-Ladders-with-a-Stripe-Wavefunction" title="Permalink"></a></h1><p>Download this example as a <a href="../assets/scripts/tutorials/hubbard_ladders.jl">Julia script</a>.</p><p>In this tutorial, we will work through a more involved example of simulating a Hubbard model on <span>$N$</span>-leg interacting ladders using a variational wavefunction with charge and spin stripes. The Hubbard Hamiltonian for <span>$N$</span>-leg ladders (rectangular lattices) is given by</p><p class="math-container">\[\begin{align}
+\hat{H} = &amp; -t \sum_{\langle i, j \rangle, \alpha, \sigma} (\hat{c}^{\dagger}_{i, \alpha, \sigma}, \hat{c}^{\phantom \dagger}_{j, \alpha, \sigma} + {\rm H.c.})\\
+&amp; + U \sum_{i,\alpha} \hat{n}_{i,\alpha,\uparrow}\hat{n}_{i,\alpha,\downarrow}\\
+&amp; + V \sum_{i,\sigma,\sigma&#39;} \left( n_{i,N/2,\sigma}\, n_{i,N/2+1,\sigma&#39;} + n_{i,N/2,\sigma}\, n_{i+1,N/2+1,\sigma&#39;} \right)\\
+&amp; - \mu \sum_{i,\sigma} \hat{n}_{i,\sigma},
+\end{align}\]</p><p>where <span>$\hat{c}^\dagger_{i,\alpha,\sigma} \ (\hat{c}^{\phantom \dagger}_{i,\alpha,\sigma})$</span> creates (annihilates) a spin <span>$\sigma$</span> electron on site <span>$i$</span> in the <span>$\alpha$</span> sublattice, and <span>$\hat{n}_{i,\alpha,\sigma} = \hat{c}^\dagger_{i,\alpha,\sigma} \hat{c}^{\phantom \dagger}_{i,\alpha,\sigma}$</span> is the spin-<span>$\sigma$</span> electron number operator for site <span>$i$</span> in sublattice <span>$\alpha$</span>. In the above Hamiltonian <span>$U &gt; 0$</span> controls the strength of the on-site Hubbard repulsion and <span>$V&gt;0$</span> controls the strength of the interaction between the <span>$N$</span>-leg ladders.</p><h2 id="hubbard_square_import_packages"><a class="docs-heading-anchor" href="#hubbard_square_import_packages">Import packages</a><a id="hubbard_square_import_packages-1"></a><a class="docs-heading-anchor-permalink" href="#hubbard_square_import_packages" title="Permalink"></a></h2><p>Let us begin by importing <a href="https://github.com/atanjaro/VariationalMC.jl">VariationalMC.jl</a>, and its relevant submodules.</p><pre><code class="language-julia hljs">using VariationalMC
+import VariationalMC.LatticeUtilities as lu</code></pre><p>The <a href="https://github.com/atanjaro/VariationalMC.jl">VariationalMC.jl</a> package re-exports the <a href="https://github.com/SmoQySuite/LatticeUtilities.jl.git">LatticeUtilities</a> from <a href="https://github.com/SmoQySuite/SmoQyDQMC.jl.git">SmoQyDQMC</a>, which we will use to define the lattice geometry for our model.</p><p>We will also  use the Standard Library packages <a href="https://docs.julialang.org/en/v1/stdlib/Random/">Random</a> and <a href="https://docs.julialang.org/en/v1/stdlib/Printf/">Printf</a> for random number generation and C-style string formatting, respectively.</p><pre><code class="language-julia hljs">using Random
+using Printf</code></pre><h2 id="Specify-simulation-parameters"><a class="docs-heading-anchor" href="#Specify-simulation-parameters">Specify simulation parameters</a><a id="Specify-simulation-parameters-1"></a><a class="docs-heading-anchor-permalink" href="#Specify-simulation-parameters" title="Permalink"></a></h2><p>The entire main body of the simulation we will wrapped in a top-level function named <code>run_simulation</code> that will take as keyword arguments various model and simulation parameters that we may want to change. The function arguments with default values are ones that are typically left unchanged between simulations. The specific meaning of each argument will be discussed in more detail in later sections of the tutorial.</p><pre><code class="language-julia hljs"># Top-level function to run the simulation
+function run_simulation(;
+    # KEYWORD ARGUMENTS
+    sID,                    # Simulation ID.
+    Lx,                     # System size in the x-direction.
+    Ly,                     # System size in the y-direction.
+    t₁′,                    # Next-nearest neighbor hopping amplitude in the first ladder.
+    t₂′,                    # Next-nearest neighbor hopping amplitude in the second ladder.
+    U,                      # Hubbard interaction.
+    V,                      # Extended Hubbard interaction.
+    density,                # Density of Fermions.
+    ph_transform,           # Whether the model is particle-hole transformed.
+    N_equil,                # Number of equilibration/thermalization updates.
+    N_opt,                  # Number of optimization steps.
+    N_sim,                  # Number of simulation steps.
+    N_opt_bins,             # Number of optimization bins.
+    N_sim_bins,             # Number of simulation bins.
+    dt = 0.1,               # Optimization rate.
+    η = 1e-4,               # Optimization stablity factor.
+    n_stab_W = 50,          # Green&#39;s function stabilization frequency.
+    δW = 1e-3,              # Maximum allowed error in the Green&#39;s function.
+    n_stab_T = 50,          # Jastrow factor stabilization frequency.
+    δT = 1e-3,              # Maximum allowed error in the Jastrow factor.
+    seed = abs(rand(Int)),  # Seed for random number generator.
+    filepath=&quot;.&quot;            # Filepath to where data folder will be created.
+)</code></pre><h2 id="hubbard_square_initialize_simulation"><a class="docs-heading-anchor" href="#hubbard_square_initialize_simulation">Initialize simulation</a><a id="hubbard_square_initialize_simulation-1"></a><a class="docs-heading-anchor-permalink" href="#hubbard_square_initialize_simulation" title="Permalink"></a></h2><p>In this first part of the script we name and initialize our simulation, creating the data folder our simulation results will be written to. This is done by initializing an instances of the <a href="../api.html#VariationalMC.SimulationInfo"><code>SimulationInfo</code></a> type, and then calling the <a href="../api.html#VariationalMC.initialize_datafolder"><code>initialize_datafolder</code></a> function.</p><p>Note that the <code>write_bins_concurrent</code> keyword arguments controls whether or not binned simulation measurement data is written to HDF5 file during the simulation, or held in memory and only written to file once the simulation is complete. Here we decide how to set <code>write_bins_concurrent</code> based on the system size being simulated. This is because when performing simulations of small systems that do not take very long, writing data to file too frequently can sometimes cause network latency problems on clusters and HPC systems. However, for larger systems that take longer to simulate, you are not limited by file IO frequency but rather by available memory, so writing data to file more frequently is preferred in these cases.</p><pre><code class="language-julia hljs">    # Construct the foldername the data will be written to.
+    datafolder_prefix = @sprintf &quot;hubbard_ladder_n%.3f_tp1%.2f_tp2%.2f_U%.2f_V%.2f_Lx%d_Ly%d&quot; density t₁′ t₂′ U V Lx Ly
+
+    # Initialize simulation info.
+    simulation_info = SimulationInfo(
+        filepath = filepath,
+        datafolder_prefix = datafolder_prefix,
+        sID = sID
+    )
+
+    # Initialize the directory the data will be written to.
+    initialize_datafolder(simulation_info)</code></pre><h2 id="Initialize-simulation-metadata"><a class="docs-heading-anchor" href="#Initialize-simulation-metadata">Initialize simulation metadata</a><a id="Initialize-simulation-metadata-1"></a><a class="docs-heading-anchor-permalink" href="#Initialize-simulation-metadata" title="Permalink"></a></h2><p>In this section of the code we record important metadata about the simulation, including initializing the random number generator that will be used throughout the simulation. The important metadata within the simulation will be recorded in the <code>metadata</code> dictionary.</p><pre><code class="language-julia hljs">    # Initialize a random number generator.
+    rng = Xoshiro(seed)
+
+    # Initialize the metadata dictionary.
+    metadata = Dict()
+
+    # Record simulation parameters.
+    metadata[&quot;N_equil&quot;] = N_equil
+    metadata[&quot;N_opt&quot;] = N_opt
+    metadata[&quot;N_sim&quot;] = N_sim
+    metadata[&quot;N_opt_bins&quot;] = N_opt_bins
+    metadata[&quot;N_sim_bins&quot;] = N_sim_bins
+    metadata[&quot;δW&quot;] = δW
+    metadata[&quot;δT&quot;] = δT
+    metadata[&quot;n_stab_W&quot;] = n_stab_W
+    metadata[&quot;n_stab_T&quot;] = n_stab_T
+    metadata[&quot;dt&quot;] = dt
+    metadata[&quot;acceptance_rate&quot;] = 0.0
+    metadata[&quot;seed&quot;] = seed</code></pre><p>In the above, <code>sID</code> stands for simulation ID, which is used to distinguish simulations that would otherwise be identical i.e. to distinguish simulations that use the same parameters and are only different in the random seed used to initialize the simulation. A valid <code>sID</code> is any positive integer greater than zero, and is used when naming the data folder the simulation results will be written to. Specifically, the actual data folder created above will be <code>&quot;$(filepath)/$(datafolder_prefix)-$(sID)&quot;</code>. Note that if you set <code>sID = 0</code>, then it will instead be assigned smallest previously unused integer value. For instance, suppose the directory <code>&quot;$(filepath)/$(datafolder_prefix)-1&quot;</code> already exits. Then if you pass <code>sID = 0</code> to <a href="../api.html#VariationalMC.SimulationInfo"><code>SimulationInfo</code></a>, then the simulation ID <code>sID = 2</code> will be used instead, and a directory <code>&quot;$(filepath)/$(datafolder_prefix)-2&quot;</code> will be created.</p><p>Another useful resource in the documentation is the <a href="../simulation_output.html#Simulation-Output-Overview">Simulation Output Overview</a> page, which describes the output written to the data folder generated during a <a href="https://github.com/atanjaro/VariationalMC.jl">VariationalMC.jl</a> simulation.</p><h2 id="Initialize-model"><a class="docs-heading-anchor" href="#Initialize-model">Initialize model</a><a id="Initialize-model-1"></a><a class="docs-heading-anchor-permalink" href="#Initialize-model" title="Permalink"></a></h2><p>The next step is define the model we wish to simulate. In this example the relevant model parameters are the Hubbard interaction strength <span>$U$</span> (<code>U</code>) and lattice size <span>$L$</span> (<code>L</code>).</p><p>First we define the lattice geometry for our model, relying on the <a href="https://github.com/SmoQySuite/LatticeUtilities.jl.git">LatticeUtilities</a> package to do so. We define a the unit cell and size of our finite lattice using the <a href="https://smoqysuite.github.io/LatticeUtilities.jl/stable/api/#LatticeUtilities.UnitCell"><code>UnitCell</code></a> and <a href="https://smoqysuite.github.io/LatticeUtilities.jl/stable/api/#LatticeUtilities.Lattice"><code>Lattice</code></a> types, respectively. Lastly, we define various instances of the <a href="https://smoqysuite.github.io/LatticeUtilities.jl/stable/api/#LatticeUtilities.Bond"><code>Bond</code></a> type to represent the the nearest-neighbor and next-nearest-neighbor bonds. All of this information regarding the lattice geometry is then stored in an instance of the <a href="../api.html#VariationalMC.ModelGeometry"><code>ModelGeometry</code></a> type. Further documentation, with usage examples, for <a href="https://github.com/SmoQySuite/LatticeUtilities.jl.git">LatticeUtilities</a> package can be found <a href="https://smoqysuite.github.io/LatticeUtilities.jl/stable/">here</a>.</p><p>We also initialize the Canonical Ensemble particle configuration that lives on the lattice. In this case, given the total Fermion density that we want to live on the lattice, <a href="../api.html#VariationalMC.ParticleConfiguration"><code>ParticleConfiguration</code></a> will determine the correct total number of particles and the correct number of spin-up and spin-down particles.</p><pre><code class="language-julia hljs">    # Define the unit cell.
+    unit_cell = lu.UnitCell(
+        lattice_vecs = [[1.0, 0.0], [0.0, 1.0]],
+        basis_vecs   = [[0.0, 0.0], [1.0, 0.0]]
+    )
+
+    # Define a finite lattice with periodic boundary conditions in the y-direction.
+    lattice = lu.Lattice(
+        [Lx, Ly],
+        [false, true]
+    )
+
+    # Initialize model geometry.
+    model_geometry = ModelGeometry(
+        unit_cell, lattice
+    )
+
+    # Define the nearest-neighbor x-bond in the first ladder.
+    bond_x1 = lu.Bond(
+        orbitals = (1,1),
+        displacement = [1,0]
+    )
+
+    # Add this bond definition to the model by adding it to the `model_geometry`.
+    bond_x1_id = add_bond!(model_geometry, bond_x1)
+
+    # Define the nearest-neighbor y-bond in the first ladder.
+    bond_y1 = lu.Bond(
+        orbitals = (1,1),
+        displacement = [0,1]
+    )
+
+    # Add this bond definition to the model by adding it to the `model_geometry`.
+    bond_y1_id = add_bond!(model_geometry, bond_y1)
+
+    # Define the postive next-nearest neighbor in the first ladder.
+    bond_xy1 = lu.Bond(
+        orbitals = (1,1),
+        displacement = [1,1]
+    )
+
+    # Add this bond definition to the model by adding it to the `model_geometry`.
+    bond_xy1_id = add_bond!(model_geometry, bond_xy1)
+
+    # Define the negative next-nearest neighbor in the first ladder.
+    bond_yx1 = lu.Bond(
+        orbitals = (1,1),
+        displacement = [1,-1]
+    )
+
+    # Add this bond definition to the model by adding it to the `model_geometry`.
+    bond_yx1_id = add_bond!(model_geometry, bond_yx1)
+
+    # Define the nearest-neighbor x-bond in the second ladder.
+    bond_x2 = lu.Bond(
+        orbitals = (2,2),
+        displacement = [1,0]
+    )
+
+    # Add this bond definition to the model by adding it to the `model_geometry`.
+    bond_x2_id = add_bond!(model_geometry, bond_x2)
+
+    # Define the nearest-neighbor y-bond in the second ladder.
+    bond_y2 = lu.Bond(
+        orbitals = (2,2),
+        displacement = [0,1]
+    )
+
+    # Add this bond definition to the model by adding it to the `model_geometry`.
+    bond_y2_id = add_bond!(model_geometry, bond_y2)
+
+    # Define the postive next-nearest neighbor in the second ladder.
+    bond_xy2 = lu.Bond(
+        orbitals = (2,2),
+        displacement = [1,1]
+    )
+
+    # Add this bond definition to the model by adding it to the `model_geometry`.
+    bond_xy2_id = add_bond!(model_geometry, bond_xy2)
+
+    # Define the negative next-nearest neighbor in the second ladder.
+    bond_yx2 = lu.Bond(
+        orbitals = (2,2),
+        displacement = [1,-1]
+    )
+
+    # Add this bond definition to the model by adding it to the `model_geometry`.
+    bond_yx2_id = add_bond!(model_geometry, bond_yx2)
+
+    # Define a nearest-neighbor interaction bond between the first and second ladders.
+    bond_int1 = lu.Bond(
+        orbitals = (1,2),
+        displacement = [-1,-1]
+    )
+
+    # Add this bond definition to the model by adding it to the `model_geometry`.
+    bond_int1_id = add_bond!(model_geometry, bond_int1)
+
+    #$ Define a nearest-neighbor interaction bond between the first and second ladders.
+    bond_int2 = lu.Bond(
+        orbitals = (1,2),
+        displacement = [0,-1]
+    )
+
+    # Add this bond definition to the model by adding it to the `model_geometry`.
+    bond_int2_id = add_bond!(model_geometry, bond_int2)
+
+    # Determine the density and initialize the configuration of Fermions.
+    particle_configuration = ParticleConfiguration(
+        density,
+        model_geometry = model_geometry,
+        ph_transform = ph_transform
+    )</code></pre><p>Next we specify the non-interacting tight-binding term in our Hamiltonian with the <a href="../api.html#VariationalMC.TightBindingModel"><code>TightBindingModel</code></a> type.</p><pre><code class="language-julia hljs">    # Set nearest-neighbor hopping amplitude for the first ladder to unity.
+    t₁ = 1.0
+
+    # Set nearest-neighbor hopping amplitude for the second ladder to unity.
+    t₂ = 1.0
+
+    # Define the non-interacting tight binding model.
+    tight_binding_model = TightBindingModel(
+        model_geometry = model_geometry,
+        μ       =  0., # set initial estimate for the chemical potential
+        t_bonds = [bond_x1, bond_y1, bond_x2, bond_y2, bond_xy1, bond_yx1, bond_xy2, bond_yx2], # defines hopping
+        t_mean  = [t₁, t₁, t₂, t₂, t₁′, t₁′, t₂′, t₂′] # defines corresponding mean hopping amplitude
+    )</code></pre><p>Then, we define the Hubbard interaction with the <a href="../api.html#VariationalMC.HubbardModel"><code>HubbardModel</code></a> type and the extended Hubbard interaction with the <a href="../api.html#VariationalMC.ExtendedHubbardModel"><code>ExtendedHubbardModel</code></a>.</p><pre><code class="language-julia hljs">    # Define the Hubbard interaction in the model.
+    hubbard_model = HubbardModel(
+        U_orbital   = [1, 2],
+        U_mean      = [U, U]
+    )
+
+    # Define the Hubbard interaction between the ladders.
+    extended_hubbard_model = ExtendedHubbardModel(
+        model_geometry = model_geometry,
+        V_bond = [bond_int1, bond_int2],
+        V_mean = [V, V]
+    )</code></pre><h2 id="Initialize-model-parameters"><a class="docs-heading-anchor" href="#Initialize-model-parameters">Initialize model parameters</a><a id="Initialize-model-parameters-1"></a><a class="docs-heading-anchor-permalink" href="#Initialize-model-parameters" title="Permalink"></a></h2><p>The next step is to initialize our model parameters given the size of our finite lattice. To clarify, both the <a href="../api.html#VariationalMC.TightBindingModel"><code>TightBindingModel</code></a> and <a href="../api.html#VariationalMC.HubbardModel"><code>HubbardModel</code></a> types are agnostic to the size of the lattice being simulated, defining the model in a translationally invariant way. To do so we need to initialize an instance of the <a href="../api.html#VariationalMC.TightBindingParameters"><code>TightBindingParameters</code></a> and <a href="../api.html#VariationalMC.HubbardParameters"><code>HubbardParameters</code></a> types.</p><p>Note that the initial guess for the chemical potential given in <a href="../api.html#VariationalMC.TightBindingModel"><code>TightBindingModel</code></a> will be overriden here with the exact one.</p><pre><code class="language-julia hljs">    #$ Initialize tight-binding parameters.
+    tight_binding_parameters = TightBindingParameters(
+        tight_binding_model     = tight_binding_model,
+        particle_configuration  = particle_configuration,
+        model_geometry          = model_geometry
+    )
+
+    # Initialize Hubbard interaction parameters.
+    hubbard_parameters = HubbardParameters(
+        hubbard_model   = hubbard_model,
+        model_geometry  = model_geometry
+    )
+
+    # Initialize extended Hubbard interaction parameters.
+    extended_hubbard_parameters = ExtendedHubbardParameters(
+        extended_hubbard_model = extended_hubbard_model,
+        model_geometry = model_geometry
+    )</code></pre><p>Next, we add variational parameters to our model. This first set represents parameters in the determinantal or Slater part of the wavefunction. By initializing the <a href="../api.html#VariationalMC.DeterminantalParameters"><code>DeterminantalParameters</code></a> type, a base number of parameters are automatically added to the model, which represent the minimal possible orders. These include charge order in the form of <code>&quot;mu&quot;</code> and <code>&quot;density&quot;</code>, and spin order in the form of <code>&quot;spin-x&quot;</code> and <code>&quot;spin-z&quot;</code>. To flag parameters for optimization, they will need to be added using the <a href="../api.html#VariationalMC.add_parameter!"><code>add_parameter!</code></a> method. In this case, we will add an additional parameters in the form of charge and spin stripes.</p><p>We also add variational parameters in the form of Jastrow pseudopotentials, in this case of the <code>&quot;spin-spin</code> type.</p><pre><code class="language-julia hljs">    # Initialize variational parameters in the determinantal-part of the wavefunction.
+    determinantal_parameters = DeterminantalParameters(
+        tight_binding_parameters    = tight_binding_parameters,
+        model_geometry              = model_geometry,
+        rng                         = rng
+    )
+
+    # Add charge stripe parameters for optimization.
+    add_parameter!(
+        determinantal_parameters,
+        param_name  = &quot;density&quot;,
+        order_type  = &quot;charge&quot;,
+        symmetry    = &quot;site-dependent&quot;,
+        optimize    = true,
+        orbital     = [1, 2],
+        model_geometry = model_geometry
+    )
+
+    # Add spin stripe parameters for optimization.
+    add_parameter!(
+        determinantal_parameters,
+        param_name  = &quot;spin-z&quot;,
+        order_type  = &quot;spin&quot;,
+        symmetry    = &quot;site-dependent&quot;,
+        optimize    = true,
+        orbital     = [1, 2],
+        model_geometry = model_geometry
+    )
+
+    # Initialize variational parameters in the form of Jastrow pseudopotentials.
+    jastrow_parameters = JastrowParameters(
+        particle_pair   = &quot;electron-electron&quot;,
+        order_pair      = &quot;spin-spin&quot;,
+        orbitals        = [1, 2],
+        optimize        = true,
+        model_geometry  = model_geometry,
+        rng             = rng
+    )</code></pre><p>Lastly, the <a href="../api.html#VariationalMC.model_summary"><code>model_summary</code></a> function is used to write a <code>model_summary.toml</code> file, specifying the parameters which will be used in the Hamiltonian that will be simulated.</p><pre><code class="language-julia hljs">    # Write model summary TOML file specifying Hamiltonian that will be simulated.
+    model_summary(
+        simulation_info         = simulation_info,
+        model_geometry          = model_geometry,
+        particle_configuration  = particle_configuration,
+        tight_binding_model     = tight_binding_model,
+        interactions            = (hubbard_model, extended_hubbard_model,),
+        parameters              = (determinantal_parameters, jastrow_parameters,)
+    )</code></pre><h2 id="hubbard_square_initialize_measurements"><a class="docs-heading-anchor" href="#hubbard_square_initialize_measurements">Initialize measurements</a><a id="hubbard_square_initialize_measurements-1"></a><a class="docs-heading-anchor-permalink" href="#hubbard_square_initialize_measurements" title="Permalink"></a></h2><p>Having initialized both our model and the corresponding model parameters, the next step is to initialize the various measurements we want to make during our VMC simulation. This includes initialization of any correlation measurements we wish to make.</p><pre><code class="language-julia hljs">    # Initialize the container where measurements will be accumulated.
+    measurement_container = initialize_measurement_container(
+        determinantal_parameters,
+        model_geometry,
+        (jastrow_parameters,)
+    )
+
+    # Initialize the tight-binding model related measurements, namely the hopping energy.
+    initialize_measurements!(measurement_container, tight_binding_model)
+
+    # Initialize the Hubbard interaction related measurements.
+    initialize_measurements!(measurement_container, hubbard_model)
+
+    # Initialize the extended Hubbard interaction related measurements.
+    initialize_measurements!(measurement_container, extended_hubbard_model)
+
+    # Initialize equal-time charge correlation measurements.
+    initialize_correlation_measurements!(
+        measurement_container = measurement_container,
+        model_geometry = model_geometry,
+        correlation = &quot;density&quot;,
+        pairs = [(1,2)]
+    )
+
+    # Initialize equal-time spin correlation measurements.
+    initialize_correlation_measurements!(
+        measurement_container = measurement_container,
+        model_geometry = model_geometry,
+        correlation = &quot;spin-z&quot;,
+        pairs = [(1,2)]
+    )</code></pre><h2 id="hubbard_square_setup_vmc"><a class="docs-heading-anchor" href="#hubbard_square_setup_vmc">Set up VMC simulation</a><a id="hubbard_square_setup_vmc-1"></a><a class="docs-heading-anchor-permalink" href="#hubbard_square_setup_vmc" title="Permalink"></a></h2><p>This section of the code sets up the VMC simulation by initializing the optimizer that will be used during Stochastic Reconfiguration.</p><pre><code class="language-julia hljs">    # Initialize the optimzer that will be used for Stochastic Reconfiguration.
+    optimizer = Optimizer(
+        determinantal_parameters = determinantal_parameters,
+        η = η, dt = dt,
+        jas_parameters = (jastrow_parameters,)
+    )</code></pre><h2 id="hubbard_square_optimize"><a class="docs-heading-anchor" href="#hubbard_square_optimize">Optimize the parameters</a><a id="hubbard_square_optimize-1"></a><a class="docs-heading-anchor-permalink" href="#hubbard_square_optimize" title="Permalink"></a></h2><p>This next section of the code performs updates to optimize the variational parameters. The structure of this function should be fairly intuitive, mainly consisting of a loop, inside which we perform updates to the particle configuration.</p><p>Before the start of the each update loop, we initialize the auxiliary Hamiltonian which is then used to construct the variational wavefunction using the update parametrs from the previous loop.</p><p>In the block of code below, <code>N_equil</code> is the number of local updates performed to equilibrate/thermalize the system. Unlike a DQMC simulation, where thermalization updates can be done before any measurements are made, VMC requires the system be thermalized/equilibrated before each measurement. This is because the VMC optimizer is more prone to getting stuck in a local minimum and by equilibrating before each measurement, this reduces this risk.</p><p>The total number of optimization iterations <code>N_opt</code> and the total number of bins <code>N_opt_bins</code> is automatically translated into the correct bin lengths. The bin-averaged measurements are written to file once <code>opt_bin_size</code> measurements are accumulated using the <a href="../api.html#VariationalMC.write_measurements!"><code>write_measurements!</code></a> function.</p><p>Note that we set <code>opt_step = true</code> in the <a href="../api.html#VariationalMC.make_measurements!"><code>make_measurements!</code></a> and <a href="../api.html#VariationalMC.write_measurements!"><code>write_measurements!</code></a> functions to ensure that the logarithmic derivatives are being measured that to let the simulation know that the optimizer will handle normalization during this stage of the VMC simulation.</p><pre><code class="language-julia hljs">    # Calculate the size of each optimization bin.
+    opt_bin_size = div(N_opt, N_opt_bins)
+
+    # Iterate over the optimization bins.
+    for bin in 1:N_opt_bins
+
+        # Construct the auxiliary/mean-field Hamiltonian.
+        hamiltonian = Hamiltonian(
+            tight_binding_parameters    = tight_binding_parameters,
+            determinantal_parameters    = determinantal_parameters,
+            particle_configuration      = particle_configuration,
+            model_geometry              = model_geometry
+        )
+
+        # Construct the determinantal/Slater wavefunction.
+        detwf = DeterminantalWavefunction(
+            determinantal_parameters    = determinantal_parameters,
+            hamiltonian                 = hamiltonian,
+            particle_configuration      = particle_configuration,
+            model_geometry              = model_geometry,
+            rng                         = rng
+        )
+
+        # Construct the Jastrow factor.
+        jfac = JastrowFactor(
+            jastrow_parameters      = jastrow_parameters,
+            particle_configuration  = particle_configuration,
+            model_geometry          = model_geometry
+        )
+
+        # Iterate over the length of the bin.
+        for n in 1:opt_bin_size
+            # Equilibrate/thermalize the system
+            for equil in 1:N_equil
+                # Attempt to update the fermion configuration.
+                accepted = local_fermion_update!(
+                    detwf = detwf, jas_factors = (jfac,),
+                    tight_binding_parameters = tight_binding_parameters, jas_parameters = (jastrow_parameters,),
+                    particle_configuration = particle_configuration,
+                    model_geometry = model_geometry,
+                    δW = δW, δT = δT,
+                    n_stab_W = n_stab_W, n_stab_T = n_stab_T, rng = rng
+                )
+
+                # Record the acceptance rate.
+                metadata[&quot;acceptance_rate&quot;] += accepted
+            end
+
+            # Make measurements
+            make_measurements!(
+                measurement_container,
+                detwf = detwf, jas_factors = (jfac,),
+                tight_binding_parameters = tight_binding_parameters,
+                determinantal_parameters = determinantal_parameters,
+                jas_parameters = (jastrow_parameters,),
+                coupling_parameters = (hubbard_parameters, extended_hubbard_parameters,),
+                particle_configuration = particle_configuration,
+                model_geometry = model_geometry, opt_step = true
+            )
+        end
+
+        # Attempt to update the variational parameters.
+        update_optimizer!(
+            optimizer = optimizer,
+            measurement_container = measurement_container,
+            bin_size = opt_bin_size,
+            determinantal_parameters = determinantal_parameters,
+            jas_parameters = (jastrow_parameters,)
+        )
+
+        # Write the measurements.
+        write_measurements!(
+            measurement_container = measurement_container,
+            simulation_info = simulation_info,
+            model_geometry = model_geometry,
+            bin = bin,
+            bin_size = opt_bin_size,
+            opt_step = true
+        )
+    end</code></pre><h2 id="hubbard_square_simulate_system"><a class="docs-heading-anchor" href="#hubbard_square_simulate_system">Simulate the system</a><a id="hubbard_square_simulate_system-1"></a><a class="docs-heading-anchor-permalink" href="#hubbard_square_simulate_system" title="Permalink"></a></h2><p>Now that the variational parameters have been optimzied, we simulate the system using these parameters to obtain clean measurements of any observables. The structure of this section is similar to the optimization block, sans the actual optimizer.</p><pre><code class="language-julia hljs">    # Calculate the size of each simulation bin.
+    sim_bin_size = div(N_sim, N_sim_bins)
+
+    # Iterate over the simulation bins.
+    for bin in 1:N_sim_bins
+
+        # Construct the auxiliary/mean-field Hamiltonian.
+        hamiltonian = Hamiltonian(
+            tight_binding_parameters    = tight_binding_parameters,
+            determinantal_parameters    = determinantal_parameters,
+            particle_configuration      = particle_configuration,
+            model_geometry              = model_geometry
+        )
+
+        # Construct the determinantal/Slater wavefunction.
+        detwf = DeterminantalWavefunction(
+            determinantal_parameters    = determinantal_parameters,
+            hamiltonian                 = hamiltonian,
+            particle_configuration      = particle_configuration,
+            model_geometry              = model_geometry,
+            rng                         = rng
+        )
+
+        # Construct the Jastrow factor.
+        jfac = JastrowFactor(
+            jastrow_parameters      = jastrow_parameters,
+            particle_configuration  = particle_configuration,
+            model_geometry          = model_geometry
+        )
+
+        # Iterate over the length of the bin.
+        for n in 1:opt_bin_size
+            # Equilibrate/thermalize the system
+            for equil in 1:N_equil
+                # Attempt to update the fermion configuration.
+                accepted = local_fermion_update!(
+                    detwf = detwf, jas_factors = (jfac,),
+                    tight_binding_parameters = tight_binding_parameters, jas_parameters = (jastrow_parameters,),
+                    particle_configuration = particle_configuration,
+                    model_geometry = model_geometry,
+                    δW = δW, δT = δT,
+                    n_stab_W = n_stab_W, n_stab_T = n_stab_T, rng = rng
+                )
+
+                # Record the acceptance rate.
+                metadata[&quot;acceptance_rate&quot;] += accepted
+            end
+
+            # Make measurements
+            make_measurements!(
+                measurement_container,
+                detwf = detwf, jas_factors = (jfac,),
+                tight_binding_parameters = tight_binding_parameters,
+                determinantal_parameters = determinantal_parameters,
+                jas_parameters = (jastrow_parameters,),
+                coupling_parameters = (hubbard_parameters, extended_hubbard_parameters,),
+                particle_configuration = particle_configuration,
+                model_geometry = model_geometry
+            )
+        end
+
+        # Write the measurements.
+        write_measurements!(
+            measurement_container = measurement_container,
+            simulation_info = simulation_info,
+            model_geometry = model_geometry,
+            bin = bin,
+            bin_size = sim_bin_size
+        )
+    end</code></pre><h2 id="Merge-binned-data"><a class="docs-heading-anchor" href="#Merge-binned-data">Merge binned data</a><a id="Merge-binned-data-1"></a><a class="docs-heading-anchor-permalink" href="#Merge-binned-data" title="Permalink"></a></h2><p>At this point the simulation is essentially complete, with all updates and measurements having been performed. However, the binned measurement data resides in many separate HDF5 files currently. Here we will merge these separate HDF5 files into a single file containing all the binned data using the <a href="../api.html#VariationalMC.merge_bins"><code>merge_bins</code></a> function. This must be done for both the optimization and simulation bins.</p><pre><code class="language-julia hljs">    # Merge binned optimization data into a single HDF5 file.
+    merge_bins(simulation_info, opt = true)
+
+    # Merge binned simulation data into a single HDF5 file.
+    merge_bins(simulation_info)</code></pre><h2 id="Record-simulation-metadata"><a class="docs-heading-anchor" href="#Record-simulation-metadata">Record simulation metadata</a><a id="Record-simulation-metadata-1"></a><a class="docs-heading-anchor-permalink" href="#Record-simulation-metadata" title="Permalink"></a></h2><p>Next, we want to calculate the final acceptance rate for the Monte Carlo updates, as well as write the simulation metadata to file, including the contents of the <code>metadata</code> dictionary. This is done using the <a href="../api.html#VariationalMC.save_simulation_info"><code>save_simulation_info</code></a> function.</p><pre><code class="language-julia hljs">    # Normalize the acceptance rate.
+    metadata[&quot;acceptance_rate&quot;] /= N_equil * (N_opt + N_sim)
+
+    # Write the simulation summary TOML file.
+    save_simulation_info(simulation_info, metadata)</code></pre><h2 id="hubbard_square_process_results"><a class="docs-heading-anchor" href="#hubbard_square_process_results">Post-process results</a><a id="hubbard_square_process_results-1"></a><a class="docs-heading-anchor-permalink" href="#hubbard_square_process_results" title="Permalink"></a></h2><p>In this final section of code we post-process the binned data. This includes calculating the final estimates for the mean and error of all measured observables, which will be written to an HDF5 file using the <a href="../api.html#VariationalMC.process_measurements"><code>process_measurements</code></a> function. Inside this function the binned data gets further re-binned into <code>n_bins</code>, where <code>n_bins</code> is any positive integer satisfying the constraints <code>(N_bins ≥ n_bin)</code> and <code>(N_bins % n_bins == 0)</code>. Note that the <a href="../api.html#VariationalMC.process_measurements"><code>process_measurements</code></a> function has many additional keyword arguments that can be used to control the output. For instance, in this example in addition to writing the statistics to an HDF5 file, we also export the statistics to CSV files by setting <code>export_to_csv = true</code>, with additional keyword arguments controlling the formatting of the CSV files. Again, for more information on how to interpret the output refer the <a href="../simulation_output.html#Simulation-Output-Overview">Simulation Output Overview</a> page.</p><pre><code class="language-julia hljs">    # Process the simulation results, calculating final error bars for all measurements.
+    # writing final statistics to CSV files.
+    process_measurements(
+        datafolder = simulation_info.datafolder,
+        n_bins = N_sim_bins,
+        export_to_csv = true,
+        scientific_notation = false,
+        decimals = 7,
+        delimiter = &quot; &quot;,
+        process_all_equal_time_measurements = true
+    )
+
+    return nothing
+end # end of run_simulation function</code></pre><h2 id="Execute-script"><a class="docs-heading-anchor" href="#Execute-script">Execute script</a><a id="Execute-script-1"></a><a class="docs-heading-anchor-permalink" href="#Execute-script" title="Permalink"></a></h2><p>VMC simulations are typically run from the command line as jobs on a computing cluster. With this in mind, the following block of code only executes if the Julia script is run from the command line, also reading in additional command line arguments.</p><pre><code class="language-julia hljs"># Only execute if the script is run directly from the command line.
+if abspath(PROGRAM_FILE) == @__FILE__
+
+    # Run the simulation, reading in command line arguments.
+    run_simulation(;
+        sID             = parse(Int,     ARGS[1]),  # Simulation ID.
+        Lx              = parse(Int,     ARGS[2]),  # System size in the x-direction.
+        Ly              = parse(Int,     ARGS[3]),  # System size in the y-direction.
+        t₁′             = parse(Float64, ARGS[4]),  # Next-nearest neighbor hopping amplitude in the first ladder.
+        t₂′             = parse(Float64, ARGS[5]),  # Next-nearest neighbor hopping amplitude in the second ladder.
+        U               = parse(Float64, ARGS[6]),  # Hubbard interaction.
+        V               = parse(Float64, ARGS[7]),  # Extended Hubbard interaction.
+        density         = parse(Float64, ARGS[8]),  # Density of Fermions.
+        ph_transform    = parse(Bool,    ARGS[9]),  # Whether the model is particle-hole transformed.
+        N_equil         = parse(Int,     ARGS[10]), # Number of equilibration/thermalization updates.
+        N_opt           = parse(Int,     ARGS[11]), # Number of optimization steps.
+        N_sim           = parse(Int,     ARGS[12]), # Number of simulation steps.
+        N_opt_bins      = parse(Int,     ARGS[13]), # Number of optimization bins.
+        N_sim_bins      = parse(Int,     ARGS[14])  # Number of simulation bins.
+    )
+end</code></pre><p>For instance, the command</p><pre><code class="nohighlight hljs">&gt; julia hubbard_ladders.jl 1 16 2 -0.25 -0.25 1.0 0.3 0.875 false 200 3000 6000 300 600</code></pre><p>runs a VMC simulation of <span>$N=2$</span> interacting ladders at <span>$1/8$</span>-doping with <span>$t^\prime_1 = t^\prime_2 = -0.25$</span>, onsite interaction strength <span>$U = 1.0$</span>, and an exteneded interaction strength <span>$V = 0.3$</span>. Since there are no pairing terms in the wavefunction, we set <code>ph_transform = false</code>. In the VMC simulation, <span>$200$</span> sweeps through the lattice are be performed to equilibrate the system, while sweeping through <span>$3,000$</span> optimiztion iterations and <span>$6,000$</span> simulation iterations. Measurements are then written to file <span>$300$</span> times during the optimization and <span>$600$</span> times during simulation, with each bin containing the average of <span>$3,000/300 = 10$</span> (<span>$6,000/600 = 10$</span>) sequential measurements.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="hubbard_square_mpi.html">« 2b) Square Hubbard Model with MPI Parallelization</a><a class="docs-footer-nextpage" href="../examples/hubbard_chain.html">Hubbard Chain »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.11.4 on <span class="colophon-date" title="Friday 29 May 2026 10:36">Friday 29 May 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

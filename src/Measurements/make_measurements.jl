@@ -1,950 +1,339 @@
 @doc raw"""
 
-    make_measurements!( measurement_container::NamedTuple, 
-                        detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-                        tight_binding_model::TightBindingModel{E2}, 
-                        hubbard_model::HubbardModel{E2},
-                        determinantal_parameters::DeterminantalParameters{I}, 
-                        model_geometry::ModelGeometry,
-                        optimize::NamedTuple,
-                        Np::I, 
-                        pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
+    make_measurements!(
+        measurement_container::NamedTuple;
+        detwf::DeterminantalWavefunction{T},
+        jas_factors::Union{Tuple{<:AbstractJastrowFactor{T}}, Nothing} = nothing,
+        tight_binding_parameters::TightBindingParameters{T, E},
+        jas_parameters::Union{Tuple{JastrowParameters{E}}, Nothing} = nothing,
+        coupling_parameters::Tuple,
+        particle_configuration::ParticleConfiguration,
+        model_geometry::ModelGeometry;
+        opt_step::Bool = false
+    ) where {T<:Number, E<:AbstractFloat}
 
-Measures optimization and simulation observables including the local energy ``\langle E_{\mathrm{loc}}\rangle``, logarithmic
-derivatives ``\langle\Delta_k\rangle``, ``\langle\Delta_{k}\Delta_{k}^\prime\rangle``, ``\langle\Delta_{k}E\rangle``, average double occupancy ``\langle D\rangle``, and average density ``\langle n\rangle``.
-Also records the current particle configuration ``|x\rangle``.
-
-- `measurement_container::NamedTuple`: container where measurements are stored.
-- `detwf::DeterminantalWavefunction{T, Q, E, I}`: current determinantal wavefunction.
-- `tight_binding_model::TightBindingModel{E}`: non-interacting tight-binding model. 
-- `hubbard_model::HubbardModel`: Hubbard interaction parameters.
-- `determinantal_parameters{I}::DeterminantalParameters{I}`: set of determinantal variational parameters.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `optimize::NamedTuple`:: tuple of optimization flags.
-- `Np::I`: total number of particles in the system.
-- `pht::Bool`: whether or not model is particle-hole transformed.
+Make measurements. If used during the optimization phase of the simulation, set `opt_step = true`, which will activate the 
+measurements of the logarithmic derivatives.
 
 """
 function make_measurements!(
-    measurement_container::NamedTuple, 
-    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-    tight_binding_model::TightBindingModel{E2}, 
-    hubbard_model::HubbardModel{E2},
-    determinantal_parameters::DeterminantalParameters{I}, 
+    measurement_container::NamedTuple;
+    detwf::DeterminantalWavefunction{T},
+    jas_factors::Union{Tuple{<:AbstractJastrowFactor{T}}, Nothing} = nothing,
+    tight_binding_parameters::TightBindingParameters{T, E},
+    determinantal_parameters::DeterminantalParameters,
+    jas_parameters::Union{Tuple{JastrowParameters}, Nothing} = nothing,
+    coupling_parameters::Tuple,
+    particle_configuration::ParticleConfiguration,
     model_geometry::ModelGeometry,
-    optimize::NamedTuple,
-    Np::I, 
-    pht::Bool
-) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
-    # measure the energy
-    measure_local_energy!(
-        measurement_container, 
-        detwf, 
-        tight_binding_model, 
-        hubbard_model,
-        model_geometry,
-        Np, 
-        pht
-    )
+    opt_step::Bool = false
+) where {T<:Number, E<:AbstractFloat}
+    (; equaltime_correlations) = measurement_container
+    (; unit_cell, lattice) = model_geometry
+    (; pconfig, Np, ph_transform) = particle_configuration
 
-    # measure the logarithmic derivatives
-    measure_Δk!(
-        measurement_container, 
-        detwf, 
-        determinantal_parameters,
-        model_geometry, 
-        optimize,
-        Np
-    )
-    measure_ΔkΔkp!(
-        measurement_container, 
-        detwf, 
-        determinantal_parameters, 
-        model_geometry,
-        optimize, 
-        Np
-    )
-    measure_ΔkE!(
-        measurement_container, 
-        detwf, 
-        tight_binding_model, 
-        hubbard_model,
-        determinantal_parameters, 
-        model_geometry, 
-        optimize,
-        Np, 
-        pht
-    )
+    # total number of lattice sites
+    Norbs = unit_cell.n 
+    Ncells = lattice.N
+    N = Norbs * Ncells 
 
-    # measure double occupancy
-    measure_double_occ!(
-        measurement_container, 
-        detwf, 
-        model_geometry, 
-        pht
-    )
-
-    # measure average density
-    measure_n!(
-        "local",
-        measurement_container, 
-        detwf, 
-        model_geometry,
-        pht
-    )
-
-    # measure site_dependent density (if added)
-    if haskey(measurement_container.simulation_measurements, "site-dependent_density")
-        measure_n!(
-            "site-dependent",
-            measurement_container, 
-            detwf, 
-            model_geometry,
-            pht
-        ) 
-    end
-
-    # measure average Sz (if added)
-    if haskey(measurement_container.simulation_measurements, "local_spin-z")
-        measure_Sz!(
-            "local",
-            measurement_container, 
-            detwf, 
-            model_geometry,
-            pht
-        ) 
-    end
-
-    # measure site_dependent Sz (if added)
-    if haskey(measurement_container.simulation_measurements, "site-dependent_spin-z")
-        measure_Sz!(
-            "site-dependent",
-            measurement_container, 
-            detwf, 
-            model_geometry,
-            pht
-        ) 
-    end
-    
-    # measure correlations (if added)
-    if haskey(measurement_container.correlation_measurements, "density")
-        measure_density_correlation!(
-            measurement_container,
-            detwf,
-            model_geometry,
-            pht
-        )
-    end
-    if haskey(measurement_container.correlation_measurements, "spin")
-        measure_spin_correlation!(
-            measurement_container,
-            detwf,
-            model_geometry,
-            pht
-        )
-    end
-
-    # record the current particle configuration
-    measurement_container.simulation_measurements["pconfig"] = detwf.pconfig
-
-    return nothing
-end
-
-
-@doc raw"""
-
-    make_measurements!( measurement_container::NamedTuple, 
-                        detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-                        jastrow_factor::JastrowFactor{E2, I},
-                        tight_binding_model::TightBindingModel{E2},
-                        hubbard_model::HubbardModel{E2},
-                        determinantal_parameters::DeterminantalParameters{I},
-                        jastrow_parameters::JastrowParameters{S, K, V, I},
-                        model_geometry::ModelGeometry, 
-                        optimize::NamedTuple,
-                        Np::I, 
-                        pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
-
-Measures optimization and simulation observables including the local energy ``\langle E_{\mathrm{loc}}\rangle``, logarithmic
-derivatives ``\langle\Delta_k\rangle``, ``\langle\Delta_{k}\Delta_{k}^\prime\rangle``, ``\langle\Delta_{k}E\rangle``, average double occupancy ``\langle D\rangle``, and average density ``\langle n\rangle``.
-Also records the current particle configuration ``|x\rangle``.
-
-- `measurement_container::NamedTuple`: container where measurements are stored.
-- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current determinantal wavefunction.
-- `jastrow_factor::JastrowFactor{E2, I}`: current Jastrow factor. 
-- `tight_binding_model::TightBindingModel{E}`: non-interacting tight-binding model. 
-- `hubbard_model::HubbardModel{E2}`: Hubbard interaction parameters.
-- `determinantal_parameters::DeterminantalParameters{I}`: set of determinantal variational parameters.
-- `jastrow_parameters::JastrowParameters{S, K, V, I}`: current set of Jastrow variational parameters.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `optimize::NamedTuple`:: tuple of optimization flags.
-- `Np::I`: total number of particles in the system.
-- `pht::Bool`: whether or not model is particle-hole transformed.
-
-"""
-function make_measurements!(
-    measurement_container::NamedTuple, 
-    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-    jastrow_factor::JastrowFactor{E2, I}, 
-    tight_binding_model::TightBindingModel{E2}, 
-    hubbard_model::HubbardModel{E2},
-    determinantal_parameters::DeterminantalParameters{I},
-    jastrow_parameters::JastrowParameters{S, K, V, I},
-    model_geometry::ModelGeometry,
-    optimize::NamedTuple,
-    Np::I, 
-    pht::Bool
-) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
-    # measure the energy
-    measure_local_energy!(
-        measurement_container, 
-        detwf, 
-        jastrow_factor,
-        tight_binding_model, 
-        hubbard_model,
-        jastrow_parameters,
-        model_geometry, 
-        Np, 
-        pht
-    )
-
-    # measure the logarithmic derivatives
-    measure_Δk!(
-        measurement_container, 
+    # make local measurements
+    local_measurements = measurement_container.local_measurements
+    make_local_measurements!(
+        local_measurements,
         detwf,
-        determinantal_parameters,
-        jastrow_parameters,
+        tight_binding_parameters,
+        coupling_parameters,
         model_geometry,
-        optimize,
-        Np,
-        pht
-    )
-    measure_ΔkΔkp!(
-        measurement_container, 
-        detwf, 
-        determinantal_parameters, 
-        jastrow_parameters,
-        model_geometry, 
-        optimize,
-        Np,
-        pht
-    )
-    measure_ΔkE!(
-        measurement_container, 
-        detwf, 
-        jastrow_factor,
-        tight_binding_model, 
-        hubbard_model,
-        determinantal_parameters, 
-        jastrow_parameters,
-        model_geometry, 
-        optimize,
-        Np, 
-        pht
+        pconfig, N, ph_transform,
+        jas_factors = jas_factors,
+        jas_parameters = jas_parameters
     )
 
-    # measure double occupancy
-    measure_double_occ!(
-        measurement_container, 
-        detwf, 
-        model_geometry, 
-        pht
-    )
-
-     # measure average density
-    measure_n!(
-        "local",
-        measurement_container, 
-        detwf, 
-        model_geometry,
-        pht
-    )
-
-    # measure site_dependent density (if added)
-    if haskey(measurement_container.simulation_measurements, "site-dependent_density")
-        measure_n!(
-            "site-dependent",
-            measurement_container, 
-            detwf, 
-            model_geometry,
-            pht
-        ) 
-    end
-
-    # measure average Sz (if added)
-    if haskey(measurement_container.simulation_measurements, "local_spin-z")
-        measure_Sz!(
-            "local",
-            measurement_container, 
-            detwf, 
-            model_geometry,
-            pht
-        ) 
-    end
-
-    # measure site_dependent Sz (if added)
-    if haskey(measurement_container.simulation_measurements, "site-dependent_spin-z")
-        measure_Sz!(
-            "site-dependent",
-            measurement_container, 
-            detwf, 
-            model_geometry,
-            pht
-        ) 
-    end
-    
-    # measure correlations (if added)
-    if haskey(measurement_container.correlation_measurements, "density")
-        measure_density_correlation!(
-            measurement_container,
-            detwf,
-            model_geometry,
-            pht
-        )
-    end
-    if haskey(measurement_container.correlation_measurements, "spin")
-        measure_spin_correlation!(
-            measurement_container,
-            detwf,
-            model_geometry,
-            pht
-        )
-    end
-
-    # record the current particle configuration
-    measurement_container.simulation_measurements["pconfig"] = detwf.pconfig
-
-    return nothing
-end
-
-
-@doc raw"""
-
-    make_measurements!( measurement_container::NamedTuple, 
-                        detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-                        jastrow_factor_1::JastrowFactor{E2, I},
-                        jastrow_factor_2::JastrowFactor{E2, I},
-                        tight_binding_model::TightBindingModel{E2},
-                        hubbard_model::HubbardModel{E2},
-                        determinantal_parameters::DeterminantalParameters{I},
-                        jastrow_parameters_1::JastrowParameters{S, K, V, I},
-                        jastrow_parameters_2::JastrowParameters{S, K, V, I},
-                        model_geometry::ModelGeometry, 
-                        optimize::NamedTuple,
-                        Np::I, 
-                        pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
-
-Measures optimization and simulation observables including the local energy ``\langle E_{\mathrm{loc}}\rangle``, logarithmic
-derivatives ``\langle\Delta_k\rangle``, ``\langle\Delta_{k}\Delta_{k}^\prime\rangle``, ``\langle\Delta_{k}E\rangle``, average double occupancy ``\langle D\rangle``, and average density ``\langle n\rangle``.
-Also records the current particle configuration ``|x\rangle``.
-
-- `measurement_container::NamedTuple`: container where measurements are stored.
-- `detwf::DeterminantalWavefunction{T, Q, E, I}`: current determinantal wavefunction.
-- `jastrow_factor_1::JastrowFactor{E, I}`: first Jastrow factor.
-- `jastrow_factor_2::JastrowFactor{E, I}`: second Jastrow factor.
-- `tight_binding_model::TightBindingModel{E}`: non-interacting tight-binding model. 
-- `hubbard_model::HubbardModel`: Hubbard interaction parameters.
-- `determinantal_parameters::DeterminantalParameters`: set of determinantal variational parameters.
-- `jastrow_parameters_1::JastrowParameters{S, K, V, I}`: first set of Jastrow variational parameters.
-- `jastrow_parameters_2::JastrowParameters{S, K, V, I}`: second set of Jastrow variational parameters.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `optimize::NamedTuple`:: tuple of optimization flags. 
-- `Np::I`: total number of particles in the system.
-- `pht::Bool`: whether or not model is particle-hole transformed.
-
-"""
-function make_measurements!(
-    measurement_container::NamedTuple, 
-    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-    jastrow_factor_1::JastrowFactor{E2, I},
-    jastrow_factor_2::JastrowFactor{E2, I}, 
-    tight_binding_model::TightBindingModel{E2}, 
-    hubbard_model::HubbardModel{E2},
-    determinantal_parameters::DeterminantalParameters{I},
-    jastrow_parameters_1::JastrowParameters{S, K, V, I},
-    jastrow_parameters_2::JastrowParameters{S, K, V, I},
-    model_geometry::ModelGeometry,
-    optimize::NamedTuple,
-    Np::I, 
-    pht::Bool
-) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
-    # measure the energy
-    measure_local_energy!(
-        measurement_container, 
-        detwf, 
-        jastrow_factor_1,
-        jastrow_factor_2,
-        tight_binding_model, 
-        hubbard_model,
-        jastrow_parameters_1,
-        jastrow_parameters_2,
-        model_geometry, 
-        Np, 
-        pht
-    )
-
-    # measure the lograithmic derivatives
-    measure_Δk!(
-        measurement_container, 
+    # make global_measurements
+    global_measurements = measurement_container.global_measurements
+    make_global_measurements!(
+        global_measurements,
         detwf,
-        determinantal_parameters,
-        jastrow_parameters_1,
-        jastrow_parameters_2,
-        model_geometry,
-        optimize,
-        Np,
-        pht
-    )
-    measure_ΔkΔkp!(
-        measurement_container, 
-        detwf, 
-        determinantal_parameters, 
-        jastrow_parameters_1,
-        jastrow_parameters_2,
-        model_geometry, 
-        optimize,
-        Np,
-        pht
-    )
-    measure_ΔkE!(
-        measurement_container, 
-        detwf, 
-        jastrow_factor_1,
-        jastrow_factor_2,
-        tight_binding_model, 
-        hubbard_model,
-        determinantal_parameters, 
-        jastrow_parameters_1,
-        jastrow_parameters_2,
-        model_geometry, 
-        optimize,
-        Np, 
-        pht
+        tight_binding_parameters,
+        coupling_parameters,
+        pconfig, N, ph_transform;
+        model_geometry = model_geometry,
+        jas_factors = jas_factors,
+        jas_parameters = jas_parameters
     )
 
-    # measure double occupancy
-    measure_double_occ!(
-        measurement_container, 
-        detwf, 
-        model_geometry, 
-        pht
-    )
-
-    # measure average density
-    measure_n!(
-        "local",
-        measurement_container, 
-        detwf, 
-        model_geometry,
-        pht
-    )
-
-    # measure site_dependent density (if added)
-    if haskey(measurement_container.simulation_measurements, "site-dependent_density")
-        measure_n!(
-            "site-dependent",
-            measurement_container, 
-            detwf, 
-            model_geometry,
-            pht
-        ) 
-    end
-
-    # measure average Sz (if added)
-    if haskey(measurement_container.simulation_measurements, "local_spin-z")
-        measure_Sz!(
-            "local",
-            measurement_container, 
-            detwf, 
-            model_geometry,
-            pht
-        ) 
-    end
-
-    # measure site_dependent Sz (if added)
-    if haskey(measurement_container.simulation_measurements, "site-dependent_spin-z")
-        measure_Sz!(
-            "site-dependent",
-            measurement_container, 
-            detwf, 
-            model_geometry,
-            pht
-        ) 
-    end
-    
-    # measure correlations (if added)
-    if haskey(measurement_container.correlation_measurements, "density")
-        measure_density_correlation!(
-            measurement_container,
+    if opt_step
+        # make optimization measurements
+        optimization_measurements = measurement_container.optimization_measurements
+        make_optimization_measurements!(
+            optimization_measurements,
             detwf,
-            model_geometry,
-            pht
-        )
-    end
-    if haskey(measurement_container.correlation_measurements, "spin")
-        measure_spin_correlation!(
-            measurement_container,
-            detwf,
-            model_geometry,
-            pht
+            tight_binding_parameters,
+            determinantal_parameters,
+            coupling_parameters,
+            pconfig, N, Np,
+            model_geometry = model_geometry,
+            jas_factors = jas_factors,
+            jas_parameters = jas_parameters,
+            ph_transform = ph_transform
         )
     end
 
-    # record the current particle configuration
-    measurement_container.simulation_measurements["pconfig"] = detwf.pconfig
+    # make equal-time correlation measurements
+    if !isempty(equaltime_correlations)
+        make_equaltime_measurements!(
+            equaltime_correlations,
+            unit_cell,
+            pconfig, N, Ncells, ph_transform
+        )
+    end
 
     return nothing
 end
 
 
-@doc raw"""
+# make local measurements
+function make_local_measurements!(
+    local_measurements::Dict{String, Union{Vector{Complex{T}}, Vector{Vector{Complex{T}}}}},
+    detwf::DeterminantalWavefunction{T},
+    tight_binding_parameters::TightBindingParameters{T, E},
+    coupling_parameters::Tuple,
+    model_geometry::ModelGeometry,
+    pconfig::Vector{Int}, N::Int, ph_transform::Bool;
+    jas_factors::Union{Tuple{<:AbstractJastrowFactor{T}}, Nothing} = nothing,
+    jas_parameters::Union{Tuple{JastrowParameters}, Nothing} = nothing
+) where {T<:Number, E<:AbstractFloat}
+    # number of orbitals per unit cell
+    unit_cell = model_geometry.unit_cell
+    lattice = model_geometry.lattice
+    norbital = unit_cell.n
+    Ncells = lattice.N
 
-    make_measurements!( measurement_container::NamedTuple, 
-                        detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-                        tight_binding_model::TightBindingModel{E2}, 
-                        hubbard_model::HubbardModel{E2},
-                        model_geometry::ModelGeometry, 
-                        Np::I, 
-                        pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
-
-Measures simulation observables including the local energy ``\langle E_{\mathrm{loc}}\rangle``,
-average double occupancy ``\langle D\rangle``, and average density ``\langle n\rangle``.
-Also records the current particle configuration ``|x\rangle``.
-
-- `measurement_container::NamedTuple`: container where measurements are stored.
-- `detwf::DeterminantalWavefunction{T, Q, E, I}`: current determinantal wavefunction.
-- `tight_binding_model::TightBindingModel{E}`: non-interacting tight-binding model. 
-- `hubbard_model::HubbardModel{E2}`: Hubbard interaction parameters.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `Np::I`: total number of particles in the system.
-- `pht::Bool`: whether or not model is particle-hole transformed.
-
-"""
-function make_measurements!(
-    measurement_container::NamedTuple, 
-    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-    tight_binding_model::TightBindingModel{E2}, 
-    hubbard_model::HubbardModel{E2},
-    model_geometry::ModelGeometry, 
-    Np::I, 
-    pht::Bool
-) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
-    # measure the local energy
-    measure_local_energy!(
-        measurement_container, 
-        detwf, 
-        tight_binding_model, 
-        hubbard_model,
-        model_geometry, 
-        Np, 
-        pht
-    )
-
-    # measure double occupancy
-    measure_double_occ!(
-        measurement_container, 
-        detwf, 
-        model_geometry, 
-        pht
-    )
-
-    # measure average density
-    measure_n!(
-        "local",
-        measurement_container, 
-        detwf, 
-        model_geometry,
-        pht
-    )
-
-    # measure site_dependent density (if added)
-    if haskey(measurement_container.simulation_measurements, "site-dependent_density")
-        measure_n!(
-            "site-dependent",
-            measurement_container, 
-            detwf, 
-            model_geometry,
-            pht
-        ) 
-    end
-
-    # measure average Sz (if added)
-    if haskey(measurement_container.simulation_measurements, "local_spin-z")
-        measure_Sz!(
-            "local",
-            measurement_container, 
-            detwf, 
-            model_geometry,
-            pht
-        ) 
-    end
-
-    # measure site_dependent Sz (if added)
-    if haskey(measurement_container.simulation_measurements, "site-dependent_spin-z")
-        measure_Sz!(
-            "site-dependent",
-            measurement_container, 
-            detwf, 
-            model_geometry,
-            pht
-        ) 
-    end
-    
-    # measure correlations (if added)
-    if haskey(measurement_container.correlation_measurements, "density")
-        measure_density_correlation!(
-            measurement_container,
-            detwf,
-            model_geometry,
-            pht
-        )
-    end
-    if haskey(measurement_container.correlation_measurements, "spin")
-        measure_spin_correlation!(
-            measurement_container,
-            detwf,
-            model_geometry,
-            pht
-        )
-    end
-
-    # record the current particle configuration
-    measurement_container.simulation_measurements["pconfig"] = detwf.pconfig
-
-    return nothing
-end
-
-
-@doc raw"""
-
-    make_measurements!( measurement_container::NamedTuple, 
-                        detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-                        jastrow_factor::JastrowFactor{E2},
-                        tight_binding_model::TightBindingModel{E2}, 
-                        hubbard_model::HubbardModel{E2},
-                        jastrow_parameters::JastrowParameters{S, K, V, I},
-                        model_geometry::ModelGeometry, 
-                        Np::I, 
-                        pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
-
-Measures simulation observables including the local energy ``\langle E_{\mathrm{loc}}\rangle``,
-average double occupancy ``\langle D\rangle``, and average density ``\langle n\rangle``.
-Also records the current particle configuration ``|x\rangle``.
-
-- `measurement_container::NamedTuple`: container where measurements are stored.
-- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current determinantal wavefunction.
-- `jastrow_factor::JastrowFactor{E2}`: current Jastrow factor. 
-- `tight_binding_model::TightBindingModel{E2}`: non-interacting tight-binding model. 
-- `hubbard_model::HubbardMode{E2}`: Hubbard interaction parameters.
-- `jastrow_parameters::JastrowParameters{S, K, V, I}`: current set of Jastrow variational parameters.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `Np::I`: total number of particles in the system.
-- `pht::Bool`: whether or not model is particle-hole transformed.
-
-"""
-function make_measurements!(measurement_container::NamedTuple, 
-    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-    jastrow_factor::JastrowFactor{E2},
-    tight_binding_model::TightBindingModel{E2},
-    hubbard_model::HubbardModel{E2},
-    jastrow_parameters::JastrowParameters{S, K, V, I},
-    model_geometry::ModelGeometry, 
-    Np::I, 
-    pht::Bool
-) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
-    # measure the local energy
-    measure_local_energy!(
-        measurement_container, 
-        detwf, 
-        jastrow_factor, 
-        tight_binding_model, 
-        hubbard_model,
-        jastrow_parameters,
-        model_geometry, 
-        Np, 
-        pht
-    )
-
-    # measure double occupancy
-    measure_double_occ!(
-        measurement_container, 
-        detwf, 
-        model_geometry, 
-        pht
-    )
-
-    # measure average density
-    measure_n!(
-        "local",
-        measurement_container, 
-        detwf, 
-        model_geometry,
-        pht
-    )
-
-    # measure site_dependent density (if added)
-    if haskey(measurement_container.simulation_measurements, "site-dependent_density")
-        measure_n!(
-            "site-dependent",
-            measurement_container, 
-            detwf, 
-            model_geometry,
-            pht
-        ) 
-    end
-
-    # measure average Sz (if added)
-    if haskey(measurement_container.simulation_measurements, "local_spin-z")
-        measure_Sz!(
-            "local",
-            measurement_container, 
-            detwf, 
-            model_geometry,
-            pht
-        ) 
-    end
-
-    # measure site_dependent Sz (if added)
-    if haskey(measurement_container.simulation_measurements, "site-dependent_spin-z")
-        measure_Sz!(
-            "site-dependent",
-            measurement_container, 
-            detwf, 
-            model_geometry,
-            pht
-        ) 
-    end
-    
-    # measure correlations (if added)
-    if haskey(measurement_container.correlation_measurements, "density")
-        measure_density_correlation!(
-            measurement_container,
-            detwf,
-            model_geometry,
-            pht
-        )
-    end
-    if haskey(measurement_container.correlation_measurements, "spin")
-        measure_spin_correlation!(
-            measurement_container,
-            detwf,
-            model_geometry,
-            pht
-        )
-    end
-
-    # record the current particle configuration
-    measurement_container.simulation_measurements["pconfig"] = detwf.pconfig
-
-    return nothing
-end
-
-
-@doc raw"""
-
-    make_measurements!( measurement_container::NamedTuple, 
-                        detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-                        jastrow_factor_1::JastrowFactor{E2},
-                        jastrow_factor_2::JastrowFactor{E2},
-                        tight_binding_model::TightBindingModel{E2}, 
-                        hubbard_model::HubbardModel{E2},
-                        jastrow_parameters_1::JastrowParameters{S, K, V, I},
-                        jastrow_parameters_2::JastrowParameters{S, K, V, I},
-                        model_geometry::ModelGeometry, 
-                        Np::I, 
-                        pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
-
-Measures simulation observables including the local energy ``\langle E_{\mathrm{loc}}\rangle``,
-average double occupancy ``\langle D\rangle``, and average density ``\langle n\rangle``.
-Also records the current particle configuration ``|x\rangle``.
-
-- `measurement_container::NamedTuple`: container where measurements are stored.
-- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current determinantal wavefunction.
-- `jastrow_factor_1::JastrowFactor{E2}`: first Jastrow factor.
-- `jastrow_factor_2::JastrowFactor{E2}`: second Jastrow factor. 
-- `tight_binding_model::TightBindingModel{E2}`: non-interacting tight-binding model. 
-- `hubbard_model::HubbardModel{E2}`: Hubbard interaction parameters.
-- `jastrow_parameters_1::JastrowParameters{S, K, V, I}`: first set of Jastrow variational parameters.
-- `jastrow_parameters_2::JastrowParameters{S, K, V, I}`: second set of Jastrow variational parameters.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `Np::I`: total number of particles in the system.
-- `pht::Bool`: whether or not model is particle-hole transformed.
-
-"""
-function make_measurements!(measurement_container::NamedTuple, 
-    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-    jastrow_factor_1::JastrowFactor{E2},
-    jastrow_factor_2::JastrowFactor{E2},
-    tight_binding_model::TightBindingModel{E2},
-    hubbard_model::HubbardModel{E2},
-    jastrow_parameters_1::JastrowParameters{S, K, V, I},
-    jastrow_parameters_2::JastrowParameters{S, K, V, I},
-    model_geometry::ModelGeometry, 
-    Np::I, 
-    pht::Bool
-) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
-    # measure the local energy
-    measure_local_energy!(
-        measurement_container, 
-        detwf, 
-        jastrow_factor_1,
-        jastrow_factor_2,
-        tight_binding_model, 
-        hubbard_model,
-        jastrow_parameters_1,
-        jastrow_parameters_2,
-        model_geometry, 
-        Np, 
-        pht
-    )
-
-    # measure double occupancy
-    measure_double_occ!(
-        measurement_container, 
-        detwf, 
-        model_geometry, 
-        pht
-    )
-
-    # measure average density
-    measure_n!(
-        "local",
-        measurement_container, 
-        detwf, 
-        model_geometry,
-        pht
-    )
-
-    # measure site_dependent density (if added)
-    if haskey(measurement_container.simulation_measurements, "site-dependent_density")
-        measure_n!(
-            "site-dependent",
-            measurement_container, 
-            detwf, 
-            model_geometry,
-            pht
-        ) 
-    end
-
-    # measure average Sz (if added)
-    if haskey(measurement_container.simulation_measurements, "local_spin-z")
-        measure_Sz!(
-            "local",
-            measurement_container, 
-            detwf, 
-            model_geometry,
-            pht
-        ) 
-    end
-
-    # measure site_dependent Sz (if added)
-    if haskey(measurement_container.simulation_measurements, "site-dependent_spin-z")
-        measure_Sz!(
-            "site-dependent",
-            measurement_container, 
-            detwf, 
-            model_geometry,
-            pht
-        ) 
-    end
-    
-    # measure correlations (if added)
-    if haskey(measurement_container.correlation_measurements, "density")
-        measure_density_correlation!(
-            measurement_container,
-            detwf,
-            model_geometry,
-            pht
-        )
-    end
-    if haskey(measurement_container.correlation_measurements, "spin")
-        measure_spin_correlation!(
-            measurement_container,
-            detwf,
-            model_geometry,
-            pht
-        )
-    end
-
-    # record the current particle configuration
-    measurement_container.simulation_measurements["pconfig"] = detwf.pconfig
-
-    return nothing
-end
-
-
-"""
-
-    reset_measurements!( measurements::Dict{S, T}; 
-                         in_place::Bool = false ) where {S<:AbstractString, T}
-
-Resets values in the measurement container to zero.
-
-- `measurements::Dict{S, T}`: measurement container.
-- `in_place::Bool = false`: whether to perform in-place update of measurements. Best to set to `false` to prevent undesired mutation.
-
-"""
-function reset_measurements!(
-    measurements::Dict{S, T}; 
-    in_place::Bool = false
-) where {S<:AbstractString, T}
-    function reset_value(val)
-        # Numbers & complex -> scalar zero
-        if isa(val, Number) || isa(val, Complex)
-            return zero(val)
-
-        # 1D arrays / vectors
-        elseif isa(val, AbstractVector)
-            if in_place
-                fill!(val, zero(eltype(val)))
-                return val
-            else
-                return zeros(eltype(val), length(val))
-            end
-
-        # Matrices / N-d arrays
-        elseif isa(val, AbstractMatrix)
-            if in_place
-                fill!(val, zero(eltype(val)))
-                return val
-            else
-                return zeros(eltype(val), size(val)...)
-            end
-
-        # General <:AbstractArray (including Vector{Vector} etc.)
-        elseif isa(val, AbstractArray)
-            if in_place
-                for i in eachindex(val)
-                    val[i] = reset_value(val[i])
-                end
-                return val
-            else
-                return [ reset_value(x) for x in val ]
-            end
-
-        # Tuples: immutable -> build new tuple with reset elements
-        elseif isa(val, Tuple)
-            return tuple((reset_value(v) for v in val)...)
-
-        # Dict: recurse and return a new dict of reset values
-        elseif isa(val, Dict)
-            newd = Dict{Any,Any}()
-            for (k,v) in val
-                newd[k] = reset_value(v)
-            end
-            return newd
-
-        # fallback: unknown type -> return as-is
-        else
-            return val
+    for n in 1:norbital
+        # measure density
+        local_measurements["density"][n] += measure_n("mean", pconfig, unit_cell, n, Ncells, N, ph_transform)
+        if haskey(local_measurements, "site-dependent_density")
+            local_measurements["site-dependent_density"][n] += measure_n("site-dependent", pconfig, unit_cell, n, Ncells, N, ph_transform)
+        end
+        # measure double occupancy
+        local_measurements["double_occ"][n] += measure_double_occ(pconfig, unit_cell, n, Ncells, N, ph_transform)
+        # measure spin-z
+        local_measurements["spin-z"][n] += measure_spinz("mean", pconfig, unit_cell, n, Ncells, N, ph_transform)
+        if haskey(local_measurements, "site-dependent_spin-z")
+            local_measurements["site-dependent_spin-z"][n] += measure_spinz("site-dependent", pconfig, unit_cell, n, Ncells, N, ph_transform)
         end
     end
 
-    for (k, v) in measurements
-        if k == "parameters"
-            continue  # skip this key
+    # make tight binding measurements
+    make_local_measurements!(
+        local_measurements,
+        detwf,
+        tight_binding_parameters,
+        pconfig, N, ph_transform,
+        model_geometry = model_geometry,
+        jas_factors = jas_factors,
+        jas_parameters = jas_parameters
+    )
+
+    # make local measurements associated with couplings
+    for coupling_parameter in coupling_parameters
+        make_local_measurements!(
+            local_measurements,
+            coupling_parameter,
+            pconfig,
+            ph_transform
+        )
+    end
+
+    return nothing
+end
+
+
+# make local measurements associated with the tight binding model
+function make_local_measurements!(
+    local_measurements::Dict{String, Union{Vector{Complex{T}}, Vector{Vector{Complex{T}}}}},
+    detwf::DeterminantalWavefunction{T},
+    tight_binding_parameters::TightBindingParameters{T, E},
+    pconfig::Vector{Int}, N::Int, ph_transform::Bool;
+    model_geometry::ModelGeometry = model_geometry,
+    jas_factors::Union{Tuple{<:AbstractJastrowFactor{T}}, Nothing} = nothing,
+    jas_parameters::Union{Tuple{JastrowParameters}, Nothing} = nothing
+) where {T<:Number, E<:AbstractFloat}
+    # number of orbitals per unit cell
+    norbital = tight_binding_parameters.norbital
+
+    # number of types of hopping
+    bond_ids = tight_binding_parameters.bond_ids
+    nhopping = length(tight_binding_parameters.bond_ids)
+
+    if nhopping > 0
+        for hopping_id in 1:nhopping
+            # measure the hopping hopping
+            e_hop = measure_hopping_energy(
+                detwf,
+                tight_binding_parameters,
+                pconfig,
+                hopping_id,
+                N,
+                ph_transform,
+                model_geometry = model_geometry,
+                jas_factors = jas_factors,
+                jas_parameters = jas_parameters
+            )
+
+            local_measurements["hopping_energy"][hopping_id] += e_hop
         end
-        measurements[k] = reset_value(v)
+    end
+
+    return nothing
+end
+
+
+# make local measurements associated with the Hubbard model
+function make_local_measurements!(
+    local_measurements::Dict{String, Union{Vector{Complex{T}}, Vector{Vector{Complex{T}}}}},
+    hubbard_parameters::HubbardParameters{E},
+    pconfig::Vector{Int}, ph_transform::Bool
+) where {T<:Number, E<:AbstractFloat}
+    # measure hubbard energy for each orbital in unit cell
+    hubbard_energies = local_measurements["hubbard_energy"]
+    for hubbard_id in eachindex(hubbard_energies)
+        hubbard_energies[hubbard_id] += measure_hubbard_energy(hubbard_parameters, hubbard_id, pconfig, ph_transform)
+    end
+
+    return nothing
+end
+
+
+# make local measurements associated with the extended Hubbard model
+function make_local_measurements!(
+    local_measurements::Dict{String, Union{Vector{Complex{T}}, Vector{Vector{Complex{T}}}}},
+    extended_hubbard_parameters::ExtendedHubbardParameters{E},
+    pconfig::Vector{Int}, ph_transform::Bool
+) where {T<:Number, E<:AbstractFloat}
+
+    # measure hubbard energy for each orbital in unit cell
+    ext_hub_energies = local_measurements["ext_hub_energy"]
+    for ext_hub_id in eachindex(ext_hub_energies)
+        ext_hub_energies[ext_hub_id] += measure_ext_hubbard_energy(extended_hubbard_parameters, ext_hub_id, pconfig, ph_transform)
+    end
+
+    return nothing
+end
+
+
+# make global measurements
+function make_global_measurements!(
+    global_measurements::Dict{String, Complex{T}},
+    detwf::DeterminantalWavefunction{T},
+    tight_binding_parameters::TightBindingParameters{T, E},
+    coupling_parameters::Tuple,
+    pconfig::Vector{Int}, N::Int, ph_transform::Bool;
+    model_geometry::ModelGeometry,
+    jas_factors::Union{Tuple{<:AbstractJastrowFactor{T}}, Nothing} = nothing,
+    jas_parameters::Union{Tuple{JastrowParameters}, Nothing} = nothing
+) where {T<:Number, E<:AbstractFloat}
+    # measure the average density
+    global_measurements["density"] += measure_n("mean", pconfig, N, ph_transform)
+
+    # measure the double occupancy
+    global_measurements["double_occ"] += measure_double_occ(pconfig, N, ph_transform)
+
+    # measure the average spin-z
+    global_measurements["spin-z"] += measure_spinz("mean", pconfig, N, ph_transform)
+    
+    # measure the total energy per site 
+    global_measurements["energy_per_site"] += measure_variational_energy(
+                                                    detwf, 
+                                                    tight_binding_parameters, 
+                                                    coupling_parameters,
+                                                    pconfig, N, ph_transform,
+                                                    model_geometry = model_geometry, 
+                                                    jas_factors = jas_factors,
+                                                    jas_parameters = jas_parameters
+                                                )
+
+    return nothing
+end
+
+
+# make optimization measurements
+function make_optimization_measurements!(
+    optimization_measurements::Dict{String, Union{Vector{T}, Vector{Complex{T}}, Matrix{Complex{T}}}},
+    detwf::DeterminantalWavefunction{T},
+    tight_binding_parameters::TightBindingParameters{T, E},
+    determinantal_parameters::DeterminantalParameters{S, T},
+    coupling_parameters::Tuple,
+    pconfig::Vector{Int}, N::Int, Np::Int;
+    model_geometry::ModelGeometry,
+    jas_factors::Union{Tuple{<:AbstractJastrowFactor}, Nothing} = nothing,
+    jas_parameters::Union{Tuple{JastrowParameters}, Nothing} = nothing,
+    ph_transform::Bool = false
+) where {T<:Number, E<:AbstractFloat, S}
+    logD = measure_Dk(detwf, determinantal_parameters, pconfig, N, Np)
+
+    if !isnothing(jas_parameters)
+        for jasp in jas_parameters
+            for o in jasp.orbitals
+                logDj = measure_Dk(jasp, o, pconfig, N, ph_transform)
+                logD = vcat(logD, logDj)
+            end
+        end
+    end
+
+    # measure the global energy
+    E_glob = measure_variational_energy(
+        detwf, 
+        tight_binding_parameters, 
+        coupling_parameters,
+        pconfig, N, ph_transform,
+        model_geometry = model_geometry, 
+        jas_factors = jas_factors,
+        jas_parameters = jas_parameters
+    )
+
+    optimization_measurements["logDk"]          += logD
+    optimization_measurements["logDklogDkp"]    += logD .* logD'
+    optimization_measurements["logDkE"]         += logD .* E_glob
+
+    return nothing
+end
+
+
+# make equal-time measurements
+function make_equaltime_measurements!(
+    equaltime_correlations::Dict{String, CorrelationContainer{D,E}},
+    unit_cell::UnitCell,
+    pconfig::Vector{Int}, N::Int, Ncells::Int, ph_transform::Bool
+) where {D, E}
+    # iterate over equal-time correlation function getting measured
+    for correlation in keys(equaltime_correlations)
+
+        correlation_container = equaltime_correlations[correlation]::CorrelationContainer{D,E}
+        id_pairs = correlation_container.id_pairs::Vector{NTuple{2,Int}}
+        correlations = correlation_container.correlations::Vector{Array{Complex{E}, D}}
+
+        if correlation == "density"
+            for k in eachindex(id_pairs)
+                (i,j) = id_pairs[k]
+                n_i = measure_n("site-dependent", pconfig, unit_cell, i, Ncells, N, ph_transform) 
+                n_j = measure_n("site-dependent", pconfig, unit_cell, j, Ncells, N, ph_transform) 
+                
+                correlations[k] += n_i * n_j'
+            end
+        elseif correlation == "spin-z"
+            for k in eachindex(id_pairs)
+                (i,j) = id_pairs[k]
+                s_i = measure_spinz("site-dependent", pconfig, unit_cell, i, Ncells, N, ph_transform) 
+                s_j = measure_spinz("site-dependent", pconfig, unit_cell, j, Ncells, N, ph_transform) 
+  
+                correlations[k] += s_i * s_j'
+            end
+        elseif correlation == "pair"
+            @assert ph_transform == true
+            # TODO
+        end
     end
 
     return nothing

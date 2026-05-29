@@ -3,16 +3,16 @@
     include("../examples/hubbard_square.jl")
 
     @test isnothing(
-        run_hubbard_square_simulation(
+        run_simulation(
             sID             = abs(rand(Int)), 
             L               = 4, 
             U               = 4.0, 
             density         = 1.0, 
-            pht             = false, 
+            ph_transform    = true, 
             N_equil         = 2, 
             N_opt           = 2, 
-            N_opt_bins      = 2, 
             N_sim           = 2, 
+            N_opt_bins      = 2,
             N_sim_bins      = 2, 
             filepath        = tempdir()
         )

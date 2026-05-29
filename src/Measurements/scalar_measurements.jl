@@ -1,912 +1,402 @@
 @doc raw"""
 
-    get_local_energy( detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-                      tight_binding_model::TightBindingModel{E2}, 
-                      hubbard_model::HubbardModel{E2},
-                      model_geometry::ModelGeometry, 
-                      Np::I, 
-                      pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
-
-Calculates the local variational energy per site ``E_{\mathrm{var}}/N`` for a Hubbard model.
-
-- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current variational wavefunction.
-- `tight_binding_model::TightBindingModel{E}`: parameters for a non-interacting tight-binding model. 
-- `hubbard_model::HubbardModel{E2}`: Hubbard interaction parameters.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `Np::I`: total number of particles in the system.
-- `pht::Bool`: whether model is particle-hole transformed.
-
-"""
-function get_local_energy(
-    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-    tight_binding_model::TightBindingModel{E2}, 
-    hubbard_model::HubbardModel{E2},
-    model_geometry::ModelGeometry, 
-    Np::I, 
-    pht::Bool
-) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
-    # number of lattice sites
-    Norbs = model_geometry.unit_cell.n
-    Ncells = model_geometry.lattice.N
-    N = Norbs * Ncells
-
-    # calculate kinetic energy
-    E_k = get_local_kinetic_energy(
-        detwf, 
-        tight_binding_model, 
-        model_geometry, 
-        Np, 
-        pht
+    measure_double_occ(
+        pconfig::Vector{Int},
+        N::Int,
+        ph_transform::Bool
     )
 
-    # calculate on-site Hubbard energy
-    E_hubb = get_local_hubbard_energy( 
-        detwf, 
-        hubbard_model.U₀,
-        model_geometry, 
-        pht
-    )
+Measures the average double occupancy ``\langle \hat{n}_\uparrow \hat{n}_\downarrow \rangle`` given the current particle configuration. 
 
-    # calculate extended Hubbard energy
-    if hubbard_model.U₁ != 0.0
-        E_ext_hubb = get_extended_hubbard_energy(
-            detwf,  
-            hubbard_model.U₁,
-            model_geometry,
-            pht
-        )
-    else
-        E_ext_hubb = 0.0
-    end
+# ARGUMENTS
 
-    # calculate total local energy
-    E_loc = E_k + E_hubb + E_ext_hubb
-    
-    return E_loc / N
-end
-
-
-@doc raw"""
-
-    get_local_energy( detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-                      jastrow_factor::JastrowFactor{E2},
-                      tight_binding_model::TightBindingModel{E2},
-                      hubbard_model::HubbardModel{E2},
-                      jastrow_parameters::JastrowParameters{S, K, V, I}, 
-                      model_geometry::ModelGeometry,
-                      Np::I,
-                      pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
-
-Calculates the local variational energy ``E_{\mathrm{var}}`` per site for a Hubbard model.
-
-- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current variational wavefunction.
-- `jastrow_factor::JastrowFactor{E2}`: current Jastrow factor.
-- `tight_binding_model::TightBindingModel{E2}`: parameters for a non-interacting tight-binding model. 
-- `hubbard_model::HubbardModel{E2}`: Hubbard interaction parameters.
-- `jastrow_parameters::JastrowParameters{S, K, V, I}`: current set of Jastrow variational parameters.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `Np::I`: total number of particles in the system.
-- `pht::Bool`: whether model is particle-hole transformed.
+-`pconfig::Vector{Int}`: Current particle configuration.
+-`N::Int`: Total number of sites on the lattice.
+-`ph_transform::Bool`: Whether the model is particle-hole transformed.
 
 """
-function get_local_energy(
-    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-    jastrow_factor::JastrowFactor{E2},
-    tight_binding_model::TightBindingModel{E2}, 
-    hubbard_model::HubbardModel{E2},
-    jastrow_parameters::JastrowParameters{S, K, V, I},
-    model_geometry::ModelGeometry, 
-    Np::I, 
-    pht::Bool
-) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
-    # number of lattice sites
-    Norbs = model_geometry.unit_cell.n
-    Ncells = model_geometry.lattice.N
-    N = Norbs * Ncells
-
-    # calculate kinetic energy
-    E_k = get_local_kinetic_energy(
-        detwf, 
-        jastrow_factor, 
-        tight_binding_model, 
-        jastrow_parameters,
-        model_geometry, 
-        Np, 
-        pht
-    )
-
-    # calculate on-site Hubbard energy
-    E_hubb = get_local_hubbard_energy( 
-        detwf, 
-        hubbard_model.U₀,
-        model_geometry, 
-        pht
-    )
-
-    # calculate extended Hubbard energy
-    if hubbard_model.U₁ != 0.0
-        E_ext_hubb = get_extended_hubbard_energy(
-            detwf,
-            hubbard_model.U₁,
-            model_geometry, 
-            pht
-        )
-    else
-        E_ext_hubb = 0.0
-    end
-
-    # calculate total local energy
-    E_loc = E_k + E_hubb + E_ext_hubb
-    
-    return E_loc / N
-end
-
-
-@doc raw"""
-
-    get_local_energy( detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-                      jastrow_factor_1::JastrowFactor{E2},
-                      jastrow_factor_2::JastrowFactor{E2},
-                      tight_binding_model::TightBindingModel{E2},
-                      hubbard_model::HubbardModel{E2},
-                      jastrow_parameters_1::JastrowParameters{S, K, V, I},
-                      jastrow_parameters_2::JastrowParameters{S, K, V, I}, 
-                      model_geometry::ModelGeometry,
-                      Np::I,
-                      pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
-
-Calculates the local variational energy ``E_{\mathrm{var}}`` per site for a Hubbard model.
-
-- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current variational wavefunction.
-- `jastrow_factor_1::JastrowFactor{E2}`: first Jastrow factor.
-- `jastrow_factor_2::JastrowFactor{E2}`: second Jastrow factor.
-- `tight_binding_model::TightBindingModel{E2}`: parameters for a non-interacting tight-binding model. 
-- `hubbard_model::HubbardModel{E2}`: Hubbard interaction parameters.
-- `jastrow_parameters_1::JastrowParameters{S, K, V, I}`: first set of Jastrow variational parameters.
-- `jastrow_parameters_2::JastrowParameters{S, K, V, I}`: second set of Jastrow variational parameters.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `Np::I`: total number of particles in the system.
-- `pht::Bool`: whether model is particle-hole transformed.
-
-"""
-function get_local_energy(
-    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-    jastrow_factor_1::JastrowFactor{E2},
-    jastrow_factor_2::JastrowFactor{E2}, 
-    tight_binding_model::TightBindingModel{E2}, 
-    hubbard_model::HubbardModel{E2},
-    jastrow_parameters_1::JastrowParameters{S, K, V, I},
-    jastrow_parameters_2::JastrowParameters{S, K, V, I},
-    model_geometry::ModelGeometry, 
-    Np::I, 
-    pht::Bool
-) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
-    # number of lattice sites
-    Norbs = model_geometry.unit_cell.n
-    Ncells = model_geometry.lattice.N
-    N = Norbs * Ncells
-
-    # calculate kinetic energy
-    E_k = get_local_kinetic_energy(
-        detwf, 
-        jastrow_factor_1, 
-        jastrow_factor_2, 
-        tight_binding_model, 
-        jastrow_parameters_1,
-        jastrow_parameters_2,
-        model_geometry, 
-        Np, 
-        pht
-    )
-
-    # calculate on-site Hubbard energy
-    E_hubb = get_local_hubbard_energy( 
-        detwf, 
-        hubbard_model.U₀,
-        model_geometry, 
-        pht
-    )
-
-    # calculate extended Hubbard energy
-    if hubbard_model.U₁ != 0.0
-        E_ext_hubb = get_extended_hubbard_energy( 
-            detwf, 
-            hubbard_model.U₁,
-            model_geometry, 
-            pht
-        )
-    else
-        E_ext_hubb = 0.0
-    end
-
-    # calculate total local energy
-    E_loc = E_k + E_hubb + E_ext_hubb
-    
-    return E_loc / N
-end
-
-
-@doc raw"""
-
-    get_local_kinetic_energy( detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-                              tight_binding_model::TightBindingModel{E2}, 
-                              model_geometry::ModelGeometry, 
-                              Np::I
-                              pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
-
-Calculates the local kinetic energy ``E_{\mathrm{kin}}`` . 
-
-- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current variational wavefunction.
-- `tight_binding_model::TightBindingModel{E2}`: parameters for a non-interacting tight-binding model. 
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `Np::I`: total number of particles in the system.
-- `pht::Bool`: whether model is particle-hole transformed.
-
-"""
-function get_local_kinetic_energy(
-    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-    tight_binding_model::TightBindingModel{E2}, 
-    model_geometry::ModelGeometry, 
-    Np::I, 
-    pht::Bool
-) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
-    dims = length(model_geometry.lattice.L)
-    Lx   = model_geometry.lattice.L[1]
-    if dims != 1
-        Ly = model_geometry.lattice.L[2]
-    else
-        Ly = 1
-    end
-
-    # hopping amplitudes       
-    t₀ = tight_binding_model.t₀
-    t₁ = tight_binding_model.t₁
-
-    # generate nearest neighbor table
-    nbr_table0 = build_neighbor_table(
-        model_geometry.bond[1],
-        model_geometry.unit_cell,
-        model_geometry.lattice
-    )
-
-    # remove double counting if any lattice dimension equals 2
-    if Lx == 2 || Ly == 2
-        keep = trues(size(nbr_table0, 2))
-        seen = Set{Tuple{Int,Int}}()
-
-        for (j, col) in enumerate(eachcol(nbr_table0))
-            key = Tuple(sort(col))
-            if key in seen
-                keep[j] = false
-            else
-                push!(seen, key)
-            end
-        end
-
-        nbr_table0 = nbr_table0[:, keep]
-    end
-
-    # generate neighbor map
-    nbr_map0 = map_neighbor_table(nbr_table0)
-
-    E_loc_kinetic = 0.0
-
-    for β in 1:Np
-        # spindex of particle
-        k = findfirst(x -> x == β, detwf.pconfig)
-
-        # real position 
-        ksite = get_index_from_spindex(k, model_geometry) 
-
-        # check spin of particle  
-        spin = get_spindex_type(k, model_geometry)
-      
-        # loop over nearest neighbors
-        sum_nn = 0.0
-        for lsite in nbr_map0[ksite][2]
-            if spin == 1
-                l = get_spindices_from_index(lsite, model_geometry)[1]
-            else
-                l = get_spindices_from_index(lsite, model_geometry)[2]
-            end
-
-            # check that neighboring site is unoccupied
-            if detwf.pconfig[l] == 0
-                sum_nn += detwf.W[l, β]
-            end
-        end
-
-        sum_nnn = 0.0
-        if t₁ != 0.0
-            # generate next-nearest neighbor table
-            nbr_table1 = build_neighbor_table(
-                model_geometry.bond[2],
-                model_geometry.unit_cell,
-                model_geometry.lattice
-            )
-
-            # generate neighbor map
-            nbr_map1 = map_neighbor_table(nbr_table1)
-
-            # loop over next-nearest neighbors
-            sum_nnn = 0.0
-            for lsite in nbr_map1[ksite][2]
-                if spin == 1
-                    l = get_spindices_from_index(lsite, model_geometry)[1]
-                else
-                    l = get_spindices_from_index(lsite, model_geometry)[2]
-                end
-
-                # check that neighboring site is unoccupied
-                if detwf.pconfig[l] == 0
-                    sum_nnn += detwf.W[l, β]
-                end
-            end
-        end
-
-        if pht 
-            if spin == 1
-                E_loc_kinetic += (-t₀ * sum_nn) + (t₁ * sum_nnn)
-            else
-                E_loc_kinetic += (t₀ * sum_nn) - (t₁ * sum_nnn)
-            end
-        else
-            E_loc_kinetic += (-t₀ * sum_nn) + (t₁ * sum_nnn)
-        end
-    end
-
-    return real(E_loc_kinetic)
-end
-
-
-@doc raw"""
-
-    get_local_kinetic_energy( detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-                              jastrow_factor::JastrowFactor{E2},
-                              tight_binding_model::TightBindingModel{E2}, 
-                              jastrow_parameters::JastrowParameters{S, K, V, I},
-                              model_geometry::ModelGeometry, 
-                              Np::I,
-                              pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
-
-Calculates the local kinetic energy ``E_{\mathrm{kin}}`` . 
-
-- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current variational wavefunction.
-- `jastrow_factor::JastrowFactor{E2}`: current Jastrow factor.
-- `tight_binding_model::TightBindingModel{E2}`: parameters for a non-interacting tight-binding model. 
-- `jastrow_parameters::JastrowParameters{S, K, V, I}`: current set of Jastrow variational parameters.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `Np::I`: total number of particles in the system.
-- `pht::Bool`: whether model is particle-hole transformed.
-
-"""
-function get_local_kinetic_energy(
-    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-    jastrow_factor::JastrowFactor{E2},
-    tight_binding_model::TightBindingModel{E2}, 
-    jastrow_parameters::JastrowParameters{S, K, V, I}, 
-    model_geometry::ModelGeometry, 
-    Np::I, 
-    pht::Bool
-) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
-    dims = length(model_geometry.lattice.L)
-    Lx   = model_geometry.lattice.L[1]
-    if dims != 1
-        Ly = model_geometry.lattice.L[2]
-    else
-        Ly = 1
-    end
-
-    # hopping amplitudes       
-    t₀ = tight_binding_model.t₀
-    t₁ = tight_binding_model.t₁
-
-    # generate neighbor table
-    nbr_table0 = build_neighbor_table(
-        model_geometry.bond[1],
-        model_geometry.unit_cell,
-        model_geometry.lattice
-    )
-
-    # remove double counting if any lattice dimension equals 2
-    if Lx == 2 || Ly == 2
-        keep = trues(size(nbr_table0, 2))
-        seen = Set{Tuple{Int,Int}}()
-
-        for (j, col) in enumerate(eachcol(nbr_table0))
-            key = Tuple(sort(col))
-            if key in seen
-                keep[j] = false
-            else
-                push!(seen, key)
-            end
-        end
-
-        nbr_table0 = nbr_table0[:, keep]
-    end
-
-    # generate neighbor maps
-    nbr_map0 = map_neighbor_table(nbr_table0)
-
-    E_loc_kinetic = 0.0
-
-    for β in 1:Np
-        # spindex of particle
-        k = findfirst(x -> x == β, detwf.pconfig)
-
-        # real position 
-        ksite = get_index_from_spindex(k, model_geometry) 
-
-        # check spin of particle  
-        spin = get_spindex_type(k, model_geometry)
-      
-        # loop over nearest neighbors
-        sum_nn = 0.0
-        for lsite in nbr_map0[ksite][2]
-            if spin == 1
-                l = get_spindices_from_index(lsite, model_geometry)[1]
-            else
-                l = get_spindices_from_index(lsite, model_geometry)[2]
-            end
-
-            # check that neighboring site is unoccupied
-            if detwf.pconfig[l] == 0
-                @assert jastrow_parameters.jastrow_type == "e-den-den" || jastrow_parameters.jastrow_type == "e-spn-spn"
-
-                Rⱼ = get_fermionic_jastrow_ratio(
-                    k, 
-                    l, 
-                    jastrow_parameters, 
-                    jastrow_factor, 
-                    pht, 
-                    spin, 
-                    model_geometry
-                )
-
-                sum_nn += Rⱼ * detwf.W[l, β]
-            end
-        end
-
-        sum_nnn = 0.0
-        if t₁ != 0.0
-            # generate next-nearest neighbor table
-            nbr_table1 = build_neighbor_table(
-                model_geometry.bond[2],
-                model_geometry.unit_cell,
-                model_geometry.lattice
-            )
-
-            # generate neighbor map
-            nbr_map1 = map_neighbor_table(nbr_table1)
-
-            # loop over next nearest neighbors
-            sum_nnn = 0.0
-            for lsite in nbr_map1[ksite][2]
-                if spin == 1
-                    l = get_spindices_from_index(lsite, model_geometry)[1]
-                else
-                    l = get_spindices_from_index(lsite, model_geometry)[2]
-                end
-
-                # check that neighboring site is unoccupied
-                if detwf.pconfig[l] == 0
-                    Rⱼ = get_fermionic_jastrow_ratio(
-                        k, 
-                        l, 
-                        jastrow_parameters, 
-                        jastrow_factor, 
-                        pht, 
-                        spin, 
-                        model_geometry
-                    )
-                    sum_nnn += Rⱼ * detwf.W[l, β]
-                end
-            end
-        end
-
-        if pht 
-            if spin == 1
-                E_loc_kinetic += (-t₀ * sum_nn) + (t₁ * sum_nnn)
-            else
-                E_loc_kinetic += (t₀ * sum_nn) - (t₁ * sum_nnn)
-            end
-        else
-            E_loc_kinetic += (-t₀ * sum_nn) + (t₁ * sum_nnn)
-        end
-    end
-
-    return real(E_loc_kinetic)
-end
-
-
-@doc raw"""
-
-    get_local_kinetic_energy( detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-                              jastrow_factor_1::JastrowFactor{E2},
-                              jastrow_factor_2::JastrowFactor{E2}, 
-                              tight_binding_model::TightBindingModel{2E}, 
-                              jastrow_parameters_1::JastrowParameters{S, K, V, I},
-                              jastrow_parameters_2::JastrowParameters{S, K, V, I},
-                              model_geometry::ModelGeometry, 
-                              Np::I,
-                              pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
-
-Calculates the local kinetic energy ``E_{\mathrm{kin}}`` . 
-
-- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current variational wavefunction.
-- `jastrow_factor_1::JastrowFactor{E2}`: first Jastrow factor.
-- `jastrow_factor_2::JastrowFactor{E2}`: second Jastrow factor.
-- `tight_binding_model::TightBindingModel{E2}`: parameters for a non-interacting tight-binding model. 
-- `jastrow_parameters_1::JastrowParameters{S, K, V, I}`: first set of Jastrow variational parameters.
-- `jastrow_parameters_2::JastrowParameters{S, K, V, I}`: second set of Jastrow variational parameters.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `Np::I`: total number of particles in the system.
-- `pht::Bool`: whether model is particle-hole transformed.
-
-"""
-function get_local_kinetic_energy(
-    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-    jastrow_factor_1::JastrowFactor{E2},
-    jastrow_factor_2::JastrowFactor{E2},
-    tight_binding_model::TightBindingModel{E2}, 
-    jastrow_parameters_1::JastrowParameters{S, K, V, I},
-    jastrow_parameters_2::JastrowParameters{S, K, V, I}, 
-    model_geometry::ModelGeometry, 
-    Np::I, 
-    pht::Bool
-) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
-    dims = length(model_geometry.lattice.L)
-    Lx   = model_geometry.lattice.L[1]
-    if dims != 1
-        Ly = model_geometry.lattice.L[2]
-    else
-        Ly = 1
-    end
-
-    # hopping amplitudes       
-    t₀ = tight_binding_model.t₀
-    t₁ = tight_binding_model.t₁
-
-    # generate neighbor table
-    nbr_table0 = build_neighbor_table(
-        model_geometry.bond[1],
-        model_geometry.unit_cell,
-        model_geometry.lattice
-    )
-
-    # remove double counting if any lattice dimension equals 2
-    if Lx == 2 || Ly == 2
-        keep = trues(size(nbr_table0, 2))
-        seen = Set{Tuple{Int,Int}}()
-
-        for (j, col) in enumerate(eachcol(nbr_table0))
-            key = Tuple(sort(col))
-            if key in seen
-                keep[j] = false
-            else
-                push!(seen, key)
-            end
-        end
-
-        nbr_table0 = nbr_table0[:, keep]
-    end
-
-    # generate neighbor maps
-    nbr_map0 = map_neighbor_table(nbr_table0)
-
-    E_loc_kinetic = 0.0
-
-    for β in 1:Np
-        # spindex of particle
-        k = findfirst(x -> x == β, detwf.pconfig)
-
-        # real position 
-        ksite = get_index_from_spindex(k, model_geometry) 
-
-        # check spin of particle  
-        spin = get_spindex_type(k, model_geometry)
-      
-        # loop over nearest neighbors
-        sum_nn = 0.0
-        for lsite in nbr_map0[ksite][2]
-            if spin == 1
-                l = get_spindices_from_index(lsite, model_geometry)[1]
-            else
-                l = get_spindices_from_index(lsite, model_geometry)[2]
-            end
-
-            # check that neighboring site is unoccupied
-            if detwf.pconfig[l] == 0
-                @assert jastrow_parameters_1.jastrow_type == "e-den-den" || jastrow_parameters_1.jastrow_type == "e-spn-spn" 
-                @assert jastrow_parameters_2.jastrow_type == "e-den-den" || jastrow_parameters_2.jastrow_type == "e-spn-spn"
-
-                Rⱼ₁ = get_fermionic_jastrow_ratio(
-                    k, 
-                    l, 
-                    jastrow_parameters_1, 
-                    jastrow_factor_1, 
-                    pht, 
-                    spin, 
-                    model_geometry
-                )
-
-                Rⱼ₂ = get_fermionic_jastrow_ratio(
-                    k, 
-                    l, 
-                    jastrow_parameters_2, 
-                    jastrow_factor_2, 
-                    pht, 
-                    spin, 
-                    model_geometry
-                )
-                sum_nn += Rⱼ₁ * Rⱼ₂ * detwf.W[l, β]
-            end
-        end
-
-        sum_nnn = 0.0
-        if t₁ != 0.0
-            # generate next-nearest neighbor table
-            nbr_table1 = build_neighbor_table(
-                model_geometry.bond[2],
-                model_geometry.unit_cell,
-                model_geometry.lattice
-            )
-
-            # generate neighbor map
-            nbr_map1 = map_neighbor_table(nbr_table1)
-
-            # loop over next nearest neighbors
-            sum_nnn = 0.0
-            for lsite in nbr_map1[ksite][2]
-                if spin == 1
-                    l = get_spindices_from_index(lsite, model_geometry)[1]
-                else
-                    l = get_spindices_from_index(lsite, model_geometry)[2]
-                end
-
-                # check that neighboring site is unoccupied
-                if detwf.pconfig[l] == 0
-                    Rⱼ₁ = get_fermionic_jastrow_ratio(
-                        k, 
-                        l, 
-                        jastrow_parameters_1, 
-                        jastrow_factor_1, 
-                        pht, 
-                        spin, 
-                        model_geometry
-                    )
-
-                    Rⱼ₂ = get_fermionic_jastrow_ratio(
-                        k, 
-                        l, 
-                        jastrow_parameters_2, 
-                        jastrow_factor_2, 
-                        pht, 
-                        spin, 
-                        model_geometry
-                    )
-
-                    sum_nnn += Rⱼ₁ * Rⱼ₂ * detwf.W[l, β]
-                end
-            end
-        end
-
-        if pht 
-            if spin == 1
-                E_loc_kinetic += (-t₀ * sum_nn) + (t₁ * sum_nnn)
-            else
-                E_loc_kinetic += (t₀ * sum_nn) - (t₁ * sum_nnn)
-            end
-        else
-            E_loc_kinetic += (-t₀ * sum_nn) + (t₁ * sum_nnn)
-        end
-    end
-
-    return real(E_loc_kinetic)
-end
-
-
-@doc raw"""
-
-    get_local_hubbard_energy( detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-                              U₀::E2,
-                              model_geometry::ModelGeometry, 
-                              pht::Bool ) where {E1<:AbstractFloat, T<:Number, Q, E2<:Number, I<:Integer}
-
-Calculates the energy due to on-site Hubbard interaction ``U``.  
-
-- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current variational wavefunction.
-- `U₀::E2`: on-site Hubbard interaction strength.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `pht::Bool`: whether model is particle-hole transformed.
-
-"""
-function get_local_hubbard_energy( 
-    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-    U₀::E2,
-    model_geometry::ModelGeometry, 
-    pht::Bool
-) where {E1<:AbstractFloat, T<:Number, Q, E2<:Number, I<:Integer}
-    # number of sites
-    Norbs = model_geometry.unit_cell.n
-    Ncells = model_geometry.lattice.N
-    N = Norbs * Ncells
-        
-    hubbard_sum = 0.0
-    for i in 1:N
-        occ_up, occ_dn, _ = get_onsite_fermion_occupation(i, detwf.pconfig, N)
-        if pht
-            hubbard_sum += occ_up .* (1 .- occ_dn)
-        else
-            hubbard_sum += occ_up .* occ_dn
-        end
-    end
-
-    E_loc_hubbard = U₀ * hubbard_sum
-
-    return E_loc_hubbard
-end
-
-
-@doc raw"""
-
-    get_extended_hubbard_energy( detwf::DeterminantalWavefunction{T, Q, E1, I},
-                                 U₁::E2,
-                                 model_geometry::ModelGeometry,
-                                 pht::Bool ) where {E1<:AbstractFloat, T<:Number, Q, E2<:Number, I<:Integer}
-
-Calculates the energy due to the extended Hubbard interaction ``V``.  
-
-- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current variational wavefunction.
-- `U₁::E2`: extended Hubbard interaction strength.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `pht::Bool`: whether model is particle-hole transformed.
-
-"""
-function get_extended_hubbard_energy(
-    detwf::DeterminantalWavefunction{T, Q, E1, I},
-    U₁::E2,
-    model_geometry::ModelGeometry,
-    pht::Bool
-) where {E1<:AbstractFloat, T<:Number, Q, E2<:Number, I<:Integer}
-    # number of sites
-    Norbs = model_geometry.unit_cell.n
-    Ncells = model_geometry.lattice.N
-    N = Norbs * Ncells
-
-    # generate neighbor map
-    nbr_map0 = map_neighbor_table(nbr_table0)
-
-    ext_hubbard_sum = 0.0
-    for i in 1:N
-        # get occupations for site i
-        occ_upᵢ, occ_dnᵢ, occ_eᵢ = get_onsite_fermion_occupation(i, detwf.pconfig, N)
-
-        # get neighboring occupations for site j
-        for j in nbr_map0[i][2]
-            occ_upⱼ, occ_dnⱼ, occ_eⱼ = get_onsite_fermion_occupation(j, detwf.pconfig, N)
-            
-            # add to the energy sum
-            if pht
-                hubbard_sum += (occ_upᵢ - occ_dnᵢ) * (occ_upⱼ - occ_dnⱼ)
-            else
-                hubbard_sum += occ_eᵢ * occ_eⱼ
-            end
-        end
-    end
-
-    E_ext_hubbard = U₁ * ext_hubbard_sum
-
-    return E_ext_hubbard
-end
-
-
-@doc raw"""
-
-    get_double_occ( detwf::DeterminantalParameters{T, Q, E, I}, 
-                    model_geometry::ModelGeometry, 
-                    pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
-
-Calculates the average double occupancy``D = \sum_{i} n_{\boldsymbol{i},\uparrow}n_{\boldsymbol{i},\downarrow}``. 
-
-- `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `pht::Bool`: whether model is particle-hole transformed.
-
-"""
-function get_double_occ(
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    model_geometry::ModelGeometry, 
-    pht::Bool
-) where {T<:Number, Q, E<:Number, I<:Integer}
-    Norbs = model_geometry.unit_cell.n
-    Ncells = model_geometry.lattice.N
-    N = Norbs * Ncells
-
+function measure_double_occ(
+    pconfig::Vector{Int},
+    N::Int,
+    ph_transform::Bool
+)
     nup_ndn = 0.0
     for site in 1:N
-        occ_up, occ_dn, _ = get_onsite_fermion_occupation(site, detwf.pconfig, N)
-        if pht
-            nup_ndn += occ_up * (1 - occ_dn)
-        else
-            nup_ndn += occ_up * occ_dn
-        end
+        nup, ndn = get_fermion_occupations(site, pconfig, N)
+        nup_ndn += ph_transform ? nup * (1 - ndn) : nup * ndn
     end
-    
-    return nup_ndn / N
+
+    nup_ndn /= N
+
+    return nup_ndn
 end
 
 
 @doc raw"""
 
-    get_n( detwf::DeterminantalWavefunction{T, Q, E, I}, 
-           model_geometry::ModelGeometry,
-           pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+    measure_double_occ(
+        pconfig::Vector{Int},
+        o::Int,
+        Ncells::Int,
+        unit_cell::UnitCell,
+        ph_transform::Bool
+    )
 
-Calculate the average particle density ``n = \sum_{i} (n_{\boldsymbol{i},\uparrow} + n_{\boldsymbol{i},\downarrow})``.
+Measures the average double occupancy ``\langle \hat{n}_\uparrow \hat{n}_\downarrow \rangle`` for a 
+given orbital species `o` in the current particle configuration. 
 
-- `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `pht::Bool`: whether model is particle-hole transformed.
+# ARGUMENTS
+
+-`pconfig::Vector{Int}`: Current particle configuration.
+-`unit_cell::UnitCell`: Instance of `UnitCell`.
+-`o::Int`: Orbital ID.
+-`Ncells::Int`: Total number of unit cells on the lattice.
+-`N::Int`: Total number of sites on the lattice.
+-`ph_transform::Bool`: Whether the model is particle-hole transformed.
 
 """
-function get_n(
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    model_geometry::ModelGeometry,
-    pht::Bool
-) where {T<:Number, Q, E<:Number, I<:Integer}
-    total_occ = 0.0
-    Norbs = model_geometry.unit_cell.n
-    Ncells = model_geometry.lattice.N
-    N = Norbs * Ncells
-
-    for i in 1:N
-        occ_up, occ_dn, _ = get_onsite_fermion_occupation(i, detwf.pconfig, N)
-        if pht
-            local_occ = occ_up + (1 - occ_dn)
-        else
-            local_occ = occ_up + occ_dn
-        end
-        total_occ += local_occ
+function measure_double_occ(
+    pconfig::Vector{Int},
+    unit_cell::UnitCell,
+    o::Int,
+    Ncells::Int,
+    N::Int,
+    ph_transform::Bool
+)
+    nup_ndn = 0.0
+    for uc in 1:Ncells
+        site = loc_to_site(uc, o, unit_cell)
+        nup, ndn = get_fermion_occupations(site, pconfig, N)
+        nup_ndn += ph_transform ? nup * (1 - ndn) : nup * ndn
     end
 
-    return total_occ / N
+    nup_ndn /= N
+
+    return nup_ndn
 end
 
 
 @doc raw"""
 
-    get_Sz( detwf::DeterminantalWavefunction{T, Q, E, I}, 
-            model_geometry::ModelGeometry,
-            pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+    measure_n(
+        type::AbstractString,
+        pconfig::Vector{Int},
+        N::Int,
+        ph_transform::Bool
+    )
 
-Calculate the average value of the operator 
-``S_z = \frac{1}{2} \sum_{i} (n_{\boldsymbol{i},\uparrow} - n_{\boldsymbol{i},\downarrow})``.
+Measures the average (or site-dependent) density ``\langle \hat{n}_\sigma \rangle`` given the current particle configuration. 
 
-- `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `pht::Bool`: whether model is particle-hole transformed.
+# ARGUMENTS
 
-""" 
-function get_Sz(
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    model_geometry::ModelGeometry,
-    pht::Bool
-) where {T<:Number, Q, E<:Number, I<:Integer}
-    total_Sz = 0.0
-    Norbs = model_geometry.unit_cell.n
-    Ncells = model_geometry.lattice.N
-    N = Norbs * Ncells
+-`type::AbstractString`: Type of density observable being calculated.
+-`pconfig::Vector{Int}`: Current particle configuration.
+-`N::Int`: Total number of sites on the lattice.
+-`ph_transform::Bool`: Whether the model is particle-hole transformed.
 
-    for i in 1:N
-        occ_up, occ_dn, _ = get_onsite_fermion_occupation(i, detwf.pconfig, N)
-        if pht
-            local_Sz = 0.5 * (occ_up + occ_dn - 1)
-        else
-            local_Sz = 0.5 * (occ_up - occ_dn)
+# NOTE 
+
+The valid options for `type` are `"mean"` and `"site-dependent"`.
+
+"""
+function measure_n(
+    type::AbstractString,
+    pconfig::Vector{Int},
+    N::Int,
+    ph_transform::Bool
+)
+    if type == "mean"
+        n̄ = 0.0
+        for site in 1:N
+            nup, ndn = get_fermion_occupations(site, pconfig, N)
+            n̄ += ph_transform ? nup + (1 - ndn) : nup + ndn
         end
-        total_Sz += local_Sz
+        n̄ /= N
+    elseif type == "site-dependent"
+        up_occs = Int.(pconfig[1:N] .!= 0)
+        dn_occs = Int.(pconfig[N+1:2*N] .!= 0)
+
+        n̄ = ph_transform ? up_occs .- dn_occs .+ 1 : up_occs .+ dn_occs
     end
 
-    return total_Sz / N
+    return n̄
+end
+
+
+@doc raw"""
+
+    measure_n(
+        type::AbstractString,
+        pconfig::Vector{Int},
+        o::Int,
+        Ncells::Int,
+        unit_cell::UnitCell,
+        ph_transform::Bool
+    )
+
+Measures the average density ``\langle \hat{n}_\sigma \rangle`` for a given orbital species `o` in the current particle configuration. 
+
+# ARGUMENTS
+
+-`pconfig::Vector{Int}`: Current particle configuration.
+-`unit_cell::UnitCell`: Instance of `UnitCell`.
+-`o::Int`: Orbital ID.
+-`Ncells::Int`: Total number of unit cells on the lattice.
+-`N::Int`: Total number of sites on the lattice.
+-`ph_transform::Bool`: Whether the model is particle-hole transformed.
+
+# NOTE 
+
+The valid options for `type` are `"mean"` and `"site-dependent"`.
+
+"""
+function measure_n(
+    type::AbstractString,
+    pconfig::Vector{Int},
+    unit_cell::UnitCell,
+    o::Int,
+    Ncells::Int,
+    N::Int,
+    ph_transform::Bool
+)
+    if type == "mean"
+        n̄ = 0.0
+        for uc in 1:Ncells
+            site = loc_to_site(uc, o, unit_cell)
+            nup, ndn = get_fermion_occupations(site, pconfig, N)
+            n̄ += ph_transform ? nup + (1 - ndn) : nup + ndn
+        end
+        n̄ /= N
+    elseif type == "site-dependent"
+        # get sites corresponding to orbital ID
+        orb_sites = [(uc - 1) * unit_cell.n + o for uc in 1:Ncells]
+
+        up_occs = Int.(pconfig[orb_sites] .!= 0)
+        dn_occs = Int.(pconfig[orb_sites .+ N] .!= 0)
+
+        n̄ = ph_transform ? up_occs .- dn_occs .+ 1 : up_occs .+ dn_occs
+    end
+
+    return n̄
+end
+
+
+@doc raw"""
+
+    measure_spinz(
+        type::AbstractString,
+        pconfig::Vector{Int},
+        N::Int,
+        ph_transform::Bool
+    )   
+
+Measures the average (or site-dependent) z-component of the spin ``\langle \hat{n}_{\uparrow} - \hat{n}_{\downarrow} \rangle/2`` given the current particle configuration. 
+
+# ARGUMENTS
+
+-`type::AbstractString`: Type of spin-z observable being calculated.
+-`pconfig::Vector{Int}`: Current particle configuration.
+-`N::Int`: Total number of sites on the lattice.
+-`ph_transform::Bool`: Whether the model is particle-hole transformed.
+
+# NOTE 
+
+The valid options for `type` are `"mean"` and `"site-dependent"`.
+
+"""
+function measure_spinz(
+    type::AbstractString,
+    pconfig::Vector{Int},
+    N::Int,
+    ph_transform::Bool
+)   
+    if type =="mean"
+        Sz = 0.0
+        for site in 1:N
+            nup, ndn = get_fermion_occupations(site, pconfig, N)
+            Sz += ph_transform ? 0.5 * (nup + ndn - 1) : 0.5 * (nup - ndn)
+        end
+        Sz /= N
+    elseif type == "site-dependent"
+        up_occs = Int.(pconfig[1:N] .!= 0)
+        dn_occs = Int.(pconfig[N+1:2*N] .!= 0)
+
+        Sz = ph_transform ? 0.5 * (up_occs .+ dn_occs .- 1) : 0.5 * (up_occs .- dn_occs)
+    end
+
+    return Sz
+end
+
+
+@doc raw"""
+
+    measure_spinz(
+        pconfig::Vector{Int},
+        unit_cell::UnitCell,
+        o::Int,
+        Ncells::Int,
+        N::Int,
+        ph_transform::Bool
+    )   
+
+Measures the average z-component of the spin ``\langle \hat{n}_{\uparrow} - \hat{n}_{\downarrow} \rangle`` for a given orbital species `o` in the current particle configuration. 
+
+# ARGUMENTS
+
+-`pconfig::Vector{Int}`: Current particle configuration.
+-`unit_cell::UnitCell`: Instance of `UnitCell`.
+-`o::Int`: Orbital ID.
+-`Ncells::Int`: Total number of unit cells on the lattice.
+-`N::Int`: Total number of sites on the lattice.
+-`ph_transform::Bool`: Whether the model is particle-hole transformed.
+
+# NOTE 
+
+The valid options for `type` are `"mean"` and `"site-dependent"`.
+
+"""
+function measure_spinz(
+    type::AbstractString,
+    pconfig::Vector{Int},
+    unit_cell::UnitCell,
+    o::Int,
+    Ncells::Int,
+    N::Int,
+    ph_transform::Bool
+)   
+    if type == "mean"
+        Sz = 0.0
+        for uc in 1:Ncells
+            site = loc_to_site(uc, o, unit_cell)
+            nup, ndn = get_fermion_occupations(site, pconfig, N)
+            Sz += ph_transform ? 0.5 * (nup + ndn - 1) : 0.5 * (nup - ndn)
+        end
+
+        Sz /= N
+    elseif type == "site-dependent"
+        # get sites corresponding to orbital ID
+        orb_sites = [(uc - 1) * unit_cell.n + o for uc in 1:Ncells]
+
+        up_occs = Int.(pconfig[orb_sites] .!= 0)
+        dn_occs = Int.(pconfig[orb_sites .+ N] .!= 0)
+
+        Sz = ph_transform ? 0.5 * (up_occs .+ dn_occs .- 1) : 0.5 * (up_occs .- dn_occs)
+    end
+
+    return Sz
+end
+
+
+@doc raw"""
+
+    measure_variational_energy(
+        detwf::DeterminantalWavefunction{T},
+        tight_binding_parameters::TightBindingParameters{T, E},
+        coupling_parameters::Tuple,
+        pconfig::Vector{Int},
+        ph_transform::Bool;
+        model_geometry::ModelGeometry,
+        jas_factors::Union{Tuple{<:AbstractJastrowFactor{T}}, Nothing} = nothing,
+        jas_parameters::Union{Tuple{JastrowParameters}, Nothing} = nothing
+    ) where {T<:Number, E<:AbstractFloat}
+
+Measures the average variational energy per site.
+
+"""
+function measure_variational_energy(
+    detwf::DeterminantalWavefunction{T},
+    tight_binding_parameters::TightBindingParameters{T, E},
+    coupling_parameters::Tuple,
+    pconfig::Vector{Int}, N::Int, ph_transform::Bool;
+    model_geometry::ModelGeometry,
+    jas_factors::Union{Tuple{<:AbstractJastrowFactor{T}}, Nothing} = nothing,
+    jas_parameters::Union{Tuple{JastrowParameters}, Nothing} = nothing
+) where {T<:Number, E<:AbstractFloat}
+    # number of orbitals per unit cell
+    norbital = tight_binding_parameters.norbital
+
+    # number of types of hopping
+    bond_ids = tight_binding_parameters.bond_ids
+    nhopping = length(tight_binding_parameters.bond_ids)
+
+    E_var = zero(Complex{T})
+
+    # iterate over the hoppings in the lattice
+    if nhopping > 0
+        for hopping_id in 1:nhopping
+            # measure the hopping energy
+            e_hop = measure_hopping_energy(
+                detwf,
+                tight_binding_parameters,
+                pconfig,
+                hopping_id,
+                N,
+                ph_transform,
+                model_geometry = model_geometry,
+                jas_factors = jas_factors,
+                jas_parameters = jas_parameters
+            )
+
+            E_var += e_hop
+        end
+    end
+
+    # iterate over the couplings
+    for coupling in coupling_parameters
+        e_coupling = measure_coupling_energy(
+            coupling,
+            pconfig, ph_transform
+        )
+        E_var += e_coupling
+    end
+
+    return E_var
+end
+
+
+@doc raw"""
+
+    measure_coupling_energy(
+        hubbard_parameters::HubbardParameters{E},
+        pconfig::Vector{Int}, ph_transform::Bool
+    ) where {E<:AbstractFloat}
+
+Measures the average energy per site due to coupling in the Hubbard model.
+
+"""
+function measure_coupling_energy(
+    hubbard_parameters::HubbardParameters{E},
+    pconfig::Vector{Int}, ph_transform::Bool
+) where {E<:AbstractFloat}
+    E_hub = zero(Complex{E})
+    for hubbard_id in eachindex(hubbard_parameters.orbital_ids)
+        e_hub = measure_hubbard_energy(hubbard_parameters, hubbard_id, pconfig, ph_transform)
+        E_hub += e_hub
+    end
+
+    return E_hub
+end
+
+
+@doc raw"""
+
+    measure_coupling_energy(
+        extended_hubbard_parameters::ExtendedHubbardParameters{E},
+        pconfig::Vector{Int}, ph_transform::Bool
+    ) where {E<:AbstractFloat}
+
+Measures the average energy per site due to coupling in the extended Hubbard model.
+
+"""
+function measure_coupling_energy(
+    extended_hubbard_parameters::ExtendedHubbardParameters{E},
+    pconfig::Vector{Int}, ph_transform::Bool
+) where {E<:AbstractFloat}
+    E_ext_hub = zero(Complex{E})
+    for ext_hub_id in eachindex(extended_hubbard_parameters.bond_ids)
+        e_ext_hub = measure_ext_hubbard_energy(extended_hubbard_parameters, ext_hub_id, pconfig, ph_transform)
+        E_ext_hub += e_ext_hub
+    end
+
+    return E_ext_hub
 end

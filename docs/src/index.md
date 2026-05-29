@@ -1,8 +1,8 @@
-# VariationalMC.jl
+![VariationalMC logo](images/variationalmc-logo-dark.png)
 
-Documentation for `VariationalMC.jl`. This package impelments the variational Monte Carlo (VMC) method for Hubbard and electron-phonon interactions (coming soon).
+Documentation for `VariationalMC.jl`. This package implements the Variational Monte Carlo (VMC) method for the Hubbard model and models of electron-phonon interaction (coming in version 1.1.0). 
 
-**This code is currently the experimental stage of development. Use with caution.** 
+**This code is currently the experimental stage of development. Use with caution.**
 
 ## Funding 
 
@@ -10,7 +10,7 @@ The development of this code was supported by the U.S. Department of Energy, Off
 
 ## Installation
 
-To install the [VariationalMC.jl](https://github.com/atanjaro/VariationalMC.jl),
+To install [VariationalMC.jl](https://github.com/atanjaro/VariationalMC.jl),
 simply open the Julia REPL and run the commands
 ```
 julia> ]
@@ -21,31 +21,27 @@ or equivalently via `Pkg` do
 julia> using Pkg; Pkg.add(url="https://github.com/atanjaro/VariationalMC.jl")
 ```
 
-### Updating
+## Documentation
 
-To update [VariationalMC.jl](https://github.com/atanjaro/VariationalMC.jl) try the following:
-```
-julia> ]
-pkg> update VariationalMC
-```
-However, sometimes this fails to update required dependencies.
-If issues arise, we recommend first removing and then reinstalling [VariationalMC.jl](https://github.com/atanjaro/VariationalMC.jl):
-```
-julia> ]
-pkg> remove VariationalMC
-pkg> add https://github.com/atanjaro/VariationalMC.jl
-```
+- [`DEV`](https://atanjaro.github.io/VariationalMC.jl/dev/): Documentation associated with most recent commit to the main branch.
 
-## Notable External Package Dependencies
+## Notable Package Dependencies
 
 This section reviews some notable package dependencies.
 
-- [LatticeUtilties.jl](https://github.com/SmoQySuite/LatticeUtilities.jl.git): Package that is used to represent arbitrary lattice geometries.
-- [OrderedCollections.jl](https://github.com/JuliaCollections/OrderedCollections.jl): Package that implements associative containers that preserve the order of insertion.
-- [JLD2.jl](https://github.com/JuliaIO/JLD2.jl.git): Package used to write data to binary files in an HDF5 compatible format. 
-- [CSV.jl](https://github.com/JuliaData/CSV.jl): Package used for handling delimited text data.
+### Re-exported Packages
 
-## Contact
+[VariationalMC.jl](https://github.com/atanjaro/VariationalMC.jl) re-exports certain packages from [SmoQyDQMC.jl](https://github.com/SmoQySuite/SmoQyDQMC.jl) using the [Reexport.jl](https://github.com/simonster/Reexport.jl.git) package in order to simplify the installation process.
 
-For questions and comments regarding this package, please email Andy Tanjaroon Ly at [atanjaro@vols.utk.edu](mailto:atanjaro@vols.utk.edu).
+- [LatticeUtilties.jl](https://github.com/SmoQySuite/LatticeUtilities.jl.git): Used to represent arbitrary lattice geometries.
+
+### External Dependencies
+
+- [HDF5.jl](https://github.com/JuliaIO/HDF5.jl): Used for handling binary files.
+- [JLD2.jl](https://github.com/JuliaIO/JLD2.jl.git): Used to write data to binary files in an HDF5 compatible format.
+
+## Contact Us
+
+For questions and comments regarding this package, please email Andy Tanjaroon Ly at [atanjaro@vols.utk.edu](mailto:atanjaro@vols.utk.edu) or [atanjaly82@gmail.com](mailto:atanjaly82@gmail.com).
+
 

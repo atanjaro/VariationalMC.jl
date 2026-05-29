@@ -21,7 +21,6 @@ function jackknife(
     jackknife_samples = similar.(samples),
     jackknife_g = similar(samples[1])
 )
-
     # get sample size
     N = length(jackknife_g)
 
@@ -58,26 +57,3 @@ function jackknife(
 
     return ḡ, Δg
 end
-
-
-# @doc raw"""
-
-#     jackknife_stats( bin_sample::Vector{Float64} )
-
-# Performs jacknife resampling to obtain the standard deviation per bin.
-
-# """
-# function jackknife_stats(
-#     bin_samples::Vector{Float64}
-# )
-#     N = length(bin_samples)
-#     if N ≤ 1
-#         return (mean=NaN, std=NaN)
-#     end
-
-#     jk_means = [mean(deleteat!(copy(bin_samples), i)) for i in 1:N]
-#     jk_mean = mean(jk_means)
-#     jk_std = sqrt((N - 1) / N * sum((jk_means .- jk_mean).^2))
-
-#     return (mean=jk_mean, std=jk_std)
-# end

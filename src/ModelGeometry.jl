@@ -1,43 +1,67 @@
 @doc raw"""
+    ModelGeometry{D, T<:AbstractFloat, N}
 
-    ModelGeometry{T, B<:AbstractVector{<:AbstractVector{T}}}
+Contains all the information defining the lattice geometry for the model in `D` spatial dimensions.
 
-A type defining the geometry of a lattice model, including the unit cell,
-lattice, and bond definitions.
+# Comment
 
-- `unit_cell::UnitCell`: contains unit cell definitions.
-- `lattice::Lattice`: contains lattice definitions including boundary conditions.
-- `bond::B`: vector of all bond definitions.
+The bond ID associated with a `bond::Bond{D}` corresponds to the index associated with it into the `bonds` vector field.
+
+# Fields
+
+- `unit_cell::UnitCell{D,T,N}`: Defines unit cell.
+- `lattice::Lattice{D}`: Defines finite lattice extent.
+- `bonds::Vector{Bond{D}}`: All available bond definitions in simulation, with vector indices giving the bond ID.
 
 """
-struct ModelGeometry{T, B<:AbstractVector{<:AbstractVector{T}}}
+struct ModelGeometry{D, T<:AbstractFloat, N}
     # unit cell
-    unit_cell::UnitCell
+    unit_cell::UnitCell{D,T,N}
 
-    # extent of the lattice
-    lattice::Lattice
+    # lattice
+    lattice::Lattice{D}
 
-    # lattice bonds
-    bond::B
+    # bonds
+    bonds::Vector{Bond{D}}
 end
 
-# print struct info in TOML format
-function Base.show(io::IO, ::MIME"text/plain", model_geometry::ModelGeometry{D,T}) where {D, T}
+@doc raw"""
 
-    (; unit_cell, lattice, bond) = model_geometry
-    
+    ModelGeometry(  unit_cell::UnitCell, 
+                    lattice::Lattice ) where {D}
+
+Initialize and return a [`ModelGeometry`](@ref) instance. Defines a "trivial" bond definition for each
+orbital in the unit cell that connects an orbital to itself.
+"""
+function ModelGeometry(unit_cell::UnitCell{D}, lattice::Lattice{D}) where {D}
+    # define trivial bond connecting each orbital in unit cell to itself
+    n     = unit_cell.n
+    bonds = Bond{D}[]
+    for i in 1:n
+        push!(bonds, Bond((i,i),zeros(Int,D)))
+    end
+
+    return ModelGeometry(unit_cell, lattice, bonds)
+end
+
+
+# print struct info in TOML format
+function Base.show(io::IO, ::MIME"text/plain", model_geo::ModelGeometry{D,T}) where {D,T}
+
+    (; unit_cell, lattice, bonds) = model_geo
+
     @printf io "[Geometry]\n\n"
-    @printf io "dimensions = %d\n\n" size(unit_cell.lattice_vecs, 1)
+    @printf io "dimensions = %d\n\n" D
     @printf io "[Geometry.UnitCell]\n\n"
     @printf io "orbitals = %d\n\n" unit_cell.n
     @printf io "[Geometry.UnitCell.LatticeVectors]\n\n"
-    for d in 1:size(unit_cell.lattice_vecs, 1)
+    for d in 1:D
         a = @view unit_cell.lattice_vecs[:,d]
         @printf io "a_%d = %s\n" d string(round.(a, digits=6)) 
     end
     @printf io "\n"
     @printf io "[Geometry.UnitCell.ReciprocalVectors]\n\n"
-    for d in 1:size(unit_cell.lattice_vecs, 1)
+    for d in 1:D
         b = @view unit_cell.reciprocal_vecs[:,d]
         @printf io "b_%d = %s\n" d string(round.(b, digits=6)) 
     end
@@ -52,192 +76,168 @@ function Base.show(io::IO, ::MIME"text/plain", model_geometry::ModelGeometry{D,T
     @printf io "[Geometry.Lattice]\n\n"
     @printf io "L        = %s\n" string(lattice.L)
     @printf io "periodic = [%s]\n\n" join(lattice.periodic, ", ")
-    for (gidx, group) in enumerate(bond)               # group is Vector{Bond{D}}
-        for (j, b) in enumerate(group)                 # b is a Bond{D}
-            @printf io "[[Geometry.Bond]]\n\n"
-            @printf io "BOND_GROUP   = %d\n" gidx
-            @printf io "orbitals     = [%d, %d]\n" b.orbitals[1] b.orbitals[2]
-            @printf io "displacement = %s\n\n" string(b.displacement)
-        end
+    for i in eachindex(bonds)
+        @printf io "[[Geometry.Bond]]\n\n"
+        @printf io "BOND_ID      = %d\n" i
+        @printf io "orbitals     = [%d, %d]\n" bonds[i].orbitals[1] bonds[i].orbitals[2]
+        @printf io "displacement = %s\n\n" string(bonds[i].displacement)
     end
 
     return nothing
 end
 
-#### Prototypes for new ModelGeometry structure
-
-# struct ModelGeometry{D, T<:AbstractFloat, N}
-
-#     unit_cell::UnitCell{D,T,N}
-#     lattice::Lattice{D}
-#     bonds::Vector{Bond{D}}
-
-# end
-
-
-# function ModelGeometry(unit_cell::UnitCell{D}, lattice::Lattice{D}) where {D}
-
-#     # # ensure all spatial dimension are periodic
-#     # @assert all(i -> i, lattice.periodic) "All spatial dimensions in lattice must be periodic."
-
-#     # define trivial bond connecting each orbital in unit cell to itself
-#     n     = unit_cell.n
-#     bonds = Bond{D}[]
-#     for i in 1:n
-#         push!(bonds, Bond((i,i),zeros(Int,D)))
-#     end
-
-#     return ModelGeometry(unit_cell, lattice, bonds)
-# end
-
-# function add_bond!(model_geometry::ModelGeometry{D,T}, bond::Bond{D}) where {D, T}
-
-#     (; bonds) = model_geometry
-
-#     # get the bond ID
-#     bond_id = get_bond_id(model_geometry, bond)
-
-#     # if the bond is not already recorded, then record it and get its new bond ID
-#     if iszero(bond_id)
-#         # record the bond ID
-#         push!(bonds, bond)
-#         # get the ID of the new bond
-#         bond_id = length(bonds)
-#     end
-
-#     return bond_id
-# end
-
-# function get_bond_id(model_geometry::ModelGeometry{D,T}, bond::Bond{D}) where {D, T}
-
-#     (; bonds) = model_geometry
-
-#     if bond in bonds
-#         bond_id = findfirst(b -> b==bond, bonds)
-#     else
-#         bond_id = 0
-#     end
-    
-#     return bond_id
-# end
-
-
 
 @doc raw"""
 
-    apply_twist_angle!( H_t::Matrix{T},
-                        θ_twist::E,
-                        model_geometry::ModelGeometry ) where {T<:Number, E<:AbstractFloat}
+    add_bond!(  model_geometry::ModelGeometry{D,T}, 
+                bond::Bond{D}) where {D, T}   
 
-Applies a twist angle to the hopping matrix by multiplying by an appropriate phase factor.
+Add `bond` definition to `model_geometry`, returning the bond ID i.e. the index to `bond`
+in the vector `model_geometry.bonds`.
+This method first checks that `bond` is not already defined. If it is this method simply
+returns the corresponding bond ID. If `bond` is not already defined, then it is appended
+to the vector `model_geometry.bonds`.
 
 """
-function apply_twist_angle!(
-    H_t::Matrix{T},
-    θ_twist::E,
-    model_geometry::ModelGeometry
-) where {T<:Number, E<:AbstractFloat}
-    θ_x, θ_y = θ_twist, θ_twist
+function add_bond!(model_geometry::ModelGeometry{D,T}, bond::Bond{D}) where {D, T}
 
-    # dimensions
-    Lx = model_geometry.lattice.L[1]
-    Ly = model_geometry.lattice.L[2]
+    (; bonds) = model_geometry
 
-    # apply the twist in the x-direction 
-    for y in 1:Lx
-        idx1 = Lx * (y - 1) + 1  
-        idx2 = Lx * y            
+    # get the bond ID
+    bond_id = get_bond_id(model_geometry, bond)
 
-        # spin-up sector
-        H_t[idx1, idx2] *= cis(θ_x) 
-        H_t[idx2, idx1] *= cis(-θ_x) 
-
-        # spin-down sector
-        H_t[idx1 + N, idx2 + N] *= cis(-θ_x) 
-        H_t[idx2 + N, idx1 + N] *= cis(θ_x) 
+    # if the bond is not already recorded, then record it and get its new bond ID
+    if iszero(bond_id)
+        # record the bond ID
+        push!(bonds, bond)
+        # get the ID of the new bond
+        bond_id = length(bonds)
     end
 
-    # apply the twist in the y-direction 
-    for x in 1:Ly
-        idx1 = x                  
-        idx2 = Ly * (Ly - 1) + x  
-
-        # spin-up sector
-        H_t[idx1, idx2] *= cis(θ_y) 
-        H_t[idx2, idx1] *= cis(-θ_y) 
-
-        # spin-down sector
-        H_t[idx1 + N, idx2 + N] *= cis(-θ_y) 
-        H_t[idx2 + N, idx1 + N] *= cis(θ_y) 
-    end
-
-    return nothing
+    return bond_id
 end
 
 
 @doc raw"""
 
-    x( i::I, 
-       model_geometry::ModelGeometry ) where {I<:Integer}
+    get_bond_id(model_geometry::ModelGeometry{D,T}, bond::Bond{D}) where {D, T}
 
-Convenience function for obtaining the x-coordinate of a lattice site given a 
+Return the bond ID associated with the bond defintion `bond`, returning `bond_id=0`
+if the it is not a recorded bond.
+    
+"""
+function get_bond_id(model_geometry::ModelGeometry{D,T}, bond::Bond{D}) where {D, T}
+
+    (; bonds) = model_geometry
+
+    if bond in bonds
+        bond_id = findfirst(b -> b==bond, bonds)
+    else
+        bond_id = 0
+    end
+    
+    return bond_id
+end
+
+
+@doc raw"""
+
+    x(i::Int, lattice::Lattice) 
+
+Convenience function for obtaining the ``x``-coordinate of a lattice site given a 
 lattice spindex.
 
-- `i::I`: spindex.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-
 """
-function x(
-    i::I, 
-    model_geometry::ModelGeometry
-) where {I<:Integer}
-    L = model_geometry.lattice.L[1]
-
+function x(i::Int, lattice::Lattice) 
+    L = lattice.L[1]
     return i % L
 end
 
 
 @doc raw"""
 
-    y( i::I, 
-       model_geometry::ModelGeometry ) where {I<:Integer}
+    y(i::Int, lattice::Lattice) 
 
-Convenience function for obtaining the y-coordinate of a lattice site given a 
+Convenience function for obtaining the ``y``-coordinate of a lattice site given a 
 lattice spindex.
 
-- `i::I`: spindex.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-
 """
-function y(
-    i::I, model_geometry::ModelGeometry
-) where {I<:Integer}
-    L = model_geometry.lattice.L[1]
-
+function y(i::Int, lattice::Lattice) 
+    L = lattice.L[1]
     return div(i, L)
 end
 
 
 @doc raw"""
 
-    d( p1::I, 
-       p2::I, 
-       model_geometry::ModelGeometry ) where {I<:Integer}
+    z(i::Int, lattice::Lattice)
+
+Convenience function for obtaining the z-coordinate of a lattice site given a 
+lattice spindex.
+
+"""
+function z(i::Int, lattice::Lattice) 
+    L = lattice.L[3]
+    return div(i, L)
+end
+
+function coord(
+    i::I,
+    d::Int,
+    lattice::Lattice
+) where {I<:Integer}
+    if d == 1
+        return x(i, lattice)
+    elseif d == 2
+        return y(i, lattice)
+    elseif d == 3
+        return z(i, lattice)
+    end
+end
+
+
+@doc raw"""
+
+    reduce_index(i::Int, j::Int, lattice::Lattice) 
+
+For two lattice sites ``i`` and ``j`` on a 1D, 2D, or 3D lattice, returns the 
+irreducible index ``k`` between them, where ``k`` is an integer. 
+
+# Note
+
+The displacement components are sorted in descending order before index reduction to ensure that 
+symmetry-equivalent pairs map to the same index.
+
+"""
+function reduce_index(i::Int, j::Int, lattice::Lattice)
+    L   = lattice.L
+    dim = length(L)
+
+    # compute absolute displacements along each dimension
+    disp = ntuple(dim) do n
+        abs(d(coord(i, n, lattice), coord(j, n, lattice), lattice))
+    end
+
+    # sort components in descending order so symmetry-equivalent pairs share an index
+    disp = Tuple(sort(collect(disp), rev=true))
+
+    # reduce to scalar index using mixed-radix encoding
+    strides = cumprod([1; collect(L[1:end-1])])
+    return sum(disp[n] * strides[n] for n in 1:dim)
+end
+
+
+
+@doc raw"""
+
+    d(p₁::Int, p₂::Int, lattice::Lattice) 
 
 Given lattice points ``p\_1`` and ``p_2``, returns the distance between those two points, 
 accounting for the lattice edges under different boundary conditions.
 
-- `p1::I`: first lattice point.
-- `p2::I`: second lattice point.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-
 """
-function d(
-    p₁::I, 
-    p₂::I, 
-    model_geometry::ModelGeometry
-) where {I<:Integer}
-    L = model_geometry.lattice.L[1]
+function d(p₁::Int, p₂::Int, lattice::Lattice)
+    L = lattice.L[1]
     dist = p₂ - p₁
 
     if dist >div(L, 2)
@@ -253,81 +253,107 @@ end
 
 @doc raw"""
 
-    reduce_index_2d( i::I, 
-                     j::I, 
-                     model_geometry::ModelGeometry ) where {I<:Integer}
-
-For two lattice sites ``i`` and ``j`` on a 2D lattice, returns the irreducible index
-``k`` between them, where ``k`` is an integer.
-
-- `i::I`: first lattice site.
-- `j::I`: second lattice site.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-
-"""
-function reduce_index_2d(
-    i::I, 
-    j::I, 
-    model_geometry::ModelGeometry
-) where {I<:Integer}
-    L = model_geometry.lattice.L[1]
-
-    dx = abs(d(x(i, model_geometry), x(j, model_geometry), model_geometry))
-    dy = abs(d(y(i, model_geometry), y(j, model_geometry), model_geometry))
-
-    if dy > dx
-        dx, dy = dy, dx
-    end
-    
-    return dx + L * dy
-end
-
-
-@doc raw"""
-
-    reduce_index_1d( i::I, 
-                     j::I, 
-                     model_geometry::ModelGeometry ) where {I<:Integer}
-
-For two lattice sites ``i`` and ``j`` on a 1D lattice, returns the irreducible index
-``k`` between them, where ``k`` is an integer.
-
-- `i::I`: first lattice site.
-- `j::I`: second lattice site.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-
-"""
-function reduce_index_1d(
-    i::I, 
-    j::I, 
-    model_geometry::ModelGeometry
-) where {I<:Integer}
-    L = model_geometry.lattice.L[1]
-
-    dx = abs(d(x(i, model_geometry), x(j, model_geometry), model_geometry))
-
-    return dx
-end
-
-
-@doc raw"""
-
-    max_dist( N::I, 
-              L::I ) where {I<:Integer}
+    max_dist( N::I, L::I ) where {I<:Integer}
 
 For a lattice with ``N`` sites and extent ``L``, returns the maximum irreducible index ``k_{\mathrm{max}}``.
 
-- `N::I`: total number of lattice sites.
-- `L::I`: extent of the lattice.
-
 """
-function max_dist(
-    N::I, 
-    L::I
-) where {I<:Integer}
+function max_dist(N::Int, L::Int) 
     if L % 2 == 0
         return Int(N / 2 + L / 2)
     else
         return Int(N / 2)
     end
+end
+
+@doc raw"""
+
+    map_spindex(model_geometry::ModelGeometry)
+
+Creates a mapping between all spindices (spin-indices) to their real lattice site
+coordinates. Works for 1D, 2D, and 3D geometries; dimensionality is inferred
+automatically from the lattice.
+
+"""
+function map_spindex(model_geometry::ModelGeometry)
+    (; unit_cell, lattice) = model_geometry
+    Norbs = unit_cell.n
+    Ncells = lattice.N
+    N = Norbs * Ncells
+    dims = length(lattice.L)
+
+    locs = Matrix{Int}(undef, dims, 2*N)
+
+    @inbounds for spin in 0:1
+        for orb in 1:Norbs
+            for cell in 1:Ncells
+                # reconstruct spindex in desired orbital-major order
+                s_out = spin * N + (orb - 1) * Ncells + cell
+                # original spindex as laid out by get_index_from_spindex
+                idx = (cell - 1) * Norbs + orb + spin * N
+                loc = site_to_loc(idx, unit_cell, lattice)
+                for d in 1:dims
+                    locs[d, s_out] = loc[1][d]
+                end
+            end
+        end
+    end
+
+    return locs
+end
+
+
+@doc raw"""
+
+    get_spindex_type(spindex::Int, N::Int) 
+
+Returns the spin species at a given spindex.
+
+"""
+function get_spindex_type(spindex::Int, N::Int) 
+    @assert spindex < 2*N + 1
+
+    return spindex < N + 1 ? 1 : -1
+end
+
+
+@doc raw"""
+
+    get_index_from_spindex(spindex::Int, N::Int)
+
+Returns the lattice site ``i`` for a given spindex.
+
+"""
+function get_index_from_spindex(spindex::Int, N::Int)
+    @assert spindex < 2 * N + 1
+
+    return spindex <= N ? spindex : spindex - N
+end
+
+
+@doc raw"""
+
+    get_spindices_from_index(index::Int, N::Int) 
+
+Returns spin-up and spin-down indices from a given site index.
+
+"""
+function get_spindices_from_index(index::Int, N::Int) 
+    @assert index <= N
+
+    return index, index + N
+end
+
+
+@doc raw"""
+
+    get_linked_spindex(i::Int, N::Int) 
+
+ Given an index ``i`` in the spin-up sector, returns an index in the spin-down sector.
+
+"""
+function get_linked_spindex(i::Int, N::Int) 
+    @assert i < 2 * N
+
+    return i + (1 - 2 * (i ÷ N)) * N
 end

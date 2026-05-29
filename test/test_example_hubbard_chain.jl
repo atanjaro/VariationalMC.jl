@@ -3,17 +3,17 @@
     include("../examples/hubbard_chain.jl")
 
     @test isnothing(
-        run_hubbard_chain_simulation(
+        run_simulation(
             sID             = abs(rand(Int)), 
             L               = 4, 
             U               = 2.0, 
             nup             = 2, 
             ndn             = 2, 
-            pht             = false, 
+            ph_transform    = false, 
             N_equil         = 2, 
-            N_opt           = 2, 
-            N_opt_bins      = 2, 
+            N_opt           = 2,  
             N_sim           = 2, 
+            N_opt_bins      = 2,
             N_sim_bins      = 2, 
             filepath        = tempdir()
         )

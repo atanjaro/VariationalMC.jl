@@ -1,31 +1,127 @@
-using Pkg
-Pkg.activate(@__DIR__)  # Activate the package environment
-Pkg.instantiate()       # Ensure all dependencies are installed
-push!(LOAD_PATH, "../src")
-
-using Documenter
 using VariationalMC
+using Documenter
+using DocumenterCitations
+using DocumenterInterLinks
+using Literate
+using LatticeUtilities
 
-makedocs(
-    sitename = "VariationalMC.jl",
-    modules = [VariationalMC],
-    format = Documenter.HTML(),
-    checkdocs = :none,    
-    pages = [
-        "Home" => "index.md",
-        "Examples" => [
-            "Hubbard Chain" => "examples/hubbard_chain.md",
-            "Hubbard Square" => "examples/hubbard_square.md",
-            "Hubbard Square with MPI" => "examples/hubbard_square_mpi.md",
-            "Hubbard Rectangle" => "examples/hubbard_rectangle.md"
-    ],
-        "Simulation Output Overview" => "simulation_output.md",
-        "API" => "api.md"
-    ],
+
+# Remove existing Documenter `build` directory
+build_path = joinpath(@__DIR__, "build")
+isdir(build_path) && rm(build_path; recursive=true)
+# Create `build/assets` directories
+scripts_path = joinpath(build_path, "assets", "scripts")
+example_scripts_path = joinpath(scripts_path, "examples")
+tutorial_scripts_path = joinpath(scripts_path, "tutorials")
+mkpath.([example_scripts_path, tutorial_scripts_path])
+
+# generates script and notebook versions of tutorials based on literate example
+function build_examples(example_sources, destdir)
+    assetsdir = joinpath(fill("..", length(splitpath(destdir)))..., "assets")
+
+    script_type = destdir
+    destpath = joinpath(@__DIR__, "src", destdir)
+    isdir(destpath) && rm(destpath; recursive=true)
+
+    # Transform each Literate source file to Markdown for subsequent processing by
+    # Documenter.
+    for source in example_sources
+        # Extract "example" from "path/example.jl"
+        name = splitext(basename(source))[1]
+        
+        # Preprocess each example by adding a notebook download link at the top. The
+        # relative path is hardcoded according to the layout of `gh-pages` branch,
+        # which is set up by `Documenter.deploydocs`.
+        function preprocess(str)
+            lines = split(str, "\n")
+            insert!(lines, 2, "# Download this example as a [Julia script]($assetsdir/scripts/$script_type/$name.jl).\n")
+            str = join(lines, "\n")
+            return str
+        end
+        # Write to `src/$destpath/$name.md`
+        Literate.markdown(
+            source, destpath;
+            preprocess,
+            credit=false,
+            codefence = "````julia" => "````"
+        )
+    end
+
+    # Create Julia script for each Literate example.
+    # These will be stored in the `assets/` directory of the hosted docs.
+    for source in example_sources
+
+        # Build julia scripts
+        Literate.script(
+            source, joinpath(scripts_path, script_type);
+            credit=false
+        )
+    end
+
+    # Return paths `$destpath/$name.md` for each new Markdown file (relative to
+    # `src/`)
+    return map(example_sources) do source
+        name = splitext(basename(source))[1]
+        joinpath(destdir, "$name.md")
+    end
+end
+
+# initialize bibliography
+# bib = CitationBibliography(
+#     joinpath(@__DIR__, "src", "references.bib");
+#     style=:numeric
+# )
+
+DocMeta.setdocmeta!(VariationalMC, :DocTestSetup, :(using VariationalMC); recursive=true)
+
+tutorials = [
+    "hubbard_chain", "hubbard_square", "hubbard_square_mpi", "hubbard_ladders"
+]
+tutorials_sources = [joinpath(pkgdir(VariationalMC, "tutorials"), tutorial*".jl") for tutorial in tutorials]
+tutorial_mds = build_examples(tutorials_sources, "tutorials")
+
+examples = [
+    "hubbard_chain", "hubbard_square", "hubbard_square_mpi", "hubbard_ladder", "hubbard_ladder_mpi",
+    "hubbard_ladders", "hubbard_ladders_mpi"
+]
+example_sources = [joinpath(pkgdir(VariationalMC, "examples"), example*".jl") for example in examples]
+example_mds = build_examples(example_sources, "examples")
+
+# link to external package APIs
+links = InterLinks(
+    "LatticeUtilities" => "https://smoqysuite.github.io/LatticeUtilities.jl/stable/",
 )
 
+
+makedocs(;
+    clean = false,
+    plugins=[links],        #bib,
+    modules=[VariationalMC],
+    authors="Andy Tanjaroon Ly <atanjaly82@gmail.com>",
+    repo="https://github.com/atanjaro/VariationalMC.jl",
+    sitename="VariationalMC.jl",
+    format=Documenter.HTML(;
+        prettyurls=get(ENV, "CI", "false") == "true",
+        canonical="https://github.com/atanjaro/VariationalMC.jl/",
+        edit_link="main",
+        assets=String[],
+        size_threshold_warn = 1000*1024, # 200KB -- library.html gets quite large
+        size_threshold      = 2000*2024, # 300KB
+    ),
+    pages=[
+        "Home" => "index.md",
+        "Simulation Output Overview" => "simulation_output.md",
+        "API" => "api.md",
+        "Tutorials" => tutorial_mds,
+        "Examples" => example_mds,
+    ],
+    checkdocs = :exports,
+    warnonly = [:missing_docs],
+)
+
+
 deploydocs(
-    repo = "github.com/atanjaro/VariationalMC.jl.git",
+    repo = Documenter.Remotes.GitHub("atanjaro", "VariationalMC.jl"),
     target = "build",
     branch = "gh-pages",
     devbranch = "main",

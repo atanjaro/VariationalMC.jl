@@ -1,614 +1,105 @@
 @doc raw"""
 
-    measure_Δk!( measurement_container::NamedTuple, 
-                 detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                 determinantal_parameters::DeterminantalParameters{I}, 
-                 model_geometry::ModelGeometry, 
-                 optimize::NamedTuple,
-                 Np::I ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
+    measure_Dk(
+        detwf::DeterminantalWavefunction{T},
+        pconfig::Vector{Int},
+        determinantal_parameters::DeterminantalParameters,
+        N::Int,
+        Np::Int,
+    ) where {T}
 
-Measures the logarithmic derivative ``\Delta_k`` for ``k`` variational parameters and then writes
-them to the measurement container. 
-
-- `measurement_container::NamedTuple`: container where measurements are stored.
-- `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
-- `determinantal_parameters::DeterminantalParameters{I}`: current set of determinantal variational parameters.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `optimize::NamedTuple`:: tuple of optimization flags.
-- `Np::I`: total number of particles in the system. 
+Calculates the logarithmic derivative ``\Delta_k = \frac{\partial\ln\Psi_{T}}{\partial\alpha_k}`` for each determinantal parameter ``\alpha_k``.
 
 """
-function measure_Δk!(
-    measurement_container::NamedTuple, 
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    determinantal_parameters::DeterminantalParameters{I},
-    model_geometry::ModelGeometry, 
-    optimize::NamedTuple,
-    Np::I
-) where {T<:Number, Q, E<:Number, I<:Integer}
-    # calculate variational parameter derivatives
-    Δk_current = get_Δk(
-        detwf, 
-        determinantal_parameters, 
-        model_geometry, 
-        optimize,
-        Np
-    ) 
+function measure_Dk(
+    detwf::DeterminantalWavefunction{T},
+    determinantal_parameters::DeterminantalParameters,
+    pconfig::Vector{Int},
+    N::Int,
+    Np::Int,
+) where {T}
+    (; W, A) = detwf
+    (; p, optimize) = determinantal_parameters
 
-    # add current derivative to the accumulator
-    measurement_container.optimization_measurements["Δk"] += Δk_current
+    Dk = zeros(T, sum(length, p))
+    G = zeros(Complex{T}, 2*N, 2*N)
 
-    return nothing
+    for β in 1:Np
+        k = findfirst(x -> x == β, pconfig)
+        G[k, :] .= W[:, β]
+    end
+
+    A_idx   = 1
+    res_idx = 1
+
+    for (opt, params) in zip(optimize, p)
+        if opt
+            for _ in eachindex(params)
+                Dk[res_idx] = sum(A[A_idx] .* G)
+                A_idx   += 1
+                res_idx += 1
+            end
+        else
+            # skip over non-optimized parameters
+            res_idx += length(params)
+        end
+    end
+
+    return Dk
 end
 
 
 @doc raw"""
 
-    measure_Δk!( measurement_container::NamedTuple, 
-                 detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                 determinantal_parameters::DeterminantalParameters{I}, 
-                 jastrow_parameters::JastrowParameters{S, K, V, I}, 
-                 model_geometry::ModelGeometry, 
-                 optimize::NamedTuple,
-                 Np::I, 
-                 pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
+    measure_Dk(
+        jastrow_parameters::JastrowParameters{T},
+        o::Int,
+        pconfig::Vector{Int},
+        N::Int,
+        ph_transform::Bool
+    ) where {T}
 
-Measures the logarithmic derivative ``\Delta_k`` for ``k` variational parameters and then writes
-them to the measurement container. 
-
-- `measurement_container::NamedTuple`: container where measurements are stored.
-- `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
-- `determinantal_parameters::DeterminantalParameters{I}`: current set of determinantal variational parameters.
-- `jastrow_parameters::JastrowParameters{S, K, V, I}`: first set of Jastrow variational parameters.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `optimize::NamedTuple`:: tuple of optimization flags.
-- `Np::I`: total number of particles in the system.
-- `pht::Bool`: whether model is particle-hole transformed.
+Calculates the logarithmic derivative ``\Delta_k = \frac{\partial\ln\Psi_{T}}{\partial\alpha_k}`` for each Jastrow parameter ``\alpha_k``.
 
 """
-function measure_Δk!(
-    measurement_container::NamedTuple, 
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    determinantal_parameters::DeterminantalParameters{I}, 
-    jastrow_parameters::JastrowParameters{S, K, V, I},
-    model_geometry::ModelGeometry, 
-    optimize::NamedTuple,
-    Np::I, 
-    pht::Bool
-) where {T<:Number, Q, E<:Number, I<:Integer, S<:AbstractString, K, V}
-    # calculate determinantal parameter derivatives
-    Δk_determinantal = get_Δk(
-        detwf, 
-        determinantal_parameters,
-        model_geometry, 
-        optimize,
-        Np
-    )  
+function measure_Dk(
+    jastrow_parameters::JastrowParameters{T},
+    o::Int,
+    pconfig::Vector{Int},
+    N::Int,
+    ph_transform::Bool
+) where {T}
+    (; particle_pair, order_pair, irr_indices, irr_index_map, mean_v, optimize) = jastrow_parameters
 
-    # calculate Jastrow parameter derivatives
-    Δk_jastrow = get_Δk(
-        detwf,  
-        jastrow_parameters,
-        model_geometry,
-        optimize,
-        pht
-    ) 
+    Dk = zeros(T, length(mean_v[o]))
 
-    # combine all derivatives
-    Δk_current = vcat(Δk_determinantal, Δk_jastrow)
+    max_idx = maximum(irr_indices[o])
 
-    # add current derivative to the accumulator
-    measurement_container.optimization_measurements["Δk"] += Δk_current
+    if optimize
+        for idx in eachindex(irr_indices[o])
+            irr_indices[o][idx] == max_idx && continue
+            for (i,j) in irr_index_map[o][irr_indices[o][idx]]
+                if particle_pair == "electron-electron"
+                    ni_up, ni_dn = get_fermion_occupations(i+1, pconfig, N)
+                    nj_up, nj_dn = get_fermion_occupations(j+1, pconfig, N)
+                    if order_pair == "density-density"
+                        pfc = 0.5
+                    elseif order_pair == "spin-spin"
+                        pfc = 0.25 
+                    end
+                    Dk[idx] += ph_transform ?
+                        pfc * (ni_up - ni_dn) * (nj_up - nj_dn) :
+                        pfc * (ni_up + ni_dn) * (nj_up + nj_dn)
+                elseif particle_pair == "phonon-phonon"
+                    # TODO
+                elseif particle_pair == "electron-phonon"
+                    # TODO
+                end
+            end
+        end
+    end
 
-    return nothing
+    return Dk
 end
 
 
-@doc raw"""
-
-    measure_Δk!( measurement_container::NamedTuple, 
-                 detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                 determinantal_parameters::DeterminantalParameters{I}, 
-                 jastrow_parameters_1::JastrowParameters{S, K, V, I},
-                 jastrow_parameters_2::JastrowParameters{S, K, V, I},
-                 model_geometry::ModelGeometry, 
-                 optimize::NamedTuple,
-                 Np::I, 
-                 pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
-
-Measures the logarithmic derivative ``\Delta_k`` for ``k` variational parameters and then writes
-them to the measurement container. 
-
-- `measurement_container::NamedTuple`: container where measurements are stored.
-- `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
-- `determinantal_parameters::DeterminantalParameters{I}`: current set of determinantal variational parameters.
-- `jastrow_parameters_1::JastrowParameters{S, K, V, I}`: first set of Jastrow variational parameters.
-- `jastrow_parameters_2::JastrowParameters{S, K, V, I}`: second set of Jastrow variational parameters.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `optimize::NamedTuple`:: tuple of optimization flags.
-- `Np::Int`: total number of particles in the system.
-- `pht::Bool`: whether model is particle-hole transformed.
-
-"""
-function measure_Δk!(
-    measurement_container::NamedTuple, 
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    determinantal_parameters::DeterminantalParameters{I}, 
-    jastrow_parameters_1::JastrowParameters{S, K, V, I},
-    jastrow_parameters_2::JastrowParameters{S, K, V, I},
-    model_geometry::ModelGeometry, 
-    optimize::NamedTuple,
-    Np::I, 
-    pht::Bool
-) where {T<:Number, Q, E<:Number, I<:Integer, S<:AbstractString, K, V}
-    # calculate determinantal parameter derivatives
-    Δk_determinantal = get_Δk(
-        detwf, 
-        determinantal_parameters, 
-        model_geometry, 
-        optimize, 
-        Np
-    )  
-
-    # calculate Jastrow parameter derivatives
-    Δk_jastrow_1 = get_Δk(
-        detwf, 
-        jastrow_parameters_1,
-        model_geometry,
-        optimize,
-        pht
-    ) 
-    Δk_jastrow_2 = get_Δk(
-        detwf, 
-        jastrow_parameters_2,
-        model_geometry,
-        optimize,
-        pht
-    ) 
-
-    # combine all derivatives
-    Δk_current = vcat(Δk_determinantal, Δk_jastrow_1, Δk_jastrow_2)
-
-    # add current derivative to the accumulator
-    measurement_container.optimization_measurements["Δk"] += Δk_current
-
-    return nothing
-end
-
-
-
-@doc raw"""
-
-    measure_ΔkΔkp!( measurement_container::NamedTuple, 
-                    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                    determinantal_parameters::DeterminantalParameters{I}, 
-                    model_geometry::ModelGeometry,
-                    optimize::NamedTuple, 
-                    Np::I ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer}
-
-Measures the product of logarithmic derivatives ``\Delta_{k}\Delta_{k}^\prime`` and then writes them to the measurement container.
-
-- `measurement_container::NamedTuple`: container where measurements are stored.
-- `detwf::DeterminantalWavefunction`: current variational wavefunction.
-- `determinantal_parameters::DeterminantalParameters`: current variational determinantal parameters.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `optimize::NamedTuple`:: tuple of optimization flags.
-- `Np::Int`: total number of particles in the system.
-
-"""
-function measure_ΔkΔkp!(
-    measurement_container::NamedTuple, 
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    determinantal_parameters::DeterminantalParameters{I}, 
-    model_geometry::ModelGeometry, 
-    optimize::NamedTuple,
-    Np::I
-) where {T<:Number, Q, E<:Number, I<:Integer}
-    # calculate variational parameter derivatives
-    Δk = get_Δk(
-        detwf, 
-        determinantal_parameters,
-        model_geometry, 
-        optimize,
-        Np
-    )
-
-    # inner product of Δk and Δk′
-    ΔkΔkp_current = Δk .* Δk'
-
-    # add current values to the accumulator
-    measurement_container.optimization_measurements["ΔkΔkp"] += ΔkΔkp_current
-
-    return nothing
-end 
-
-
-@doc raw"""
-
-    measure_ΔkΔkp!( measurement_container::NamedTuple, 
-                    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                    determinantal_parameters::DeterminantalParameters{I}, 
-                    jastrow_parameters::JastrowParameters{S, K, V, I},
-                    model_geometry::ModelGeometry, 
-                    optimize::NamedTuple,
-                    Np::I, 
-                    pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
-
-Measures the product of logarithmic derivatives ``\Delta_{k}\Delta_{k}^\prime`` and then writes them to the measurement container.
-
-- `measurement_container::NamedTuple`: container where measurements are stored.
-- `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
-- `determinantal_parameters::DeterminantalParameters{I}`: current set of determinantal variational parameters.
-- `jastrow_parameters::JastrowParameters{S, K, V, I}`: current set of Jastrow variational parameters.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `optimize::NamedTuple`:: tuple of optimization flags.
-- `Np::Int`: total number of particles in the system.
-- `pht::Bool`: whether model is particle-hole transformed.
-
-"""
-function measure_ΔkΔkp!(
-    measurement_container::NamedTuple, 
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    determinantal_parameters::DeterminantalParameters{I}, 
-    jastrow_parameters::JastrowParameters{S, K, V, I},
-    model_geometry::ModelGeometry, 
-    optimize::NamedTuple,
-    Np::I, 
-    pht::Bool
-) where {T<:Number, Q, E<:Number, I<:Integer, S<:AbstractString, K, V}
-    # calculate determinantal parameter derivatives
-    Δk_determinantal = get_Δk(
-        detwf, 
-        determinantal_parameters, 
-        model_geometry, 
-        optimize,
-        Np
-    ) 
-
-    # calculate Jastrow parameter derivatives
-    Δk_jastrow = get_Δk(
-        detwf, 
-        jastrow_parameters,
-        model_geometry,
-        optimize,
-        pht
-    ) 
-
-    # combine all derivatives
-    Δk_current = vcat(Δk_determinantal, Δk_jastrow)
-
-    # inner product of Δk and Δk′
-    ΔkΔkp_current = Δk_current .* Δk_current'
-
-    # add current values to the accumulator
-    measurement_container.optimization_measurements["ΔkΔkp"] += ΔkΔkp_current
-
-    return nothing
-end 
-
-
-@doc raw"""
-
-    measure_ΔkΔkp!( measurement_container::NamedTuple, 
-                    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-                    determinantal_parameters::DeterminantalParameters{I}, 
-                    jastrow_parameters_1::JastrowParameters{S, K, V, I},
-                    jastrow_parameters_2::JastrowParameters{S, K, V, I},
-                    model_geometry::ModelGeometry, 
-                    optimize::NamedTuple,
-                    Np::I, 
-                    pht::Bool ) where {T<:Number, Q, E<:AbstractFloat, I<:Integer, S<:AbstractString, K, V}
-
-Measures the product of logarithmic derivatives ``\Delta_{k}\Delta_{k}^\prime`` and then writes them to the measurement container.
-
-- `measurement_container::NamedTuple`: container where measurements are stored.
-- `detwf::DeterminantalWavefunction{T, Q, E, I}`: current variational wavefunction.
-- `determinantal_parameters::DeterminantalParameters`: current set of determinantal variational parameters.
-- `jastrow_parameters_1::JastrowParameters{S, K, V, I}`: first set of Jastrow variational parameters.
-- `jastrow_parameters_2::JastrowParameters{S, K, V, I}`: second set of Jastrow variational parameters.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `optimize::NamedTuple`:: tuple of optimization flags.
-- `Np::Int`: total number of particles in the system.
-- `pht::Bool`: whether model is particle-hole transformed.
-
-"""
-function measure_ΔkΔkp!(
-    measurement_container::NamedTuple, 
-    detwf::DeterminantalWavefunction{T, Q, E, I}, 
-    determinantal_parameters::DeterminantalParameters{I}, 
-    jastrow_parameters_1::JastrowParameters{S, K, V, I},
-    jastrow_parameters_2::JastrowParameters{S, K, V, I},
-    model_geometry::ModelGeometry, 
-    optimize::NamedTuple,
-    Np::I, 
-    pht::Bool
-) where {T<:Number, Q, E<:Number, I<:Integer, S<:AbstractString, K, V}
-    # calculate determinantal parameter derivatives
-    Δk_determinantal = get_Δk(
-        detwf, 
-        determinantal_parameters,
-        model_geometry, 
-        optimize,
-        Np
-    ) 
-
-    # calculate Jastrow parameter derivatives
-    Δk_jastrow_1 = get_Δk(
-        detwf,
-        jastrow_parameters_1, 
-        model_geometry,
-        optimize,
-        pht
-    )
-    Δk_jastrow_2 = get_Δk(
-        detwf, 
-        jastrow_parameters_2,
-        model_geometry,
-        optimize,
-        pht
-    ) 
-
-    # combine all derivatives
-    Δk_current = vcat(Δk_determinantal, Δk_jastrow_1, Δk_jastrow_2)
-
-    # inner product of Δk and Δk′
-    ΔkΔkp_current = Δk_current .* Δk_current'
-
-    # add current values to the accumulator
-    measurement_container.optimization_measurements["ΔkΔkp"] += ΔkΔkp_current
-
-    return nothing
-end 
-
-
-@doc raw"""
-
-    measure_ΔkE!( measurement_container::NamedTuple, 
-                  detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-                  tight_binding_model::TightBindingModel{E2}, 
-                  hubbard_model::HubbardModel{E2},
-                  determinantal_parameters::DeterminantalParameters{I}, 
-                  model_geometry::ModelGeometry, 
-                  optimize::NamedTuple,
-                  Np::I, 
-                  pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
-
-Measures the product of logarithmic derivatives with the local energy ``\Delta_{k}E`` and then
-writes them to the measurement container.
-
-- `measurement_container::NamedTuple`: container where measurements are stored.
-- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current variational wavefunction. 
-- `tight_binding_model::TightBindingModel{E2}`: parameter for a non-interacting tight-binding model.
-- `hubbard_model::HubbardModel{E2}`: Hubbard interaction parameters.
-- `determinantal_parameters::DeterminantalParameters{I}`: current set of determinantal variational parameters.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `optimize::NamedTuple`:: tuple of optimization flags.
-- `Np::Int`: total number of particles in the system.
-- `pht::Bool`: whether model is particle-hole transformed.
-
-"""
-function measure_ΔkE!(
-    measurement_container::NamedTuple, 
-    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-    tight_binding_model::TightBindingModel{E2}, 
-    hubbard_model::HubbardModel{E2},
-    determinantal_parameters::DeterminantalParameters{I}, 
-    model_geometry::ModelGeometry, 
-    optimize::NamedTuple,
-    Np::I, 
-    pht::Bool
-)where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat}
-    # calculate variational parameter derivatives
-    Δk = get_Δk(
-        detwf, 
-        determinantal_parameters,
-        model_geometry, 
-        optimize,
-        Np
-    )
-
-    # compute local energy
-    E_loc = get_local_energy(
-        detwf, 
-        tight_binding_model, 
-        hubbard_model,
-        model_geometry, 
-        Np, 
-        pht
-    ) 
-
-    # compute product of local derivatives with the local energy
-    ΔkE_current = Δk * E_loc
-
-    # add current values to the accumulator
-    measurement_container.optimization_measurements["ΔkE"] += ΔkE_current
-
-    return nothing
-end
-
-
-@doc raw"""
-
-    measure_ΔkE!( measurement_container::NamedTuple, 
-                  detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-                  jastrow_factor::JastrowFactor{E2, I},
-                  tight_binding_model::TightBindingModel{E2}, 
-                  hubbard_model::HubbardModel{E2},
-                  determinantal_parameters::DeterminantalParameters{I}, 
-                  jastrow_parameters::JastrowParameters{S, K, V, I}, 
-                  model_geometry::ModelGeometry, 
-                  optimize::NamedTuple,
-                  Np::I, 
-                  pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
-
-Measures the product of logarithmic derivatives with the local energy ``\Delta_{k}E`` and then
-writes them to the measurement container.
-
-- `measurement_container::NamedTuple`: container where measurements are stored.
-- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current variational wavefunction.
-- `jastrow_factor::JastrowFactor{E2, I}`: current Jastrow factor.
-- `tight_binding_model::TightBindingModel{E2}`: parameters for a non-interacting tight-binding model.
-- `hubbard_model::HubbardModel{E2}`: Hubbard interaction parameters.
-- `determinantal_parameters::DeterminantalParameters{I}`: current set of determinantal variational parameters.
-- `jastrow_parameters::JastrowParameters{S, K, V, I}`: current set of Jastrow variational parameters.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `optimize::NamedTuple`:: tuple of optimization flags.
-- `Np::Int`: total number of particles in the system.
-- `pht::Bool`: whether model is particle-hole transformed.
-
-"""
-function measure_ΔkE!(
-    measurement_container::NamedTuple, 
-    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-    jastrow_factor::JastrowFactor{E2, I},
-    tight_binding_model::TightBindingModel{E2}, 
-    hubbard_model::HubbardModel{E2},
-    determinantal_parameters::DeterminantalParameters{I}, 
-    jastrow_parameters::JastrowParameters{S, K, V, I}, 
-    model_geometry::ModelGeometry, 
-    optimize::NamedTuple,
-    Np::I, 
-    pht::Bool
-) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
-    # calculate determinantal parameter derivatives
-    Δk_determinantal = get_Δk(
-        detwf, 
-        determinantal_parameters,
-        model_geometry, 
-        optimize,
-        Np
-    ) 
-
-    # calculate Jastrow parameter derivatives
-    Δk_jastrow = get_Δk(
-        detwf,
-        jastrow_parameters,
-        model_geometry, 
-        optimize,
-        pht
-    ) 
-
-    # combine all derivatives
-    Δk = vcat(Δk_determinantal, Δk_jastrow)
-
-    # compute local energy
-    E_loc = get_local_energy(
-        detwf, 
-        jastrow_factor,
-        tight_binding_model,
-        hubbard_model, 
-        jastrow_parameters,
-        model_geometry, 
-        Np, 
-        pht
-    ) 
-
-    # compute product of local derivatives with the local energy
-    ΔkE_current = Δk * E_loc
-
-    # add current values to the accumulator
-    measurement_container.optimization_measurements["ΔkE"] += ΔkE_current
-
-    return nothing
-end
-
-
-@doc raw"""
-
-    measure_ΔkE!( measurement_container::NamedTuple, 
-                  detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-                  jastrow_factor_1::JastrowFactor{E2, I},
-                  jastrow_factor_2::JastrowFactor{E2, I},
-                  tight_binding_model::TightBindingModel{E2}, 
-                  hubbard_model::HubbardModel{E2},
-                  determinantal_parameters::DeterminantalParameters{I}, 
-                  jastrow_parameters_1::JastrowParameters{S, K, V, I},
-                  jastrow_parameters_2::JastrowParameters{S, K, V, I}, 
-                  model_geometry::ModelGeometry, 
-                  optimize::NamedTuple,
-                  Np::I, 
-                  pht::Bool ) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
-
-Measures the product of logarithmic derivatives with the local energy ``\Delta_{k}E`` and then
-writes them to the measurement container.
-
-- `measurement_container::NamedTuple`: container where measurements are stored.
-- `detwf::DeterminantalWavefunction{T, Q, E1, I}`: current variational wavefunction.
-- `jastrow_factor_1::JastrowFactor{E2, I}`: first Jastrow factor.
-- `jastrow_factor_2::JastrowFactor{E2, I}`: second Jastrow factor.
-- `tight_binding_model::TightBindingModel{E2}`: parameters for a non-interacting tight-binding model.
-- `hubbard_model::HubbardModel{E2}`: Hubbard interaction parameters.
-- `determinantal_parameters::DeterminantalParameters{I}`: current set of determinantal variational parameters.
-- `jastrow_parameters_1::JastrowParameters{S, K, V, I}`: first set of Jastrow variational parameters.
-- `jastrow_parameters_2::JastrowParameters{S, K, V, I}`: second set of Jastrow variational parameters.
-- `model_geometry::ModelGeometry`: contains unit cell and lattice quantities.
-- `optimize::NamedTuple`:: tuple of optimization flags.
-- `Np::Int`: total number of particles in the system.
-- `pht::Bool`: whether model is particle-hole transformed.
-
-"""
-function measure_ΔkE!(
-    measurement_container::NamedTuple, 
-    detwf::DeterminantalWavefunction{T, Q, E1, I}, 
-    jastrow_factor_1::JastrowFactor{E2, I},
-    jastrow_factor_2::JastrowFactor{E2, I},
-    tight_binding_model::TightBindingModel{E2}, 
-    hubbard_model::HubbardModel{E2},
-    determinantal_parameters::DeterminantalParameters{I}, 
-    jastrow_parameters_1::JastrowParameters{S, K, V, I},
-    jastrow_parameters_2::JastrowParameters{S, K, V, I}, 
-    model_geometry::ModelGeometry, 
-    optimize::NamedTuple,
-    Np::I, 
-    pht::Bool
-) where {T<:Number, Q, E1<:Number, I<:Integer, E2<:AbstractFloat, S<:AbstractString, K, V}
-    # calculate determinantal parameter derivatives
-    Δk_determinantal = get_Δk(
-        detwf, 
-        determinantal_parameters,
-        model_geometry, 
-        optimize,
-        Np
-    ) 
-
-    # calculate Jastrow parameter derivatives
-    Δk_jastrow_1 = get_Δk(
-        detwf, 
-        jastrow_parameters_1,
-        model_geometry,
-        optimize,
-        pht
-    ) 
-    Δk_jastrow_2 = get_Δk(
-        detwf, 
-        jastrow_parameters_2,
-        model_geometry,
-        optimize,
-        pht
-    ) 
-
-    # combine all derivatives
-    Δk = vcat(Δk_determinantal, Δk_jastrow_1, Δk_jastrow_2)
-
-    # compute local energy
-    E_loc = get_local_energy(
-        detwf, 
-        jastrow_factor_1,
-        jastrow_factor_2, 
-        tight_binding_model, 
-        hubbard_model,
-        jastrow_parameters_1,
-        jastrow_parameters_2,
-        model_geometry, 
-        Np, 
-        pht
-    ) 
-
-    # compute product of local derivatives with the local energy
-    ΔkE_current = Δk * E_loc
-
-    # add current values to the accumulator
-    measurement_container.optimization_measurements["ΔkE"] += ΔkE_current
-
-    return nothing
-end

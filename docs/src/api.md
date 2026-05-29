@@ -1,326 +1,156 @@
+```@meta
+CollapsedDocStrings = true
+```
+
 # API
 
-## ModelGeometry Type and Methods
+## Simulation Information Type and Methods
 
-- [`ModelGeometry`](@ref)
+```@docs
+SimulationInfo
+SimulationInfo(;)
+initialize_datafolder
+model_summary
+```
+
+## Model Geometry Type and Methods
 
 ```@docs
 ModelGeometry
+ModelGeometry(::UnitCell{D}, ::Lattice{D}) where {D}
+add_bond!
+get_bond_id
 ```
 
-#### Internal Methods
-
-- [`VariationalMC.apply_twist_angle!`](@ref)
-- [`VariationalMC.x`](@ref)
-- [`VariationalMC.y`](@ref)
-- [`VariationalMC.d`](@ref)
-- [`VariationalMC.reduce_index_2d`](@ref)
-- [`VariationalMC.reduce_index_1d`](@ref) 
-- [`VariationalMC.max_dist`](@ref)
+## Particle Configuration Type and Methods
 
 ```@docs
-VariationalMC.apply_twist_angle!
-VariationalMC.x
-VariationalMC.y
-VariationalMC.d
-VariationalMC.reduce_index_2d
-VariationalMC.reduce_index_1d
-VariationalMC.max_dist
+ParticleConfiguration
+ParticleConfiguration(;)
 ```
 
-## Parameters Types and Methods
-
-- [`TightBindingModel`](@ref)
-- [`SpinModel`](@ref)
-- [`HubbardModel`](@ref)
-- [`DeterminantalParameters`](@ref)
-- [`JastrowParameters`](@ref)
+## Tight-Binding Model and Parameters
 
 ```@docs
 TightBindingModel
-SpinModel
+TightBindingModel(;)
+TightBindingParameters
+TightBindingParameters(;)
+measure_hopping_energy
+```
+
+## Hubbard Model and Parameters
+
+```@docs
 HubbardModel
+HubbardModel(;)
+HubbardParameters
+HubbardParameters(;)
+ExtendedHubbardModel
+ExtendedHubbardModel(;)
+ExtendedHubbardParameters
+ExtendedHubbardParameters(;)
+measure_hubbard_energy
+measure_ext_hubbard_energy
+```
+
+## Variational Parameters
+
+- [Variational Parameter Names](@ref)
+- [Determinantal Parameters](@ref)
+- [Jastrow Parameters](@ref)
+
+### Variational Parameter Names
+
+```@docs
+DETERMINANTAL_PARAMETERS
+JASTROW_PARAMETERS
+```
+
+### Determinantal Parameters
+```@docs
 DeterminantalParameters
+DeterminantalParameters(;)
+add_parameter!
+```
+
+### Jastrow Parameters
+```@docs
 JastrowParameters
+JastrowParameters(;)
 ```
 
-#### Internal Methods
+## Monte Carlo
 
-- [`VariationalMC.collect_parameters`](@ref)
-- [`VariationalMC.update_parameters!`](@ref)
-- [`VariationalMC.readin_parameters`](@ref)
+- [Variational Wavefunction](@ref)
+- [Metropolis Updater](@ref)
+- [Stochastic Reconfiguration](@ref)
 
-```@docs
-VariationalMC.collect_parameters
-VariationalMC.update_parameters!
-VariationalMC.readin_parameters
-```
-
-## Hamiltonian Methods
-
-#### Internal Methods
-
-- [`VariationalMC.build_auxiliary_hamiltonian`](@ref)
-- [`VariationalMC.build_tight_binding_hamiltonian`](@ref)
-- [`VariationalMC.build_variational_hamiltonian`](@ref)
-- [`VariationalMC.add_pairing_symmetry!`](@ref)
-- [`VariationalMC.add_spin_order!`](@ref)
-- [`VariationalMC.add_charge_order!`](@ref)
-- [`VariationalMC.add_chemical_potential!`](@ref)
-- [`VariationalMC.diagonalize!`](@ref)
-- [`VariationalMC.is_openshell`](@ref)
-- [`VariationalMC.get_variational_matrices`](@ref)
-- [`VariationalMC.get_tb_chem_pot`](@ref)
-
-```@docs
-VariationalMC.build_auxiliary_hamiltonian
-VariationalMC.build_tight_binding_hamiltonian
-VariationalMC.build_variational_hamiltonian
-VariationalMC.add_pairing_symmetry!
-VariationalMC.add_spin_order!
-VariationalMC.add_charge_order!
-VariationalMC.add_chemical_potential!
-VariationalMC.diagonalize!
-VariationalMC.is_openshell
-VariationalMC.get_variational_matrices
-VariationalMC.get_tb_chem_pot
-```
-
-## DeterminantalWavefunction Type and Methods
-
-- [`DeterminantalWavefunction`](@ref)
-- [`DeterminantalWavefunctionTABC`](@ref)
-- [`get_determinantal_wavefunction`](@ref)
-
+### Variational Wavefunction
 ```@docs
 DeterminantalWavefunction
-DeterminantalWavefunctionTABC
-get_determinantal_wavefunction
+DeterminantalWavefunction(;)
+AbstractJastrowFactor
+FermionJastrowFactor
+JastrowFactor(;)
 ```
 
-## Jastrow Types and Methods
-
-- [`JastrowFactor`](@ref)
-- [`get_jastrow_factor`](@ref)
-
-```@docs
-JastrowFactor
-get_jastrow_factor
-```
-
-#### Internal Methods
-
-- [`VariationalMC.get_fermionic_Tvec`](@ref)
-- [`VariationalMC.update_fermionic_Tvec!`](@ref)
-- [`VariationalMC.get_fermionic_jastrow_ratio`](@ref)
-- [`VariationalMC.map_jastrow_parameters`](@ref)
-
-```@docs
-VariationalMC.get_fermionic_Tvec
-VariationalMC.update_fermionic_Tvec!
-VariationalMC.get_fermionic_jastrow_ratio
-VariationalMC.map_jastrow_parameters
-```
-
-## Markov Methods
-
-- [`local_fermion_update!`](@ref)
-
+### Metropolis Updater
 ```@docs
 local_fermion_update!
 ```
 
-#### Internal Methods
-
-- [`VariationalMC.metropolis_step`](@ref)
-
+### Stochastic Reconfiguration 
 ```@docs
-VariationalMC.metropolis_step
-```
-
-## ParticleConfiguration Types and Methods
-
-- [`get_particle_density`](@ref)
-
-```@docs
-get_particle_density
-```
-
-#### Internal Types and Methods
-
-- [`VariationalMC.MarkovMove`](@ref)
-- [`VariationalMC.propose_random_move`](@ref)
-- [`VariationalMC.hop!`](@ref)
-- [`VariationalMC.generate_initial_fermion_configuration!`](@ref)
-- [`VariationalMC.get_onsite_fermion_occupation`](@ref)
-- [`VariationalMC.get_spindex_type`](@ref)
-- [`VariationalMC.get_index_from_spindex`](@ref)
-- [`VariationalMC.get_spindices_from_index`](@ref)
-- [`VariationalMC.get_linked_spindex`](@ref)
-
-```@docs
-VariationalMC.MarkovMove
-VariationalMC.propose_random_move
-VariationalMC.hop!
-VariationalMC.generate_initial_fermion_configuration!
-VariationalMC.get_onsite_fermion_occupation
-VariationalMC.get_spindex_type
-VariationalMC.get_index_from_spindex
-VariationalMC.get_spindices_from_index
-VariationalMC.get_linked_spindex
-```
-
-## Optimizer Methods
-
-- [`optimize_parameters!`](@ref)
-
-```@docs
-optimize_parameters!
-```
-
-#### Internal Methods
-
-- [`VariationalMC.get_Δk`](@ref)
-- [`VariationalMC.get_covariance_matrix`](@ref)
-- [`VariationalMC.get_force_vector`](@ref)
-
-```@docs
-VariationalMC.get_Δk
-VariationalMC.get_covariance_matrix
-VariationalMC.get_force_vector
+Optimizer
+update_optimizer!
 ```
 
 ## Measurement Methods
 
-### Intitialize Measurements
+- [Measurement Names](@ref)
+- [Initialize Measurements](@ref)
+- [Make Measurements](@ref)
+- [Write Measurements](@ref)
+- [Process Measurements](@ref)
+- [Export Measurements](@ref)
 
-- [`initialize_measurement_container`](@ref)
-- [`initialize_measurement_directories`](@ref)
+### Measurement Names
 
+```@docs
+GLOBAL_MEASUREMENTS
+LOCAL_MEASUREMENTS
+CORRELATION_FUNCTIONS
+```
+
+### Initialize Measurements
 ```@docs
 initialize_measurement_container
-initialize_measurement_directories
-```
-
-### Scalar Measurements
-
-#### Internal Methods
-
-- [`VariationalMC.get_local_energy`](@ref)
-- [`VariationalMC.get_local_kinetic_energy`](@ref)
-- [`VariationalMC.get_local_hubbard_energy`](@ref)
-- [`VariationalMC.get_double_occ`](@ref)
-- [`VariationalMC.get_n`](@ref)
-- [`VariationalMC.get_Sz`](@ref)
-
-```@docs
-VariationalMC.get_local_energy
-VariationalMC.get_local_kinetic_energy
-VariationalMC.get_local_hubbard_energy
-VariationalMC.get_double_occ
-VariationalMC.get_n
-VariationalMC.get_Sz
-```
-
-### Optimization Measurements
-
-#### Internal Methods
-
-- [`VariationalMC.measure_Δk!`](@ref)
-- [`VariationalMC.measure_ΔkΔkp!`](@ref)
-- [`VariationalMC.measure_ΔkE!`](@ref)
-
-```@docs
-VariationalMC.measure_Δk!
-VariationalMC.measure_ΔkΔkp!
-VariationalMC.measure_ΔkE!
-```
-
-### Simulation Measurements
-
-#### Internal Methods
-
-- [`VariationalMC.measure_local_energy!`](@ref)
-- [`VariationalMC.measure_double_occ!`](@ref)
-- [`VariationalMC.measure_n!`](@ref)
-- [`VariationalMC.measure_Sz!`](@ref)
-
-```@docs
-VariationalMC.measure_local_energy!
-VariationalMC.measure_double_occ!
-VariationalMC.measure_n!
-VariationalMC.measure_Sz!
-```
-
-### Correlation Measurements
-
-#### Internal Methods
-
-- [`VariationalMC.measure_density_correlation!`](@ref)
-- [`VariationalMC.measure_spin_correlation!`](@ref)
-- [`VariationalMC.get_site_dependent_n`](@ref)
-- [`VariationalMC.get_site_dependent_s`](@ref)
-
-```@docs
-VariationalMC.measure_density_correlation!
-VariationalMC.measure_spin_correlation!
-VariationalMC.get_site_dependent_n
-VariationalMC.get_site_dependent_s
+initialize_measurements!
+initialize_correlation_measurements!
 ```
 
 ### Make Measurements
-
-- [`make_measurements!`](@ref)
-
 ```@docs
 make_measurements!
 ```
 
-#### Internal Methods
-
-- [`VariationalMC.reset_measurements!`](@ref)
-
-```@docs
-VariationalMC.reset_measurements!
-```
-
 ### Write Measurements
-
-- [`write_measurements!`](@ref)
-
 ```@docs
 write_measurements!
-```
-
-#### Internal Methods
-
-- [`VariationalMC.normalize_measurements`](@ref)
-
-```@docs
-VariationalMC.normalize_measurements
+merge_bins
+rm_bins
 ```
 
 ### Process Measurements
-
-- [`process_measurements`](@ref)
-
 ```@docs
+save_simulation_info
 process_measurements
 ```
 
-#### Internal Methods
-
-- [`VariationalMC.process_scalar_measurements`](@ref)
-- [`VariationalMC.process_optimization_measurements`](@ref)
-
+### Export Measurements
 ```@docs
-VariationalMC.process_scalar_measurements
-VariationalMC.process_optimization_measurements
+export_global_stats_to_csv
+export_local_stats_to_csv
+export_correlation_stats_to_csv
 ```
-
-
-
-
-
-
-
