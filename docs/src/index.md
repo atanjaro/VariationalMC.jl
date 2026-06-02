@@ -10,6 +10,8 @@ The development of this code was supported by the U.S. Department of Energy, Off
 
 ## Installation
 
+**Julia version > 1.12.0 is required**
+
 To install [VariationalMC.jl](https://github.com/atanjaro/VariationalMC.jl),
 simply open the Julia REPL and run the commands
 ```

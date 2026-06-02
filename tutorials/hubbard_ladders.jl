@@ -156,7 +156,7 @@ function run_simulation(;
     ## Define a finite lattice with periodic boundary conditions in the y-direction.
     lattice = lu.Lattice(
         [Lx, Ly], 
-        [false, true]       
+        [true, false]       
     )
 
     ## Initialize model geometry.
@@ -413,7 +413,7 @@ function run_simulation(;
     initialize_correlation_measurements!(
         measurement_container = measurement_container,
         model_geometry = model_geometry,
-        correlation = "spin-z",
+        correlation = "spin_z",
         pairs = [(1,2)]
     )
 
