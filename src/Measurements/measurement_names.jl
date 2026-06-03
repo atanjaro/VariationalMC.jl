@@ -62,8 +62,8 @@ const LOCAL_MEASUREMENTS = Base.ImmutableDict(
 
     CORRELATION_FUNCTIONS = Base.ImmutableDict(
         "density"          => "ORBITAL_ID",
-        "spin_x"           => "ORBITAL_ID",
-        "spin_z"           => "ORBITAL_ID",
+        "spin-x"           => "ORBITAL_ID",
+        "spin-z"           => "ORBITAL_ID",
         "pair"             => "BOND_ID",
     )
 
@@ -74,7 +74,7 @@ Correlation functions are well defined in both position and momentum space.
 """
 const CORRELATION_FUNCTIONS = Base.ImmutableDict(
     "density"          => "ORBITAL_ID",
-    "spin_x"           => "ORBITAL_ID",
-    "spin_z"           => "ORBITAL_ID",
+    "spin-x"           => "ORBITAL_ID",
+    "spin-z"           => "ORBITAL_ID",
     "pair"             => "BOND_ID"
 )
