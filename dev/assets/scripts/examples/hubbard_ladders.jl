@@ -281,7 +281,7 @@ function run_simulation(;
     initialize_correlation_measurements!(
         measurement_container = measurement_container,
         model_geometry = model_geometry,
-        correlation = "spin_z",
+        correlation = "spin-z",
         pairs = [(1,2)]
     )
 
